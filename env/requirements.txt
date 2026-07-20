@@ -1,0 +1,21 @@
+# Reference list of python packages used by the analysis layer.
+#
+# A fresh NAF account needs NO pip installs: `source env/setup.sh` provides
+# python3 with pyyaml, numpy, matplotlib, scikit-learn, xgboost, and torch
+# from the key4hep stack on cvmfs; pyLCIO/ROOT/Marlin come from the same
+# stack.
+#
+# This file exists for two optional cases:
+#   1. running the pure-python parts on a laptop;
+#   2. adding extra packages (e.g. catboost) in a local venv on /data/dust:
+#        python3 -m venv --system-site-packages .venv
+#        source .venv/bin/activate && pip install catboost
+
+pyyaml>=6.0
+numpy>=1.22
+matplotlib>=3.5
+scikit-learn>=1.1
+xgboost>=1.7
+pytest>=7.0
+# optional alternative baseline model:
+# catboost>=1.2

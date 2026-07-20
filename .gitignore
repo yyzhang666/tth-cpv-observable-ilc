@@ -1,0 +1,48 @@
+# local machine paths (never commit paths.local.yaml)
+configs/paths.local.yaml
+
+# outputs and models
+outputs/*
+!outputs/README.md
+!outputs/.gitkeep
+models/
+*.cbm
+*.onnx
+model_metadata.json
+
+# data files
+*.slcio
+*.stdhep
+*.root
+*.npz
+*.hdf5
+*.parquet
+split_*.slcio
+
+# large tables (keep small reference CSVs explicitly if needed)
+*.csv
+!docs/**/*.csv
+!tests/data/*.csv
+
+# logs and dumps
+*.log
+*.out
+logs/
+dumpevent_*.txt
+condor/example/log/
+condor/example/out/
+condor/example/err/
+condor/example/arguments*.txt
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/
+*.json.model
+
+# editors
+.vscode/
+.idea/
+.ipynb_checkpoints/

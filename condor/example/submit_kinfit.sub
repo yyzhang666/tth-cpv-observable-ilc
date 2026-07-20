@@ -1,0 +1,26 @@
+# HTCondor submit file: kinfit + jet assignment over production chunks.
+#
+# One job per line of arguments.txt (written by make_arguments.py).
+# Smoke-test ONE job first: head -1 arguments.txt > arguments_smoke.txt
+# and point 'queue ... from' at it.
+
+executable      = job_wrapper.sh
+arguments       = $(config) $(chunk)
+
+universe        = vanilla
+Requirements    = OpSys == "LINUX" && Arch == "X86_64"
+request_cpus    = 1
+request_memory  = 4096 Mb
+request_disk    = 2 GB
+# raise if jobs are held for runtime (see condor/README.md rule 4)
++RequestRuntime = 10800
+
+# getenv=false on purpose: the wrapper sources env/setup.sh itself,
+# so jobs do not depend on the submitter's shell environment.
+getenv          = false
+
+log             = log/$(Cluster).$(Process).log
+output          = out/$(Cluster).$(Process).out
+error           = err/$(Cluster).$(Process).err
+
+queue config,chunk from arguments.txt

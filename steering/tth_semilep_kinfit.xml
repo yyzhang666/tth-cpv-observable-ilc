@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<!--
+  tth_semilep_kinfit.xml: canonical TTHSemiLepKinFit steering.
+
+  Standard jet-assignment + kinematic-fit stage (docs/KINFIT_JET_ASSIGNMENT.md):
+    signed-flavor TopN=10 pre-selection from RefinedJets6
+    + fullMass4C kinfit on OutputErrorFlowJets6 with diagonal covariance
+    + final candidate selected by log(1 + fit_chi2) + 0.3*signed_flavor_NLL.
+
+  Parameters are the frozen canonical values from the supervisor's
+  calibration campaign. Do NOT edit physics parameters; the runner
+  (scripts/run_kinfit_assignment.sh) only substitutes the __PLACEHOLDER__
+  fields (input file, output root, event limits).
+-->
+<marlin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ilcsoft.desy.de/marlin/marlin.xsd">
+
+  <global>
+    <parameter name="LCIOInputFiles">
+      __INPUT_LCIO__
+    </parameter>
+    <parameter name="MaxRecordNumber" value="__MAX_RECORDS__"/>
+    <parameter name="SkipNEvents" value="0"/>
+    <parameter name="SupressCheck" value="false"/>
+    <parameter name="Verbosity">MESSAGE</parameter>
+    <parameter name="AllowToModifyEvent" value="true"/>
+  </global>
+
+  <execute>
+    <processor name="MyTTHSemiLepKinFit"/>
+  </execute>
+
+  <processor name="MyTTHSemiLepKinFit" type="TTHSemiLepKinFit">
+    <!-- fit kinematics: jet p4 + covariance from OutputErrorFlowJets6 -->
+    <parameter name="JetCollectionName" type="string" lcioInType="ReconstructedParticle">OutputErrorFlowJets6</parameter>
+    <!-- flavor / TopN pre-selection source: RefinedJets6 (never swap these) -->
+    <parameter name="FlavorJetCollectionName" type="string">RefinedJets6</parameter>
+    <parameter name="ElectronCollectionName" type="string" lcioInType="ReconstructedParticle">ISOElectrons</parameter>
+    <parameter name="MuonCollectionName" type="string" lcioInType="ReconstructedParticle">ISOMuons</parameter>
+    <parameter name="JetSLDLinkCollectionName" type="string" lcioInType="LCRelation">JetSLDLink6</parameter>
+    <parameter name="SLDNuLinkCollectionName" type="string" lcioInType="LCRelation">SLDNuLink6</parameter>
+    <parameter name="outputJetCollection" type="string" lcioOutType="ReconstructedParticle">JetsKinFitTTHSemiLep</parameter>
+    <parameter name="outputStartJetCollection" type="string" lcioOutType="ReconstructedParticle">JetsPreFitTTHSemiLep</parameter>
+    <parameter name="outputLeptonCollection" type="string" lcioOutType="ReconstructedParticle">LeptonsKinFitTTHSemiLep</parameter>
+    <parameter name="outputStartLeptonCollection" type="string" lcioOutType="ReconstructedParticle">LeptonsPreFitTTHSemiLep</parameter>
+
+    <!-- signed-flavor TopN pre-selection -->
+    <parameter name="TopN" type="int">10</parameter>
+    <!-- production final selection: combined kinfit + signed-flavor score -->
+    <parameter name="FinalSelectionMode" type="string">logchi2_plus_flavor</parameter>
+    <parameter name="FlavorWeight" type="float">0.3</parameter>
+    <parameter name="DryRunRankingOnly" type="bool">false</parameter>
+    <parameter name="WriteCandidateDebugTree" type="bool">true</parameter>
+    <parameter name="EnableSLDNeutrinoEnumeration" type="bool">true</parameter>
+    <parameter name="MaxSLDCombinations" type="int">10000</parameter>
+    <parameter name="WeaverAlgorithmName" type="string">weaver</parameter>
+    <parameter name="BScoreIndex" type="int">0</parameter>
+    <parameter name="BbarScoreIndex" type="int">1</parameter>
+
+    <!-- fit configuration (frozen canonical values) -->
+    <parameter name="ECM" type="float">550.0</parameter>
+    <parameter name="ISRPzMax" type="float">125.6</parameter>
+    <parameter name="includeISR" type="bool">true</parameter>
+    <parameter name="ConstraintMode" type="string">fullMass4C</parameter>
+    <parameter name="JetCovarianceScale" type="float">1</parameter>
+    <parameter name="UseJetCovarianceOffDiagonal" type="bool">false</parameter>
+    <parameter name="fitter" type="int">1</parameter>
+    <parameter name="SigmaEnergyScaleFactor" type="float">1.6</parameter>
+    <!-- SigmaAnglesScaleFactor multiplies projected jet sigma_theta/sigma_phi
+         (sigma scale, not variance). Canonical value 2.6 from the supervisor's
+         angular core-sigma calibration. -->
+    <parameter name="SigmaAnglesScaleFactor" type="float">2.6</parameter>
+    <parameter name="SigmaInvPtScaleFactor" type="float">1.1</parameter>
+    <parameter name="NeutrinoEnergyError" type="float">20</parameter>
+    <parameter name="NeutrinoAngleError" type="float">0.5</parameter>
+    <parameter name="WMass" type="float">80.4</parameter>
+    <parameter name="TopMass" type="float">172.5</parameter>
+    <parameter name="HMass" type="float">125.0</parameter>
+    <parameter name="UseSoftMassConstraints" type="bool">true</parameter>
+    <parameter name="WMassSigma" type="float">19.65</parameter>
+    <parameter name="TopMassSigma" type="float">23.4</parameter>
+    <parameter name="HMassSigma" type="float">20.85</parameter>
+    <parameter name="LepTopMassSigma" type="float">23.4</parameter>
+
+    <parameter name="outputFilename" type="string">__OUTPUT_ROOT__</parameter>
+    <parameter name="treeName" type="string">TTHSemiLepKinFit</parameter>
+    <parameter name="Verbosity" type="string">MESSAGE</parameter>
+  </processor>
+
+</marlin>

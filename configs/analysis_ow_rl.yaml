@@ -1,0 +1,76 @@
+# =============================================================================
+# analysis_ow_rl.yaml — O_W baseline, pure RL helicity.
+# Identical conventions to analysis_ow_lr.yaml; only samples/outputs differ.
+# =============================================================================
+
+analysis:
+  name: ow_rl_baseline
+  observable_family: O_W
+  helicity: RL
+  level: [gen, reco]
+
+samples:
+  manifest: configs/samples.yaml
+  gen_sample: tthcpv_gen_erpl
+  reco_sample: tthcpv_reco_erpl
+
+kinfit:
+  steering: steering/tth_semilep_kinfit.xml
+  runner: scripts/run_kinfit_assignment.sh
+  # Selected candidate: FinalSelectionMode=logchi2_plus_flavor, FlavorWeight=0.3.
+  require:
+    accepted: 1
+    fit_success: 1
+  selected_pairs:
+    O_W: [W1, W2]
+    O_b: [b_had, b_lep]
+
+observable:
+  definition: "O_W = wrap(phi_quark - phi_antiquark)"
+  object_a: wjet_quark
+  object_b: wjet_antiquark
+  basis: lab_axes
+  frames: [lab, higgs_rest, ttbar_rest]
+  default_frame: higgs_rest
+  n_bins: 36
+  range: [-3.141592653589793, 3.141592653589793]
+
+features:
+  scheme: minimal
+  minimal: [E, theta, phi]    # raw variables only (frozen)
+  extended_extra: [m_jj, part_pair_prob, part_orientation_prob, part_signed_probs]
+
+split:
+  train: 0.6
+  validation: 0.2
+  test: 0.2
+  seed: 20260720
+
+model:
+  type: xgboost
+  params:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.1
+    random_seed: 20260720
+  class_order: [-1, 1]
+  score: "P(+) - P(-)"
+
+weights:
+  training_weight: weight_training
+  template_weight: weight_interference_signed
+  sm_template_weight: weight_sm
+
+selection:
+  enabled: false
+
+background:
+  enabled: false
+
+fisher:
+  mode: [signal-only]
+  variant: [absolute-yield, shape-only]
+  luminosity_ab: 8.0
+
+outputs:
+  base_dir: outputs/ow_rl

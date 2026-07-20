@@ -1,0 +1,58 @@
+schema_version: 1
+
+default_profile: xgboost_baseline
+
+profiles:
+  xgboost_baseline:
+    status: default
+    tier: baseline-ml
+    model_type: xgboost
+    trainer: scripts/train_cpv_model.py
+    required_modules:
+      - package: numpy
+        import: numpy
+      - package: PyYAML
+        import: yaml
+      - package: xgboost
+        import: xgboost
+    output_semantics:
+      observable_definition: "P(+)-P(-)"
+      class_order: [-1, 1]
+      weight_policy: "training uses |w_int|; templates use signed w_int"
+
+  catboost_optional:
+    status: planned_optional
+    tier: classical-ml
+    model_type: catboost
+    trainer: scripts/train_cpv_model.py
+    required_modules:
+      - package: catboost
+        import: catboost
+    output_semantics:
+      observable_definition: "P(+)-P(-)"
+      class_order: [-1, 1]
+
+  sklearn_checks:
+    status: optional_diagnostics
+    tier: classical-ml
+    model_type: sklearn_diagnostics
+    trainer: notebooks/
+    required_modules:
+      - package: scikit-learn
+        import: sklearn
+    output_semantics:
+      observable_definition: "diagnostics only unless promoted by config"
+
+  marlin_kinfit:
+    status: required_for_reco
+    tier: lcio-marlin
+    model_type: TTHSemiLepKinFit
+    trainer: scripts/run_kinfit_assignment.sh
+    required_modules:
+      - package: ROOT
+        import: ROOT
+      - package: pyLCIO
+        import: pyLCIO
+    output_semantics:
+      selected_candidate: "FinalSelectionMode=logchi2_plus_flavor, FlavorWeight=0.3"
+      accepted_cuts: "accepted=1 && fit_success=1"

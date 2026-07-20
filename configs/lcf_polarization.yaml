@@ -1,0 +1,33 @@
+# =============================================================================
+# lcf_polarization.yaml — LCF 550 GeV running scenario.
+#
+# a(P-,P+) = (1-P-)(1+P+)/4    weight of the pure LR sample
+# b(P-,P+) = (1+P-)(1-P+)/4    weight of the pure RL sample
+#
+# Closure requirements (tests/test_polarization.py):
+#   - a+b is NOT normalised to 1 (remaining fraction feeds LL/RR, which do
+#     not contribute to this s-channel-like process at leading order);
+#   - fractions sum to 1;
+#   - generator cross-section spin-averaging convention must be checked
+#     before multiplying yields (KNOWN_ISSUES #7).
+# =============================================================================
+
+total_luminosity_ab: 8.0
+
+running:
+  mm:
+    electron: -0.8
+    positron: -0.6
+    fraction: 0.10
+  mp:
+    electron: -0.8
+    positron: 0.6
+    fraction: 0.40
+  pm:
+    electron: 0.8
+    positron: -0.6
+    fraction: 0.40
+  pp:
+    electron: 0.8
+    positron: 0.6
+    fraction: 0.10

@@ -1,0 +1,92 @@
+# =============================================================================
+# analysis_ow_lr.yaml — O_W baseline, pure LR helicity.
+#
+# This file freezes everything a single baseline run needs. Do not edit
+# conventions here without updating docs/PHYSICS_CONVENTIONS.md.
+# =============================================================================
+
+analysis:
+  name: ow_lr_baseline
+  observable_family: O_W
+  helicity: LR
+  level: [gen, reco]          # both levels on the matched event pool
+
+samples:
+  manifest: configs/samples.yaml
+  gen_sample: tthcpv_gen_elpr        # 80 chunks x 12500 events, sidecar per chunk
+  reco_sample: tthcpv_reco_elpr      # kinfit-ready complete reco (same chunks)
+
+# jet assignment + kinematic fit stage (docs/KINFIT_JET_ASSIGNMENT.md).
+# All reco-level observables use the logchi2_plus_flavor_x0p3 selected candidate.
+kinfit:
+  steering: steering/tth_semilep_kinfit.xml    # frozen canonical parameters
+  runner: scripts/run_kinfit_assignment.sh
+  require:
+    accepted: 1
+    fit_success: 1
+  selected_pairs:
+    O_W: [W1, W2]              # selected light-jet slots; quark/antiquark ordering
+                               # via signed flavor is confirmed with the supervisor
+    O_b: [b_had, b_lep]        # selected top-side b slots
+
+observable:
+  # Theory-study primary convention (docs/PHYSICS_CONVENTIONS.md §3–§5):
+  # pairs ordered particle - antiparticle, angles measured with the
+  # lab-axes basis (boost only, phi = atan2(py, px) vs fixed lab axes).
+  definition: "O_W = wrap(phi_quark - phi_antiquark)"
+  object_a: wjet_quark
+  object_b: wjet_antiquark
+  basis: lab_axes                # production_plane is reserved for Ma2018 sign observables
+  frames: [lab, higgs_rest, ttbar_rest]
+  default_frame: higgs_rest      # strongest O_W frame in the theory study
+  n_bins: 36
+  range: [-3.141592653589793, 3.141592653589793]
+
+features:
+  # FROZEN: raw variables only — no log/sin/cos/other transformations.
+  scheme: minimal             # minimal | extended
+  minimal: [E, theta, phi]    # per object, evaluated in default_frame
+  extended_extra: [m_jj, part_pair_prob, part_orientation_prob, part_signed_probs]
+
+split:
+  # deterministic split from event_id hash; see src/ilc_tth_cpv/io.py
+  train: 0.6
+  validation: 0.2
+  test: 0.2
+  seed: 20260720
+
+model:
+  type: xgboost               # ships with the key4hep cvmfs stack; catboost optional
+  params:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.1
+    random_seed: 20260720
+  class_order: [-1, 1]        # [interference<0, interference>0]; frozen
+  score: "P(+) - P(-)"        # frozen convention, stored in model metadata
+
+weights:
+  training_weight: weight_training              # |w_int|, optionally class-balanced
+  template_weight: weight_interference_signed   # NEVER class-balanced
+  sm_template_weight: weight_sm                 # pending SM sample (KNOWN_ISSUES #5)
+
+selection:
+  enabled: false
+  # later:
+  # enabled: true
+  # score_file: outputs/mva/scores.csv
+  # threshold: null           # take pass_nominal_mva from the file
+
+background:
+  enabled: false
+  # later:
+  # enabled: true
+  # manifest: configs/samples.yaml
+
+fisher:
+  mode: [signal-only]
+  variant: [absolute-yield, shape-only]
+  luminosity_ab: 8.0          # scaled by polarisation weights downstream
+
+outputs:
+  base_dir: outputs/ow_lr

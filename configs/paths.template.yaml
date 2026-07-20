@@ -1,0 +1,20 @@
+# =============================================================================
+# paths.template.yaml
+#
+# Copy to configs/paths.local.yaml (gitignored) and adapt. Scripts load
+# paths.local.yaml when present, otherwise this template.
+#
+# Repo policy: only two kinds of external paths are allowed anywhere in this
+# repository — large data samples (see configs/samples.yaml) and the ZHH
+# software environment below. Everything else lives inside the repo.
+# =============================================================================
+
+external:
+  # ILCSoft/ZHH software stack (pyLCIO, Marlin, ROOT, TTHSemiLepKinFit processor)
+  zhh_setup: /data/dust/user/zhangyuy/analysis/tth/ZHH/setup.sh
+  # root of the event production tree (per-sample details in samples.yaml)
+  production_root: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production
+
+repo:
+  outputs: outputs
+  models: outputs/models

@@ -1,0 +1,157 @@
+# =============================================================================
+# samples.yaml — single source of truth for every sample used by this project.
+#
+# status values:
+#   config-only                 spring/steering exists, no events produced yet
+#   available                   files exist on disk
+#   readable                    verified openable with pyLCIO
+#   reconstructed               reco chain has been run
+#   method-development-ready    usable for pipeline development
+#   physics-validation-pending  NOT usable for final physics numbers
+#   superseded                  kept for history; use the replacement sample
+#   pending                     nothing exists yet, interface reserved
+#
+# Only LARGE DATA paths appear in this file (allowed by repo policy).
+# Everything else (code, docs, steering) lives inside this repository.
+# Event counts must be re-verified by the student (README checklist).
+# =============================================================================
+
+meta:
+  energy_gev: 550
+  detector_model: "SGV fast simulation (STDHEP direct input)"
+  reconstruction_chain: >
+    Physsim stdhep -> SGV common baseline -> complete_reco_kinfit_ready slcio
+    -> TTHSemiLepKinFit (jet assignment + kinematic fit, see
+    docs/KINFIT_JET_ASSIGNMENT.md)
+  helicity_convention: "LR = eL.pR = (-100%,+100%); RL = eR.pL = (+100%,-100%)"
+  production_root: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production
+  chunking: "80 chunks per polarization, 12500 generated events per chunk"
+  sidecar_alignment: >
+    accepted-event-order matching: sidecar row i corresponds to the i-th
+    usable LCIO event of the same chunk. Weights live only in the sidecar,
+    never inside the LCIO files.
+  sidecar_columns: >
+    event, sign, label, n_generated, sigma_absint, sigma_absint_error,
+    event_weight_signed, me2_sm, me2_cpv, me2_int, me2_absint,
+    dsg_sm, dsg_cpv, dsg_int, dsg_absint, func_sm, func_cpv, func_int,
+    func_absint, validation_phi, validation_plus, validation_minus,
+    validation_diff, validation_resid, validation_rel, qed_weight,
+    phase_weight, shat, mtt, mtbar, mt, mh, cos_h, phi_h, cos_t, phi_t,
+    bmengy0..bmengy4
+  documentation: docs/SAMPLE_PROVENANCE.md
+
+signals:
+
+  # ---- ttH CPV |interference| production (2026-07-20, validated) ------------
+  tthcpv_gen_elpr:
+    process: "e+e- -> ttH, CPV |interference| importance sampling"
+    level: generator
+    helicity: LR
+    path: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/cpv_tth/eL.pR/I01234_0/generator/stdhep
+    file_pattern: "E550-Test.Ptthcpv.Gphyssim.eL.pR.I01234_0.*.stdhep"
+    sidecar_dir: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/cpv_tth/eL.pR/I01234_0/generator/sidecars
+    sidecar_pattern: "E550-Test.Ptthcpv.Gphyssim.eL.pR.I01234_0.{chunk}.tthcpv_me.csv"
+    n_files: 80
+    n_events: 1000000
+    generator: "Physsim TTHCPVSpring + JSFHadronizer"
+    weight_source: "per-chunk sidecar CSV (see meta.sidecar_columns)"
+    status: [available, readable, method-development-ready, physics-validation-pending]
+    notes: "Per-chunk stdhep + sidecar; chunk id is the number before .stdhep."
+
+  tthcpv_gen_erpl:
+    process: "e+e- -> ttH, CPV |interference| importance sampling"
+    level: generator
+    helicity: RL
+    path: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/cpv_tth/eR.pL/I01234_0/generator/stdhep
+    file_pattern: "E550-Test.Ptthcpv.Gphyssim.eR.pL.I01234_0.*.stdhep"
+    sidecar_dir: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/cpv_tth/eR.pL/I01234_0/generator/sidecars
+    sidecar_pattern: "E550-Test.Ptthcpv.Gphyssim.eR.pL.I01234_0.{chunk}.tthcpv_me.csv"
+    n_files: 80
+    n_events: 1000000
+    generator: "Physsim TTHCPVSpring + JSFHadronizer"
+    weight_source: "per-chunk sidecar CSV"
+    status: [available, readable, method-development-ready, physics-validation-pending]
+    notes: ""
+
+  tthcpv_reco_elpr:
+    process: "e+e- -> ttH, CPV |interference|, kinfit-ready complete reco"
+    level: reco
+    helicity: LR
+    path: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/cpv_tth/eL.pR/I01234_0/complete_reco
+    file_pattern: "complete_reco_kinfit_ready_E550-Test.Ptthcpv.Gphyssim.eL.pR.I01234_0.*_sgv.slcio"
+    n_files: 80
+    n_events: "80 x 12499 usable events (one event per chunk lost; validator OK)"
+    reconstruction_version: "complete_reco_kinfit_ready (production 2026-07-20)"
+    weight_source: "matching generator sidecar, accepted-event-order alignment"
+    status: [available, reconstructed, method-development-ready, physics-validation-pending]
+    notes: >
+      Input for the kinfit + jet assignment stage (docs/KINFIT_JET_ASSIGNMENT.md).
+      Key collections: OutputErrorFlowJets6 (jet p4+covariance),
+      RefinedJets6 (Weaver flavor / ymerge 'yth'), ISOElectrons/ISOMuons,
+      JetSLDLink6/SLDNuLink6, MCParticlesSkimmed.
+
+  tthcpv_reco_erpl:
+    process: "e+e- -> ttH, CPV |interference|, kinfit-ready complete reco"
+    level: reco
+    helicity: RL
+    path: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/cpv_tth/eR.pL/I01234_0/complete_reco
+    file_pattern: "complete_reco_kinfit_ready_E550-Test.Ptthcpv.Gphyssim.eR.pL.I01234_0.*_sgv.slcio"
+    n_files: 80
+    n_events: "80 x 12499 usable events"
+    reconstruction_version: "complete_reco_kinfit_ready (production 2026-07-20)"
+    weight_source: "matching generator sidecar, accepted-event-order alignment"
+    status: [available, reconstructed, method-development-ready, physics-validation-pending]
+    notes: ""
+
+  # ---- ttH SM production ------------------------------------------------------
+  tth_sm_reco_elpr:
+    process: "e+e- -> ttH, SM, kinfit-ready complete reco"
+    level: reco
+    helicity: LR
+    path: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_tth/eL.pR/I01234_0/complete_reco
+    file_pattern: "complete_reco_kinfit_ready_E550-Test.Ptth.Gphyssim.eL.pR.I01234_0.*_sgv.slcio"
+    n_files: 80
+    status: [available, reconstructed, method-development-ready]
+    notes: "SM yield template source (weight_sm) once cross-section bookkeeping is frozen."
+
+  tth_sm_reco_erpl:
+    process: "e+e- -> ttH, SM, kinfit-ready complete reco"
+    level: reco
+    helicity: RL
+    path: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_tth/eR.pL/I01234_0/complete_reco
+    file_pattern: "complete_reco_kinfit_ready_E550-Test.Ptth.Gphyssim.eR.pL.I01234_0.*_sgv.slcio"
+    n_files: 80
+    status: [available, reconstructed, method-development-ready]
+    notes: ""
+
+  # ---- historical validation sample (superseded by the production above) ----
+  tthcpv_absint_val_12500:
+    process: "e+e- -> ttH, CPV |interference| (theory-study validation sample)"
+    level: generator
+    helicity: LR
+    path: /data/dust/user/zhangyuy/analysis/physsim/run/TTHCPVStudy_interference_abs_validation_12500
+    file_pattern: tthcpv_interference_abs_validation_12500.stdhep
+    sidecar: tthcpv_me.csv
+    physsim_log: sim.tthcpv_validation_12500.out
+    n_events: 12500
+    status: [available, readable, superseded]
+    notes: >
+      Sample behind the original generator observable theory study. Kept for
+      cross-checks of the ported frame/angle/weight code. New work should use
+      tthcpv_gen_elpr. This older sidecar has only 5 columns and needs the
+      physsim-log skip alignment (handled by ilc_tth_cpv.weights).
+
+backgrounds:
+  ttZ:
+    reco_path_elpr: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_ttz/eL.pR
+    reco_path_erpl: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_ttz/eR.pL
+    status: available
+    notes: "SM ttZ production directories exist; MVA/background table pending (docs/BACKGROUND_INTERFACE.md)."
+  ttbb:
+    generator_path: null
+    reco_path: null
+    status: pending
+  other_6f:
+    generator_path: null
+    reco_path: null
+    status: pending
