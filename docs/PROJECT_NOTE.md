@@ -29,18 +29,18 @@ is acceptable.
 
 | Chapter | What the student should understand or do | Repo entry point |
 |---|---|---|
-| 1 | Know the physics question, starting conditions, deliverables, and non-goals. Negative results are valid. | [README.md](../README.md), [KNOWN_ISSUES.md](../KNOWN_ISSUES.md) |
-| 2 | Learn the concepts: signed interference weights, CP-odd angles, frames, ML observables, Fisher information, and polarisation. | `src/ilc_tth_cpv/weights.py`, `angles.py`, `frames.py`, `fisher.py`, `polarization.py` |
-| 3 | Follow the first-run workflow: inspect real events, validate a generator table, smoke-test kinfit, complete one HTCondor chunk, export reco features, and preserve labelled gen/reco `O_W` examples before scaling out. | [DATA_SCHEMA.md](DATA_SCHEMA.md), `scripts/inspect_generator_event.py`, `scripts/inspect_reco_event.py`, `scripts/run_kinfit_assignment.sh`, `condor/README.md` |
-| 4 | Main milestone: full `O_W` angular-vs-ML comparison at gen and reco level, including frame and model checks. | `configs/analysis_ow_lr.yaml`, `configs/analysis_ow_rl.yaml`, `scripts/run_baseline.sh`, `scripts/train_cpv_model.py` |
-| 5 | Fast secondary baselines by reuse, not reinvention: `O_b`, `O_lnu`, `O_top`. | same feature/export/train/histogram tools as Chapter 4 |
-| 6 | Integrate the delivered event-selection MVA and backgrounds; measure selection-induced CP-information loss. | [MVA_INTERFACE.md](MVA_INTERFACE.md), [BACKGROUND_INTERFACE.md](BACKGROUND_INTERFACE.md), `scripts/join_selection_mva.py` |
-| 7 | Compare fusion strategies for `O_W + X`: early fusion, late fusion, or a 2D likelihood. | `scripts/build_ml_observable.py`, `scripts/evaluate_fisher.py` |
-| 8 | Convert pure `LR/RL` results into the physical LCF running scenario without using polarisation weights as ML features. | `configs/lcf_polarization.yaml`, `scripts/apply_polarization_weights.py` |
-| 9 | Apply only the supervisor-approved one-parameter generator-to-SMEFT conversion. | full guide Chapter 9 |
-| 10 | Optional extensions, opened only after required results are frozen. | full guide Chapter 10 |
-| 11 | Final checklist: scientific outputs, technical outputs, summary table/figure, quote-readiness. | full guide Chapter 11 and Appendix A |
-| 12 | Suggested reading and bookkeeping templates. | full guide Chapter 12 and Appendices |
+| 1 | Separate what is already provided from what the student must produce; understand the five questions, six required deliverables, non-goals, and why a negative result can still be complete. | [README.md](../README.md), [KNOWN_ISSUES.md](../KNOWN_ISSUES.md) |
+| 2 | Understand sidecar-to-event alignment, signed template weights versus optimizer weights, CP-odd object ordering, the fixed-lab and Ma frame conventions, total gen-to-reco retention, Fisher information, polarisation, and the local SMEFT conversion. | [DATA_SCHEMA.md](DATA_SCHEMA.md), [PHYSICS_CONVENTIONS.md](PHYSICS_CONVENTIONS.md), `src/ilc_tth_cpv/weights.py`, `angles.py`, `frames.py`, `fisher.py`, `polarization.py` |
+| 3 | Follow the first-run workflow in order: inspect real events, validate the generator table, isolate a kinfit smoke test, complete one HTCondor chunk, export reco features, and preserve labelled gen/reco `O_W` examples before scaling out. | [NAF_STUDENT_SETUP.md](NAF_STUDENT_SETUP.md), [DATA_SCHEMA.md](DATA_SCHEMA.md), `scripts/inspect_generator_event.py`, `scripts/inspect_reco_event.py`, `scripts/run_kinfit_assignment.sh`, `condor/README.md` |
+| 4 | Produce the main `O_W` result matrix: frame study, angle versus ML, minimal versus extended features, model cross-check, pure LR/RL comparison, and inclusive-gen/full-reco information retention. | `configs/analysis_ow_lr.yaml`, `configs/analysis_ow_rl.yaml`, `scripts/run_baseline.sh`, `scripts/train_cpv_model.py`, `scripts/evaluate_fisher.py` |
+| 5 | Reuse the frozen Chapter 4 recipe for `O_b`, `O_lnu`, and `O_top`; compare Fisher strength and correlation with `O_W`, then select one complementary branch for fusion. | the same export/train/template tools as Chapter 4; full guide §5.4–§5.5 |
+| 6 | Only after the frozen inputs arrive, join the event-selection MVA and backgrounds, quantify selection loss and background dilution, and compare the nominal 1D result with the optional 2D purity diagnostic. | [MVA_INTERFACE.md](MVA_INTERFACE.md), [BACKGROUND_INTERFACE.md](BACKGROUND_INTERFACE.md), `scripts/join_selection_mva.py` |
+| 7 | Implement and compare early fusion, late fusion, and a 2D likelihood for `O_W + X`; report the conditional information gain rather than only classifier performance. | reuse `scripts/build_ml_observable.py` and `scripts/evaluate_fisher.py`; no frozen fusion driver exists yet |
+| 8 | Start from frozen pure-LR/RL results, construct the four physical run categories, apply luminosity and helicity factors only as weights, run the closure test, and combine per-category likelihoods. | `configs/lcf_polarization.yaml`, `scripts/apply_polarization_weights.py`, Appendix B |
+| 9 | After the likelihood is stable, apply only the supervisor-approved local one-parameter conversion to `C^I_tphi/Lambda^2`, recording sign, units, and convention; do not present a multi-operator fit. | full guide §2.14 and Chapter 9 |
+| 10 | Open at most one optional extension, and only after the required results are frozen; state its prerequisite and information-based deliverable before starting. | full guide Chapter 10 |
+| 11 | Assemble the exact scientific and technical outputs, one summary figure/table, and every quote-readiness check before reporting a number. | full guide Chapter 11 and Appendix A |
+| 12 | Read the minimum theory/software references and use the appendices for the result matrix, polarisation closure test, and decision log. | full guide Chapter 12 and Appendices A–C |
 
 ## Reconstruction Rule
 

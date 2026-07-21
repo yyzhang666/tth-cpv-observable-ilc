@@ -140,8 +140,12 @@ Section 1.1 wrote the vertex with two real couplings $(\kappa_t,\widetilde{\kapp
 \mathcal{L}_{t\bar{t}H}
 =
 -\frac{m_t}{v}H\,
-\bar{t}\left(\cos\xi+i\sin\xi\,\gamma_5\right)t ,
-\qquad\text{i.e.}\qquad
+\bar{t}\left(\cos\xi+i\sin\xi\,\gamma_5\right)t .
+```
+
+The corresponding couplings are
+
+```math
 \kappa_t=\cos\xi,\quad
 \widetilde{\kappa}_t=\sin\xi .
 ```
@@ -189,9 +193,25 @@ Near the SM point, with the small local parameter $c$, the differential cross se
 
 where
 
-- $f_0 = d\sigma_{\mathrm{SM}}/dx$ — the SM prediction; **CP-even**: $f_0(\bar x)=f_0(x)$;
-- $f_1 = d\sigma_{\mathrm{int}}/dx = 2\,\mathrm{Re}\!\left(\mathcal{M}_{\mathrm{SM}}^{\ast}\mathcal{M}_{\mathrm{CPV}}\right)d\Phi$ — the **interference** term, *linear* in $c$; **CP-odd**: $f_1(\bar x)=-f_1(x)$;
-- $f_2 = d\sigma_{\mathrm{CPV}^2}/dx$ — the pure-CPV quadratic term; CP-even.
+- $f_0 = d\sigma_{\mathrm{SM}}/dx$ is the SM prediction and is CP-even:
+  $f_0(\bar x)=f_0(x)$.
+- $f_2 = d\sigma_{\mathrm{CPV}^2}/dx$ is the pure-CPV quadratic term and is
+  also CP-even.
+
+The interference term is
+
+```math
+f_1(x)
+=
+\frac{d\sigma_{\mathrm{int}}}{dx}
+=
+2\,\mathrm{Re}\left[
+\mathcal{M}_{\mathrm{SM}}^{*}
+\mathcal{M}_{\mathrm{CPV}}
+\right]d\Phi .
+```
+
+It is linear in $c$ and CP-odd: $f_1(\bar x)=-f_1(x)$.
 
 The same classification applies to observables: $O$ is **CP-even** if $O(\bar x)=O(x)$ and **CP-odd** if $O(\bar x)=-O(x)$. Two consequences drive the entire analysis strategy:
 
@@ -274,10 +294,14 @@ sign label.
 The distinction that must be preserved is therefore simple:
 `weight_training` controls how the classifier is fitted;
 `weight_template` controls how the already evaluated score or angle contributes
-to the signed $f_1$ histogram. Class balancing changes only the loss used to learn the score. When building the physics template, the code fills each event with its original signed weight_template, not the class-balanced optimizer weight. Class balancing may still change the learned score and must be validated, but it does not directly replace the physical event weight. The error would be to fill an interference template with
-the non-negative or class-balanced training weights: that would estimate
-$|f_1|$, not the signed derivative $f_1$ needed in
-$\nu(c)=\nu_0+c\nu_1$.
+to the signed $f_1$ histogram. Class balancing changes only the loss used to
+learn the score. When building the physics template, the code fills each event
+with its original signed `weight_template`, not the class-balanced optimizer
+weight. Class balancing may still change the learned score and must be
+validated, but it does not directly replace the physical event weight. The
+error would be to fill an interference template with the non-negative or
+class-balanced training weights: that would estimate $|f_1|$, not the signed
+derivative $f_1$ needed in $\nu(c)=\nu_0+c\nu_1$.
 
 Code: [../src/ilc_tth_cpv/weights.py](../src/ilc_tth_cpv/weights.py),
 [../scripts/export_features.py](../scripts/export_features.py),
@@ -316,16 +340,22 @@ where "wrap" folds the raw difference back into $(-\pi,\pi]$ (e.g. $350°$ becom
 - **Order matters.** $\Delta\phi(a,b) = -\Delta\phi(b,a)$. Since the sign *is* the CP information, you must fix which object is "first" (e.g. up-type $W$ jet before down-type; $b_t$ before $b_{\bar{t}}$) and never deviate. Charge-aware ParT scores and the decay assignment define the ordering.
 - **Wrapping matters.** Compute $\Delta\phi$ with a proper wrap function, never a naive subtraction.
 
-The observable families studied in this project:
+For the two hadronic-$W$ jets, the observable is
 
 ```math
-O_W=\Delta\phi(j_{W,\mathrm{up}},\,j_{W,\mathrm{down}}) \quad\text{(hadronic-}W\text{ jets)},
+O_W=\Delta\phi(j_{W,\mathrm{up}},\,j_{W,\mathrm{down}}).
 ```
+
+For the two top-decay $b$ jets, it is
+
 ```math
-O_b=\Delta\phi(b_t,\,b_{\bar{t}}) \quad\text{(the two top-decay }b\text{ jets)},
+O_b=\Delta\phi(b_t,\,b_{\bar{t}}).
 ```
+
+For the lepton and neutrino from the leptonic $W$, it is
+
 ```math
-O_{\ell\nu}=\Delta\phi(\ell,\,\nu_W) \quad\text{(lepton and neutrino from the leptonic }W\text{)},
+O_{\ell\nu}=\Delta\phi(\ell,\,\nu_W).
 ```
 
 plus a supervisor-approved $O_{\mathrm{top}}$ built from the reconstructed $t$ and $\bar{t}$ systems.
@@ -376,21 +406,26 @@ The Ma2018 observables use two rest frames, each with its own production-plane a
 - $R_h$: the Higgs rest frame;
 - $R_\psi$: the $t\bar t$ rest frame.
 
-For the corresponding system $X=H$ or $t\bar t$, save its lab-frame momentum **before** the boost and define
+For the corresponding system $X=H$ or $t\bar t$, save its lab-frame momentum
+**before** the boost. The $z$ axis follows the system direction:
 
 ```math
 \hat z=\frac{\vec p_X^{\,\mathrm{lab}}}{|\vec p_X^{\,\mathrm{lab}}|}
-\qquad\text{(the direction of }X\text{)},
 ```
+
+The $x$ axis is the incoming-electron direction projected perpendicular to
+$\hat z$:
+
 ```math
 \hat x=
 \frac{\hat p_{e^-}-(\hat p_{e^-}\cdot\hat z)\hat z}
 {\left|\hat p_{e^-}-(\hat p_{e^-}\cdot\hat z)\hat z\right|}
-\qquad\text{(beam direction, made perpendicular to }\hat z\text{)},
 ```
+
+The $y$ axis completes the right-handed basis:
+
 ```math
-\hat y=\hat z\times\hat x
-\qquad\text{(completes the right-handed system)} .
+\hat y=\hat z\times\hat x .
 ```
 
 Then the azimuth of any particle $i$ is
@@ -496,16 +531,34 @@ The comparison in question 1 (§1.3) is only fair if the ML model uses **the sam
 M_W:\ F_W\ \rightarrow\ s_W
 ```
 
-from a feature set $F_W$ to a score $s_W$. Two feature sets are defined:
+from a feature set $F_W$ to a score $s_W$.
 
-- **minimal** — just the kinematics of the two $W$ jets (plus the information that defines the frame):
-  ```math
-  F_W^{\mathrm{min}} = \{E,\theta,\phi\}_{j_{W,\mathrm{up}}}\cup\{E,\theta,\phi\}_{j_{W,\mathrm{down}}} + \text{frame-defining info};
-  ```
-- **extended** — minimal plus quality/identity information:
-  ```math
-  F_W^{\mathrm{ext}} = F_W^{\mathrm{min}} + \{m_{jj},\ P_{\mathrm{pair}},\ P_{\mathrm{orientation}},\ \text{signed ParT probabilities}\}.
-  ```
+The **minimal** feature set contains the kinematics of the two $W$ jets and
+the quantities required to define the frame:
+
+```math
+F_W^{\mathrm{min}}
+=
+\{E,\theta,\phi\}_{j_{W,\mathrm{up}}}
+\cup
+\{E,\theta,\phi\}_{j_{W,\mathrm{down}}}
+\cup
+F_{\mathrm{frame}} .
+```
+
+Here $F_{\mathrm{frame}}$ denotes the frame-defining information. The
+**extended** set adds pair quality and signed flavour information:
+
+```math
+F_W^{\mathrm{ext}}
+=
+F_W^{\mathrm{min}}
+\cup
+\{m_{jj},P_{\mathrm{pair}},P_{\mathrm{orientation}},P_{\mathrm{ParT,signed}}\} .
+```
+
+$P_{\mathrm{ParT,signed}}$ collectively denotes the signed ParT
+quark-antiquark probabilities.
 
 Analogous branches: $M_b$, $M_{\ell\nu}$, $M_{\mathrm{top}}$.
 
@@ -538,7 +591,7 @@ t(x)=
 i.e. the relative size of the interference at that phase-space point. No observable can beat it. If you only keep part of the event, $z=g(x)$ (e.g. only the two $W$ jets), the best you can possibly do in that reduced space is the conditional average
 
 ```math
-t_z(z)=\mathrm{E}\!\left[t(x)\mid z\right].
+t_z(z)=\mathrm{E}\left[t(x)\mid z\right].
 ```
 
 > **In plain words:** every feature group (W jets only, b jets only, everything, …) is a different *projection* of one and the same underlying CP-interference information. A "W-branch model" and a "b-branch model" are not measuring different physics parameters — they are partial views of the same $c$. (For a single coupling, they do **not** correspond to different CP phases.)
@@ -593,14 +646,16 @@ Because $a(x)$ does not depend on $c$, the local score of **accepted** events is
 With a background $b(x)$ that does not depend on $c$, the ideal observable becomes
 
 ```math
-t_{\text{sig+bg}}(x)
+t_{\mathrm{sig+bg}}(x)
 =
 \frac{f_1(x)}{f_0(x)+b(x)}
 =
-\underbrace{\frac{f_0(x)}{f_0(x)+b(x)}}_{\text{signal purity}}
-\;\cdot\;
-\underbrace{\frac{f_1(x)}{f_0(x)}}_{\text{CP score}} .
+\frac{f_0(x)}{f_0(x)+b(x)}
+\frac{f_1(x)}{f_0(x)} .
 ```
+
+The first factor is the signal purity and the second is the signal-only CP
+score.
 
 > **In plain words:** in the presence of background, the best observable is (purity) × (CP score). This motivates using the selection-MVA score $q_{SB}$ **as a second dimension** $(q_{SB}, O_{\mathrm{CP}})$ rather than only as a hard cut — a hard cut throws away the purity information of the events it keeps. Chapter 6 quantifies the difference.
 
@@ -624,8 +679,12 @@ For a histogram of independent Poisson bins with expectations
 I(0)
 =
 \sum_i
-\frac{\nu_{1,i}^2}{\nu_{0,i}} ,
-\qquad\text{with per-bin contribution}\quad
+\frac{\nu_{1,i}^2}{\nu_{0,i}} .
+```
+
+The contribution from bin $i$ is
+
+```math
 I_i=\frac{\nu_{1,i}^2}{\nu_{0,i}} .
 ```
 
@@ -642,18 +701,20 @@ I=\sum_i\frac{s_{1,i}^2}{s_{0,i}+b_i} .
 
 > Note: high purity alone is not enough — a useful bin needs a large interference yield relative to $\sqrt{s_{0}+b}$.
 
-Two variants to be aware of:
+The **absolute-yield Fisher** above includes both rate and shape information.
+If the overall normalisation is removed or profiled away, use the
+**shape-only Fisher**:
 
-- **absolute-yield Fisher** (the formulas above) includes both *rate* and *shape* information;
-- if the overall normalisation is removed or profiled away, use the **shape-only** Fisher:
-  ```math
-  I_{\mathrm{shape}}
-  =
-  \sum_i\frac{\nu_{1,i}^2}{\nu_{0,i}}
-  -
-  \frac{\left(\sum_i\nu_{1,i}\right)^2}{\sum_i\nu_{0,i}} .
-  ```
-  (For a purely CP-odd observable $\sum_i \nu_{1,i}\approx 0$ and the two coincide.)
+```math
+I_{\mathrm{shape}}
+=
+\sum_i\frac{\nu_{1,i}^2}{\nu_{0,i}}
+-
+\frac{\left(\sum_i\nu_{1,i}\right)^2}{\sum_i\nu_{0,i}} .
+```
+
+For a purely CP-odd observable, $\sum_i\nu_{1,i}\approx0$, and the two
+variants coincide.
 
 Code: [../src/ilc_tth_cpv/fisher.py](../src/ilc_tth_cpv/fisher.py), driver [../scripts/evaluate_fisher.py](../scripts/evaluate_fisher.py).
 
@@ -697,7 +758,7 @@ For any observable $z$, evaluate the Fisher information at each analysis stage:
 I_{\mathrm{gen}}(z),\quad
 I_{\mathrm{reco}}(z),\quad
 I_{\mathrm{selected}}(z),\quad
-I_{\text{sig+bg}}(z),
+I_{\mathrm{sig+bg}}(z),
 ```
 
 and form the ratios that answer the project questions directly:
@@ -708,21 +769,28 @@ R_{\mathrm{reco}}
 R_{\mathrm{reco}}^{\mathrm{total}}
 =
 \frac{I_{\mathrm{reco}}^{\mathrm{baseline}}}
-{I_{\mathrm{gen}}^{\mathrm{inclusive}}}
-\quad\text{(what fraction survives reconstruction?)},
+{I_{\mathrm{gen}}^{\mathrm{inclusive}}} .
 ```
+
+This is the fraction of information that survives reconstruction.
+
 ```math
-R_{\mathrm{selection}}=\frac{I_{\mathrm{selected}}}{I_{\mathrm{reco}}}
-\quad\text{(what does the MVA cut cost?)},
+R_{\mathrm{selection}}=\frac{I_{\mathrm{selected}}}{I_{\mathrm{reco}}} .
 ```
+
+This measures the cost of the MVA selection.
+
 ```math
-R_{\mathrm{background}}=\frac{I_{\text{sig+bg}}}{I_{\mathrm{selected}}}
-\quad\text{(what does background dilution cost?)},
+R_{\mathrm{background}}=\frac{I_{\mathrm{sig+bg}}}{I_{\mathrm{selected}}} .
 ```
+
+This measures background dilution.
+
 ```math
-G_{\text{ML/angle}}=\frac{I_{\mathrm{ML}}}{I_{\mathrm{angle}}}
-\quad\text{(what does ML gain over the plain angle?)}.
+G_{\mathrm{ML/angle}}=\frac{I_{\mathrm{ML}}}{I_{\mathrm{angle}}} .
 ```
+
+This measures the gain from ML over the plain angle.
 
 > **Fair-comparison rule:** every ratio requires the *same* luminosity, coupling convention, sample/chunk scope, weight normalisation, and binning strategy. For the primary gen-to-reco total retention, the event populations are intentionally not identical (§2.8); identical event IDs are required only for the optional matched-event migration diagnostic.
 
@@ -760,25 +828,40 @@ The **LCF 550 GeV scenario** assumed here: total $8~\mathrm{ab}^{-1}$, shared am
 
 **Polarisation in ML training — three rules:**
 
-1. $a_r,b_r$ are **event weights**, never input features, and must never multiply the final classifier score.
-2. To train for physical run configuration $r$: pool the LR and RL events, weight them as
-   ```math
-   w_{e,r}^{\mathrm{phys}}
-   =
-   \begin{cases}
-   a_r\, w_e^{LR}, & e\in LR,\\
-   b_r\, w_e^{RL}, & e\in RL,
-   \end{cases}
-   ```
-   preserving the physical LR/RL mixture *inside* each class. Equalising total (+) vs (−) class weight for training stability is allowed.
-3. Final templates use unbalanced physical yield weights including luminosity:
-   ```math
-   w_{e,r}^{\mathrm{template}}
-   =
-   \mathcal{L}_r\, a_r\, w_e^{LR}
-   \quad\text{or}\quad
-   \mathcal{L}_r\, b_r\, w_e^{RL}.
-   ```
+1. $a_r,b_r$ are **event weights**, never input features, and must never
+   multiply the final classifier score.
+2. To train for physical run configuration $r$, pool LR and RL events. For an
+   LR event use
+
+```math
+w_{e,r}^{\mathrm{phys}}=a_r\,w_e^{LR},\qquad e\in LR .
+```
+
+For an RL event use
+
+```math
+w_{e,r}^{\mathrm{phys}}=b_r\,w_e^{RL},\qquad e\in RL .
+```
+
+This preserves the physical LR/RL mixture inside each class. Equalising total
+positive and negative class weight for training stability is allowed.
+
+3. Final templates use the physical yield weights including luminosity. For
+   an LR event,
+
+```math
+w_{e,r}^{\mathrm{template}}
+=
+\mathcal{L}_r\,a_r\,w_e^{LR} .
+```
+
+For an RL event,
+
+```math
+w_{e,r}^{\mathrm{template}}
+=
+\mathcal{L}_r\,b_r\,w_e^{RL} .
+```
 
 Per-run likelihoods are combined by multiplication: $\mathcal{L}_{\mathrm{LCF}}(c)=\prod_r\mathcal{L}_r(c)$.
 
@@ -888,7 +971,7 @@ I_{x^I_{t\varphi}}
 =
 K^2 I_{c_{\mathrm{gen}}},
 \qquad
-\Delta\!\left(\frac{C^I_{t\varphi}}{\Lambda^2}\right)
+\Delta\left(\frac{C^I_{t\varphi}}{\Lambda^2}\right)
 =
 \frac{\Delta c_{\mathrm{gen}}}{|K|}\ \mathrm{TeV}^{-2}.
 ```
@@ -1167,7 +1250,7 @@ I_{\mathrm{ML}}^{\mathrm{gen}},\quad
 I_{\mathrm{ML}}^{\mathrm{reco}},
 ```
 
-plus $R_{\mathrm{reco}}$ and $G_{\text{ML/angle}}$ — **separately for pure LR and pure RL**.
+plus $R_{\mathrm{reco}}$ and $G_{\mathrm{ML/angle}}$ — **separately for pure LR and pure RL**.
 
 For the headline $R_{\mathrm{reco}}$, build $I_{\mathrm{gen}}$ from the
 inclusive generated population and $I_{\mathrm{reco}}$ from the full
@@ -1264,8 +1347,9 @@ I(s_W),\quad I(s_X),\quad I(M_{\mathrm{early}}),\quad I(s_{\mathrm{late}}),\quad
 ```
 ```math
 \Delta I_{X|W}=I(W+X)-I(W)
-\quad\text{(the conditional gain from adding }X\text{)}.
 ```
+
+This is the conditional information gain from adding branch $X$.
 
 **Deliverable:** a justified answer to "one all-feature model, separated branches, or a multidimensional likelihood?" — including "they are equivalent", if that is what the numbers say.
 
@@ -1340,7 +1424,7 @@ Aim for a single figure/table comparing
 I_{\mathrm{gen}},\qquad
 I_{\mathrm{reco}},\qquad
 I_{\mathrm{selected}},\qquad
-I_{\text{sig+bg}}
+I_{\mathrm{sig+bg}}
 ```
 
 for three observables: $O_W$ (angle), $M_W$ (ML), and one fused observable. This one plot answers questions 1, 2, and 4 of §1.3 at a glance.
@@ -1389,7 +1473,7 @@ for three observables: $O_W$ (angle), $M_W$ (ML), and one fused observable. This
 
 Fill one row per (family, level, frame, representation, model, polarisation) combination:
 
-| Family | Level | Frame | Representation | Model | Polarisation | $I$ | $R_{\mathrm{reco}}$ | $G_{\text{ML/angle}}$ | Status |
+| Family | Level | Frame | Representation | Model | Polarisation | $I$ | $R_{\mathrm{reco}}$ | $G_{\mathrm{ML/angle}}$ | Status |
 |---|---|---|---|---|---|---:|---:|---:|---|
 | $W$ | gen | Higgs rest | angle | — | LR |  | — | — |  |
 | $W$ | reco | Higgs rest | angle | — | LR |  |  | — |  |
