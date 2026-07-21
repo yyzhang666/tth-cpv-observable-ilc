@@ -3,7 +3,7 @@
 Unified entry point for the ILC/LCF `e+e- -> ttH` CP-violation summer-student
 project on the DESY NAF.
 
-Local working copy name on NAF: `ilc-tth-cpv-v2`.
+Supervisor reference copy on NAF: `ilc-tth-cpv-v2`.
 GitHub mirror: `git@github.com:yyzhang666/tth-cpv-observable-ilc.git`.
 
 ## What this repository studies
@@ -41,10 +41,32 @@ The full scientific programme: [docs/PROJECT_NOTE_FULL.md](docs/PROJECT_NOTE_FUL
 - Everything blocking or ambiguous is tracked in
   [KNOWN_ISSUES.md](KNOWN_ISSUES.md). Read it before trusting any convention.
 
+## Clone on the NAF: use your own DUST
+
+Do not clone the working repository into AFS (`/afs/desy.de/user/...`). The
+kinfit ROOT files, feature tables, models, and plots are written below the
+working copy, so the clone itself must live in the student's DUST area:
+
+```bash
+mkdir -p /data/dust/user/$USER/analysis
+cd /data/dust/user/$USER/analysis
+
+# After forking on GitHub, replace YOUR_GITHUB_ACCOUNT with the student's account.
+git clone git@github.com:YOUR_GITHUB_ACCOUNT/tth-cpv-observable-ilc.git
+cd tth-cpv-observable-ilc
+```
+
+The large input samples remain read-only in the supervisor's
+`events_physsim/production` tree through [configs/samples.yaml](configs/samples.yaml);
+they are not copied. All student products then stay under
+`/data/dust/user/$USER/analysis/tth-cpv-observable-ilc/outputs/`. Do not put
+derived student products inside the shared `events_physsim` or
+`events_whizard` production trees.
+
 ## Quick start
 
 ```bash
-cd /data/dust/user/zhangyuy/analysis/ilc-tth-cpv-v2
+cd /data/dust/user/$USER/analysis/tth-cpv-observable-ilc
 source env/setup.sh
 bash env/check_environment.sh
 bash env/check_environment.sh --data

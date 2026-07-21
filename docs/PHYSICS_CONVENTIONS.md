@@ -134,15 +134,24 @@ not renormalise. LCF scenario: 8 ab^-1 with fractions (10,40,40,10)% for
 (--, -+, +-, ++), see `configs/lcf_polarization.yaml`. Check the generator
 spin-averaging convention before using yields (KNOWN_ISSUES #7).
 
-`a_r, b_r` act exclusively as event weights for training and templates; they
-stay out of the feature list and out of any score post-scaling.
+`a_r, b_r` are later physics-template/yield factors. The current pure-LR and
+pure-RL baseline models are trained separately without polarisation
+reweighting. These factors stay out of the feature list and out of any score
+post-scaling.
 
 ## 8. Training vs template weights
 
-- Training: `weight_training ∝ |w_int|`, class balancing allowed.
-- Physics templates: `weight_interference_signed` (signed) and `weight_sm`,
-  luminosity included, always with the physical (class-unbalanced) weights.
-- The two live in separate columns of every feature table (DATA_SCHEMA.md).
+- Current production is already importance-sampled on `|w_int|`, and its
+  absolute per-event weight is constant within a chunk. Thus the base
+  `weight_training = |w_int|` is equivalent to unweighted training here. The
+  trainer currently adds class balancing inside the training split and then
+  normalises the optimizer weights. This is optimizer bookkeeping, not
+  polarisation or yield weighting.
+- Interference templates use the signed `weight_template` (initially
+  `weight_interference_signed`; later multiplied by polarisation and
+  luminosity). Future SM templates use `weight_sm`.
+- Training-time rescaling is never written into the physics-template column
+  (DATA_SCHEMA.md).
 
 ## 9. ML observable convention
 
@@ -187,3 +196,5 @@ kinfit + jet assignment stage (docs/KINFIT_JET_ASSIGNMENT.md):
 - 2026-07-21: clarified fixed-lab-axes versus Ma production-plane usage, the
   separate lab definition, beam-crossing-angle handling, and the near-beam
   degeneracy guard.
+- 2026-07-21: clarified sidecar-to-event alignment and separated base training
+  weights, signed template weights, and later polarisation/yield factors.

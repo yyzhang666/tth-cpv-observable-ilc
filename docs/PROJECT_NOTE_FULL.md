@@ -195,7 +195,7 @@ where
 
 The same classification applies to observables: $O$ is **CP-even** if $O(\bar x)=O(x)$ and **CP-odd** if $O(\bar x)=-O(x)$. Two consequences drive the entire analysis strategy:
 
-1. In a CP-symmetric sample (the SM part $f_0$ alone), any CP-odd observable has a distribution **symmetric around zero**, so $\langle O\rangle=0$. (This is also the "SM CP closure" validation check of §3.4.)
+1. In a CP-symmetric sample (the SM part $f_0$ alone), any CP-odd observable has a distribution **symmetric around zero**, so $\langle O\rangle=0$. This becomes the SM CP-closure check once the required SM template is available.
 2. Only the CP-odd part of an observable is *linearly* sensitive to $c$: since $f_1$ is CP-odd, $\int O\,f_1\,dx=0$ for any CP-even $O$, while for a CP-odd $O$
 
 ```math
@@ -210,38 +210,81 @@ The same classification applies to observables: $O$ is **CP-even** if $O(\bar x)
 
 The required programme uses only $f_0 + c f_1$. The quadratic term is Optional Extension 3.
 
-## 2.2 Signed interference weights — the most important bookkeeping rule
+## 2.2 Attach each sidecar weight to the correct event
 
-The generator provides, per event, an SM weight and a **signed interference weight** $w_{\mathrm{int}}$ that samples $f_1$. Because $f_1$ changes sign, $w_{\mathrm{int}}$ is negative for some events. This has two consequences:
+The important bookkeeping problem is not event generation. The event
+kinematics are stored in STDHEP/SLCIO, while the sign and normalisation of the
+CP-odd interference are stored in a separate per-chunk sidecar CSV. A sidecar
+row has physics meaning only when it is attached to the correct event.
 
-**(a) You cannot treat $f_1$ as a probability density** — it is not one. You cannot "generate events distributed as $f_1$".
-
-**(b) A classifier trick makes it usable for ML.** Define a label from the sign and a training weight from the magnitude:
+For the current production samples, sidecar row $i$ belongs to the $i$-th
+usable STDHEP event in the same chunk. `weights.py` enforces sequential sidecar
+event numbers and checks
 
 ```math
-y=
-\begin{cases}
-+1,& f_1(x)>0,\\
--1,& f_1(x)<0,
-\end{cases}
+s_{\mathrm{sidecar}}=\mathrm{sign}(w_{\mathrm{int}}),
 \qquad
-w_{\mathrm{train}} \propto |f_1(x)| .
+|w_{\mathrm{int}}|
+=
+\frac{\sigma_{|\mathrm{int}|}}{N_{\mathrm{generated}}}.
 ```
 
-A classifier trained to separate $y=+1$ from $y=-1$ with weights $|f_1|$ learns exactly the regions where interference is positive vs. negative — which is the CP-sensitive direction in feature space.
+The older historical validation sample has an additional complication:
+JSFHadronizer skipped some numbered events. Its skipped event numbers are read
+from the Physsim log and removed from the sidecar before row-by-row alignment.
+The current production chunks do not use that skip-log correction.
 
-**Connection to §2.1 — the two classes are CP mirror images.** Since $f_1(\bar x)=-f_1(x)$, applying a CP transformation to any $y=+1$ configuration produces a $y=-1$ configuration with the same $|f_1|$. The classifier is therefore literally being asked "does this event look more like itself or like its CP image?", and its ideal decision function is a **CP-odd function of the event**. In this sense the ML observable of §2.6 is the *learned* counterpart of the hand-built CP-odd angles of §2.3 — both are approximations to the same CP-odd score.
+At reconstruction level, the kinfit tree stores `event_index`, the input SLCIO
+record index. `export_features.py` uses that index both to retrieve the reco
+objects and to retrieve the corresponding row of the already aligned sidecar.
+If this alignment is shifted by even one event, a perfectly plausible angle is
+assigned another event's interference sign. The resulting asymmetry or ML
+label is then meaningless even though every individual input file still looks
+valid. This is why Chapter 3 asks for sidecar counts, event-index checks, and
+`n_event_number_mismatch=0` before any plot is interpreted.
 
-**The golden rule — never mix these two kinds of weights:**
+### What the weight columns actually mean
 
-| Purpose | Weight | Class balancing allowed? |
+The current CPV sidecar supplies the signed interference weight used for
+$f_1$. A usable SM yield weight for $f_0$ is not yet available in these feature
+tables, so `weight_sm` remains `NaN`. The relevant columns are:
+
+| Column | Current meaning | Where it is used |
 |---|---|---|
-| ML training | $\propto \lvert f_1 \rvert$ | yes (helps convergence) |
-| Physics templates / yields / Fisher | signed $w_{\mathrm{int}} = \mathrm{sign}(f_1)\,\lvert w_{\mathrm{int}}\rvert$ | **never** |
+| `label` | $+1$ or $-1$ from the sign of $w_{\mathrm{int}}$ | classifier target only |
+| `weight_training` | non-negative base optimizer weight, currently $|w_{\mathrm{int}}|$ | `train_cpv_model.py` only |
+| `weight_interference_signed` | signed MC estimate of the interference derivative $f_1$ | provenance and physics checks |
+| `weight_template` | initially the same signed weight; later multiplied by polarisation and luminosity factors | angular/ML interference templates |
+| `weight_sm` | future SM yield weight for $f_0$ | future SM denominator and Fisher calculation |
 
-If you balance classes or drop signs in a final yield template, your predicted physics is simply wrong. Keep the two weight columns separate in every table you write.
+The official samples were already generated by importance sampling
+$|f_1|$. Within each current production chunk, $|w_{\mathrm{int}}|$ is constant.
+Therefore this base weight is equivalent to an unweighted fit for the present
+samples; normalising it to mean one does not change that. The only non-uniform
+training rescaling currently introduced is that the trainer equalises the
+total positive- and negative-class weight in the training split. That is an
+optimizer choice, not a physics weight, and it is unrelated to beam
+polarisation.
 
-Code: [../src/ilc_tth_cpv/weights.py](../src/ilc_tth_cpv/weights.py).
+Polarisation enters later: `apply_polarization_weights.py` multiplies the
+signed template weight by the LR/RL mixture coefficient and luminosity. It does
+not turn $|w_{\mathrm{int}}|$ into a physics yield and it does not alter the
+sign label.
+
+The distinction that must be preserved is therefore simple:
+`weight_training` controls how the classifier is fitted;
+`weight_template` controls how the already evaluated score or angle contributes
+to the signed $f_1$ histogram. Class balancing during `model.fit` is not itself
+a physics error, because the template builder returns to the original signed
+`weight_template`. The error would be to fill an interference template with
+the non-negative or class-balanced training weights: that would estimate
+$|f_1|$, not the signed derivative $f_1$ needed in
+$\nu(c)=\nu_0+c\nu_1$.
+
+Code: [../src/ilc_tth_cpv/weights.py](../src/ilc_tth_cpv/weights.py),
+[../scripts/export_features.py](../scripts/export_features.py),
+[../scripts/train_cpv_model.py](../scripts/train_cpv_model.py), and
+[../scripts/apply_polarization_weights.py](../scripts/apply_polarization_weights.py).
 
 ## 2.3 Angular observables
 
@@ -879,7 +922,7 @@ By the end of the chapter, the student should be able to answer, without guessin
 ### Step 0 — check the environment and registered data
 
 ```bash
-cd /data/dust/user/zhangyuy/analysis/ilc-tth-cpv-v2
+cd /data/dust/user/$USER/analysis/tth-cpv-observable-ilc
 source env/setup.sh
 bash env/check_environment.sh
 bash env/check_environment.sh --data

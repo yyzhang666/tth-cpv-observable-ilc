@@ -66,7 +66,7 @@ model:
   score: "P(+) - P(-)"        # frozen convention, stored in model metadata
 
 weights:
-  training_weight: weight_training              # |w_int|, optionally class-balanced
+  training_weight: weight_training              # base |w_int|; class balance is trainer-only
   template_weight: weight_interference_signed   # NEVER class-balanced
   sm_template_weight: weight_sm                 # pending SM sample (KNOWN_ISSUES #5)
 

@@ -26,10 +26,10 @@ note in the metadata, so missing weights stay visible.
 | `weight_interference_signed` | signed interference weight (fb-scaled), physics templates only |
 | `weight_interference_abs` | `abs(weight_interference_signed)` |
 | `weight_quadratic` | optional `c^2` term weight (Optional extension 3) |
-| `weight_training` | training-only weight, may be class-balanced |
+| `weight_training` | non-negative base optimizer weight; any class balancing is applied only inside the trainer and is not written back here |
 | `weight_polarization` | `a_r` or `b_r` factor for a running configuration |
 | `weight_luminosity` | luminosity scale of the running configuration |
-| `weight_template` | final template weight = product of physics factors (always the physical, class-unbalanced weights) |
+| `weight_template` | signed interference template weight; later includes polarisation and luminosity factors |
 
 ## Object kinematics
 
