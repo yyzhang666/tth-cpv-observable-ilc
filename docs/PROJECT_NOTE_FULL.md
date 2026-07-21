@@ -1,10 +1,10 @@
 # Summer Student Project Note
 
-## Validation and stability study of ML-learned CP observables in semileptonic $e^+e^- \to t\bar tH$
+## Validation and stability study of ML-learned CP observables in semileptonic $e^+e^- \to t\bar{t}H$
 
-**Status:** working project note  
-**Analysis energy:** $\sqrt{s}=550~\mathrm{GeV}$  
-**Core channel:** semileptonic $t\bar tH$, with $H\to b\bar b$  
+**Status:** working project note
+**Analysis energy:** $\sqrt{s}=550~\mathrm{GeV}$
+**Core channel:** semileptonic $t\bar{t}H$, with $H\to b\bar{b}$
 **Available initial states:** $e^-_Le^+_R$ and $e^-_Re^+_L$, corresponding to $(-100\%,+100\%)$ and $(+100\%,-100\%)$
 
 > This project starts from a developing analysis. There is no completed angular–ML baseline to reproduce. The first scientific result is therefore the construction, validation, and documentation of that baseline.
@@ -15,20 +15,20 @@
 
 The top-Higgs interaction can be written as
 
-$$
-\mathcal L_{t\bar tH}
+```math
+\mathcal{L}_{t\bar{t}H}
 =
 -\frac{m_t}{v}H\,
-\bar t\left(\kappa_t+i\widetilde\kappa_t\gamma_5\right)t.
-$$
+\bar{t}\left(\kappa_t+i\widetilde{\kappa}_t\gamma_5\right)t.
+```
 
 In the Standard Model,
 
-$$
-\kappa_t=1,\qquad \widetilde\kappa_t=0.
-$$
+```math
+\kappa_t=1,\qquad \widetilde{\kappa}_t=0.
+```
 
-A non-zero pseudoscalar component introduces CP-violating structure into $t\bar tH$ production and top-decay correlations. At a linear $e^+e^-$ collider, the clean initial state, beam polarisation, charge-aware flavour tagging, and full event reconstruction provide several complementary probes.
+A non-zero pseudoscalar component introduces CP-violating structure into $t\bar{t}H$ production and top-decay correlations. At a linear $e^+e^-$ collider, the clean initial state, beam polarisation, charge-aware flavour tagging, and full event reconstruction provide several complementary probes.
 
 Traditional studies compress each event into one angular observable. An ML-learned CP observable can instead combine several correlated kinematic quantities. The central question is:
 
@@ -44,7 +44,7 @@ The project begins with the following conditions.
 4. No complete angular–ML baseline currently exists.
 5. The final signal-versus-background event-selection MVA is under development and is expected after approximately one to two weeks.
 6. Apart from the isolated-lepton multiplicity requirement and technical validity requirements, the final physics selection will be MVA-based.
-7. The student is not responsible for validating the generator, producing every missing MC sample, or finishing the whole $t\bar tH$ analysis.
+7. The student is not responsible for validating the generator, producing every missing MC sample, or finishing the whole $t\bar{t}H$ analysis.
 
 ## 1.3 Required scientific questions
 
@@ -52,7 +52,7 @@ The required programme addresses five questions.
 
 1. For one physical object pair, how much information is captured by a signed angular observable and how much additional information is captured by an ML model using the same objects?
 2. How much information is lost when truth-level objects are replaced by reconstructed objects?
-3. How do hadronic-$W$, top-decay $b/\bar b$, lepton-neutrino, and reconstructed-top observables compare?
+3. How do hadronic-$W$, top-decay $b/\bar{b}$, lepton-neutrino, and reconstructed-top observables compare?
 4. Is the best combination strategy an all-feature model, separated physical branches, late fusion, or a multidimensional likelihood?
 5. How should fully polarised $LR/RL$ samples be converted into the physical LCF running configuration?
 
@@ -92,42 +92,42 @@ A negative result is valid. Examples include:
 
 A one-parameter convention is
 
-$$
-\mathcal L_{t\bar tH}
+```math
+\mathcal{L}_{t\bar{t}H}
 =
 -\frac{m_t}{v}H\,
-\bar t\left(\cos\xi+i\sin\xi\,\gamma_5\right)t.
-$$
+\bar{t}\left(\cos\xi+i\sin\xi\,\gamma_5\right)t.
+```
 
 The amplitude is
 
-$$
-\mathcal M(\xi)=\cos\xi\,\mathcal M_S+\sin\xi\,\mathcal M_P.
-$$
+```math
+\mathcal{M}(\xi)=\cos\xi\,\mathcal{M}_S+\sin\xi\,\mathcal{M}_P.
+```
 
 Near the Standard Model point, use a local parameter $c$:
 
-$$
+```math
 \frac{d\sigma}{dx}=f_0(x)+c f_1(x)+c^2 f_2(x),
-$$
+```
 
 where
 
-$$
+```math
 f_0=\frac{d\sigma_{\mathrm{SM}}}{dx},
-$$
+```
 
-$$
+```math
 f_1=\frac{d\sigma_{\mathrm{int}}}{dx}
 =
-2\operatorname{Re}\left(\mathcal M_{\mathrm{SM}}^{\ast}\mathcal M_{\mathrm{CPV}}\right)d\Phi,
-$$
+2\operatorname{Re}\left(\mathcal{M}_{\mathrm{SM}}^{\ast}\mathcal{M}_{\mathrm{CPV}}\right)d\Phi,
+```
 
 and
 
-$$
+```math
 f_2=\frac{d\sigma_{\mathrm{CPV}^2}}{dx}.
-$$
+```
 
 The required study begins with $f_0+c f_1$. The quadratic term is optional.
 
@@ -135,21 +135,21 @@ The required study begins with $f_0+c f_1$. The quadratic term is optional.
 
 The interference contribution is signed and is not a probability density. A classifier may separate
 
-$$
+```math
 y=
 \begin{cases}
 +1,& f_1(x)>0,\\
 -1,& f_1(x)<0,
 \end{cases}
-$$
+```
 
 using training weights proportional to $|f_1|$. Final physics templates must use the signed interference weight,
 
-$$
+```math
 w_{\mathrm{int}}
 =
 \operatorname{sign}(f_1)|w_{\mathrm{int}}|.
-$$
+```
 
 Training weights and physics-template weights must remain separate. Class balancing may be used in training but never in final yield templates.
 
@@ -157,30 +157,30 @@ Training weights and physics-template weights must remain separate. Class balanc
 
 Define a signed azimuthal difference
 
-$$
+```math
 \Delta\phi(a,b)
 =
 \operatorname{wrap}(\phi_a-\phi_b)
 \in(-\pi,\pi].
-$$
+```
 
 The object ordering matters. The current analysis uses charge-aware ParT information and the reconstructed decay assignment.
 
 Initial observable families are
 
-$$
+```math
 O_W=\Delta\phi(j_{W,\mathrm{up}},j_{W,\mathrm{down}}),
-$$
+```
 
-$$
-O_b=\Delta\phi(b_t,b_{\bar t}),
-$$
+```math
+O_b=\Delta\phi(b_t,b_{\bar{t}}),
+```
 
-$$
+```math
 O_{\ell\nu}=\Delta\phi(\ell,\nu_W),
-$$
+```
 
-and a supervisor-approved $O_{\mathrm{top}}$ based on reconstructed $t,\bar t$ systems.
+and a supervisor-approved $O_{\mathrm{top}}$ based on reconstructed $t,\bar{t}$ systems.
 
 Exact definitions, charge conventions, and axis conventions must be frozen in one configuration file.
 
@@ -190,31 +190,31 @@ The $O_W$ pilot study uses:
 
 - laboratory or collider centre-of-mass frame;
 - Higgs rest frame;
-- $t\bar t$ rest frame.
+- $t\bar{t}$ rest frame.
 
 Four-vectors remain the internal representation for Lorentz boosts. After boosting, angular features are evaluated.
 
 A production-plane basis for a system $X$ may be defined as
 
-$$
+```math
 \hat z=\frac{\vec p_X^{\,\mathrm{lab}}}{|\vec p_X^{\,\mathrm{lab}}|},
-$$
+```
 
-$$
+```math
 \hat x=
 \frac{\hat p_{e^-}-(\hat p_{e^-}\cdot\hat z)\hat z}
 {\left|\hat p_{e^-}-(\hat p_{e^-}\cdot\hat z)\hat z\right|},
-$$
+```
 
-$$
+```math
 \hat y=\hat z\times\hat x.
-$$
+```
 
 Then
 
-$$
+```math
 \phi_i=\operatorname{atan2}(\vec p_i\cdot\hat y,\vec p_i\cdot\hat x).
-$$
+```
 
 The approved convention must be implemented once in a shared frame library.
 
@@ -222,17 +222,17 @@ The approved convention must be implemented once in a shared frame library.
 
 A four-vector is
 
-$$
+```math
 p^\mu=(E,p_x,p_y,p_z),
-$$
+```
 
 with
 
-$$
+```math
 p_x=|\vec p|\sin\theta\cos\phi,\qquad
 p_y=|\vec p|\sin\theta\sin\phi,\qquad
 p_z=|\vec p|\cos\theta.
-$$
+```
 
 For a nearly massless jet, $(E,\theta,\phi)$ contains almost the same independent information as the four-vector. It separates:
 
@@ -242,28 +242,28 @@ For a nearly massless jet, $(E,\theta,\phi)$ contains almost the same independen
 
 This is physically aligned with CP-sensitive azimuthal observables and gives a transparent gen/reco comparison through
 
-$$
+```math
 \Delta E,\qquad \Delta\theta,\qquad \Delta\phi.
-$$
+```
 
 However, raw $\phi$ is discontinuous at $-\pi$ and $+\pi$. A robust ML representation is
 
-$$
+```math
 \left(
 \log\frac{E}{E_0},
 \cos\theta,
 \sin\phi,
 \cos\phi
 \right),
-$$
+```
 
 optionally with
 
-$$
+```math
 m_j/E_j
 \quad\text{or}\quad
 m_j.
-$$
+```
 
 Four-vectors must still be preserved internally for boosts and invariant-mass calculations.
 
@@ -273,13 +273,13 @@ Each angle is paired first with an ML model using the same physical objects.
 
 For the hadronic-$W$ branch,
 
-$$
+```math
 M_W:F_W\rightarrow s_W.
-$$
+```
 
 A minimal feature set is
 
-$$
+```math
 F_W^{\mathrm{min}}
 =
 \left\{
@@ -287,11 +287,11 @@ E,\theta,\phi
 \right\}_{j_{W,\mathrm{up}},j_{W,\mathrm{down}}}
 +
 \text{frame-defining information}.
-$$
+```
 
 An extended set may include
 
-$$
+```math
 F_W^{\mathrm{ext}}
 =
 F_W^{\mathrm{min}}
@@ -302,21 +302,21 @@ P_{\mathrm{pair}},
 P_{\mathrm{orientation}},
 \text{signed ParT probabilities}
 \right\}.
-$$
+```
 
 Analogous branches are $M_b$, $M_{\ell\nu}$, and $M_{\mathrm{top}}$.
 
 A binary ML observable may be
 
-$$
+```math
 O_{\mathrm{ML}}=P(+)-P(-),
-$$
+```
 
 or
 
-$$
+```math
 O_{\mathrm{logit}}=\log\frac{P(+)}{P(-)}.
-$$
+```
 
 The output convention must be stored in model metadata.
 
@@ -324,16 +324,16 @@ The output convention must be stored in model metadata.
 
 Let $x$ be the full event and
 
-$$
+```math
 t(x)=
 \left.\frac{\partial\log p(x|c)}{\partial c}\right|_{c=0}
-$$
+```
 
 the ideal local score. If only $z=g(x)$ is retained, the best possible observable in that feature space is
 
-$$
+```math
 t_z(z)=\mathbb E[t(x)\mid z].
-$$
+```
 
 Different feature groups are therefore different projections of the same CP-interference information. For a single coupling, they do not normally correspond to different CP phases.
 
@@ -348,27 +348,27 @@ This motivates comparing:
 
 All gen/reco comparisons must use identical event IDs. Define
 
-$$
+```math
 S_{\mathrm{common}}
 =
 \{
 \text{events with required reconstructed objects and valid assignment}
 \}.
-$$
+```
 
 For these events, evaluate both
 
-$$
+```math
 O_i^{\mathrm{gen}}
 \quad\text{and}\quad
 O_i^{\mathrm{reco}}.
-$$
+```
 
 An inclusive gen-level curve may be shown as an upper reference, but it must not enter a gen/reco retention ratio unless the event populations match.
 
 A single global bookkeeping table should record
 
-$$
+```math
 N_{\mathrm{generated}}
 \rightarrow
 N_{\text{isolated lepton}}
@@ -376,40 +376,40 @@ N_{\text{isolated lepton}}
 N_{\text{valid reconstruction}}
 \rightarrow
 N_{\text{MVA selected}}.
-$$
+```
 
 ## 2.9 Event-selection MVA and backgrounds
 
 For signal,
 
-$$
+```math
 f_{\mathrm{sig}}(x;c)=f_0(x)+c f_1(x).
-$$
+```
 
 A fixed selection $a(x)$ gives
 
-$$
+```math
 f_{\mathrm{selected}}(x;c)=a(x)\left[f_0(x)+c f_1(x)\right].
-$$
+```
 
 For accepted signal events, the local score remains $f_1/f_0$. Selection changes the retained event population and total information, but does not invalidate the signal-only study.
 
 With parameter-independent background $b(x)$,
 
-$$
+```math
 t_{\text{sig+bg}}(x)
 =
 \frac{f_1(x)}{f_0(x)+b(x)}
 =
 \frac{f_0(x)}{f_0(x)+b(x)}
 \frac{f_1(x)}{f_0(x)}.
-$$
+```
 
 This motivates a two-dimensional observable
 
-$$
+```math
 (q_{SB},O_{\mathrm{CP}}),
-$$
+```
 
 rather than treating $q_{SB}$ only as a hard cut.
 
@@ -417,20 +417,20 @@ rather than treating $q_{SB}$ only as a hard cut.
 
 For independent Poisson bins with
 
-$$
+```math
 \nu_i(c)=\nu_{0,i}+c\nu_{1,i},
-$$
+```
 
 the likelihood is
 
-$$
-\mathcal L(c)=
+```math
+\mathcal{L}(c)=
 \prod_i \operatorname{Pois}(n_i\mid\nu_i(c)).
-$$
+```
 
 At $c=0$,
 
-$$
+```math
 I(0)
 =
 \sum_i
@@ -442,64 +442,64 @@ I(0)
 =
 \sum_i
 \frac{\nu_{1,i}^2}{\nu_{0,i}}.
-$$
+```
 
 The per-bin information is
 
-$$
+```math
 I_i=\frac{\nu_{1,i}^2}{\nu_{0,i}}.
-$$
+```
 
 With parameter-independent background,
 
-$$
+```math
 \nu_{0,i}=s_{0,i}+b_i,\qquad
 \nu_{1,i}=s_{1,i},
-$$
+```
 
 so
 
-$$
+```math
 I=\sum_i\frac{s_{1,i}^2}{s_{0,i}+b_i}.
-$$
+```
 
 High purity alone is not enough; a useful bin must have large interference relative to the square root of the SM-plus-background yield.
 
 Absolute-yield Fisher includes rate and shape. If the total normalisation is removed or profiled,
 
-$$
+```math
 I_{\mathrm{shape}}
 =
 \sum_i\frac{\nu_{1,i}^2}{\nu_{0,i}}
 -
 \frac{\left(\sum_i\nu_{1,i}\right)^2}{\sum_i\nu_{0,i}}.
-$$
+```
 
 ## 2.11 From Fisher information to limits
 
 Near the reference point,
 
-$$
--2\Delta\log\mathcal L(c)\simeq I c^2.
-$$
+```math
+-2\Delta\log\mathcal{L}(c)\simeq I c^2.
+```
 
 Therefore,
 
-$$
+```math
 \sigma_c\simeq\frac{1}{\sqrt I}.
-$$
+```
 
 For one approximately Gaussian parameter,
 
-$$
+```math
 |c|_{68\%}\simeq\frac{1}{\sqrt I},
-$$
+```
 
 and the two-sided $95\%$ interval is approximately
 
-$$
+```math
 |c|_{95\%}\simeq\frac{1.96}{\sqrt I}.
-$$
+```
 
 Fisher information is primarily a local ranking metric. A final interval must come from an explicit likelihood scan if:
 
@@ -512,44 +512,44 @@ Fisher information is primarily a local ranking metric. A final interval must co
 
 With nuisance parameters $\theta$,
 
-$$
+```math
 I_{\mathrm{prof}}
 =
 I_{cc}
 -
 I_{c\theta}I_{\theta\theta}^{-1}I_{\theta c}.
-$$
+```
 
 ## 2.12 Retention and gain metrics
 
 For observable $z$, define
 
-$$
+```math
 I_{\mathrm{gen}}(z),\quad
 I_{\mathrm{reco}}(z),\quad
 I_{\mathrm{selected}}(z),\quad
 I_{\text{sig+bg}}(z).
-$$
+```
 
 Then
 
-$$
+```math
 R_{\mathrm{reco}}(z)=\frac{I_{\mathrm{reco}}(z)}{I_{\mathrm{gen}}(z)},
-$$
+```
 
-$$
+```math
 R_{\mathrm{selection}}(z)=\frac{I_{\mathrm{selected}}(z)}{I_{\mathrm{reco}}(z)},
-$$
+```
 
-$$
+```math
 R_{\mathrm{background}}(z)=\frac{I_{\text{sig+bg}}(z)}{I_{\mathrm{selected}}(z)},
-$$
+```
 
 and
 
-$$
+```math
 G_{\text{ML/angle}}=\frac{I_{\mathrm{ML}}}{I_{\mathrm{angle}}}.
-$$
+```
 
 All ratios require the same luminosity, coupling convention, event pool, and binning.
 
@@ -557,23 +557,23 @@ All ratios require the same luminosity, coupling convention, event pool, and bin
 
 For longitudinal polarisations $P_-$ and $P_+$,
 
-$$
+```math
 d\sigma(P_-,P_+)
 =
 a(P_-,P_+)\,d\sigma_{LR}
 +
 b(P_-,P_+)\,d\sigma_{RL},
-$$
+```
 
 where
 
-$$
+```math
 a(P_-,P_+)=\frac{(1-P_-)(1+P_+)}{4},
-$$
+```
 
-$$
+```math
 b(P_-,P_+)=\frac{(1+P_-)(1-P_+)}{4}.
-$$
+```
 
 For $80\%/60\%$ beams:
 
@@ -586,15 +586,15 @@ For $80\%/60\%$ beams:
 
 The LCF $550~\mathrm{GeV}$ scenario uses
 
-$$
+```math
 8~\mathrm{ab}^{-1}
-$$
+```
 
 with
 
-$$
+```math
 (--,-+,+-,++)=(10\%,40\%,40\%,10\%).
-$$
+```
 
 The generator cross-section convention must be checked before using these factors.
 
@@ -606,39 +606,39 @@ For physical running configuration $r$:
 
 1. combine $LR$ and $RL$ events;
 2. assign mixture weights
-   $$
+   ```math
    w_{e,r}^{\mathrm{phys}}
    =
    \begin{cases}
    a_r w_e^{LR},&e\in LR,\\
    b_r w_e^{RL},&e\in RL;
    \end{cases}
-   $$
+   ```
 3. preserve the physical $LR/RL$ mixture inside each class;
 4. optionally equalise the total positive and negative class weights for training stability;
 5. use unbalanced physical yield weights, including luminosity, for final templates.
 
 For final templates,
 
-$$
+```math
 w_{e,r}^{\mathrm{template}}
 =
-\mathcal L_r a_r w_e^{LR}
-$$
+\mathcal{L}_r a_r w_e^{LR}
+```
 
 or
 
-$$
+```math
 w_{e,r}^{\mathrm{template}}
 =
-\mathcal L_r b_r w_e^{RL}.
-$$
+\mathcal{L}_r b_r w_e^{RL}.
+```
 
 Dedicated mixed-polarisation classifiers may be trained for the four running categories. Their likelihoods are combined as
 
-$$
-\mathcal L_{\mathrm{LCF}}(c)=\prod_r\mathcal L_r(c).
-$$
+```math
+\mathcal{L}_{\mathrm{LCF}}(c)=\prod_r\mathcal{L}_r(c).
+```
 
 The initial physics study should still keep pure $LR$ and $RL$ separate.
 
@@ -646,23 +646,23 @@ The initial physics study should still keep pure $LR$ and $RL$ separate.
 
 If
 
-$$
+```math
 c_{\mathrm{gen}}=K\frac{C}{\Lambda^2},
-$$
+```
 
 then
 
-$$
+```math
 I_{C/\Lambda^2}=K^2 I_{c_{\mathrm{gen}}},
-$$
+```
 
 and
 
-$$
+```math
 \Delta\left(\frac{C}{\Lambda^2}\right)
 =
 \frac{\Delta c_{\mathrm{gen}}}{|K|}.
-$$
+```
 
 The factor $K$ depends on conventions and must be supplied or approved by the supervisor. A one-parameter conversion is not a multi-operator SMEFT fit.
 
@@ -734,9 +734,9 @@ A frozen baseline configuration, schema documentation, validated common event ta
 
 Construct
 
-$$
+```math
 O_W=\Delta\phi(j_{W,\mathrm{up}},j_{W,\mathrm{down}})
-$$
+```
 
 at generator and reconstruction levels using the current ParT-assisted assignment.
 
@@ -746,13 +746,13 @@ Test:
 
 - laboratory frame;
 - Higgs rest frame;
-- $t\bar t$ rest frame.
+- $t\bar{t}$ rest frame.
 
 ## 4.3 Feature schemes
 
 Minimal:
 
-$$
+```math
 F_W^{\mathrm{min}}
 =
 \left\{
@@ -761,13 +761,13 @@ F_W^{\mathrm{min}}
 \sin\phi,
 \cos\phi
 \right\}
-$$
+```
 
 for both W jets.
 
 Extended:
 
-$$
+```math
 F_W^{\mathrm{ext}}
 =
 F_W^{\mathrm{min}}
@@ -778,7 +778,7 @@ P_{\mathrm{pair}},
 P_{\mathrm{orientation}},
 \text{signed ParT probabilities}
 \right\}.
-$$
+```
 
 ## 4.4 Models
 
@@ -793,7 +793,7 @@ This is a stability study, not a large architecture search.
 
 Calculate
 
-$$
+```math
 I_{\mathrm{angle}}^{\mathrm{gen}},
 \quad
 I_{\mathrm{angle}}^{\mathrm{reco}},
@@ -801,7 +801,7 @@ I_{\mathrm{angle}}^{\mathrm{reco}},
 I_{\mathrm{ML}}^{\mathrm{gen}},
 \quad
 I_{\mathrm{ML}}^{\mathrm{reco}},
-$$
+```
 
 and the corresponding retention and gain ratios.
 
@@ -824,25 +824,25 @@ A matrix showing:
 
 ## 5.1 $O_b$
 
-$$
-O_b=\Delta\phi(b_t,b_{\bar t}).
-$$
+```math
+O_b=\Delta\phi(b_t,b_{\bar{t}}).
+```
 
-Use signed ParT $b/\bar b$ information, top-side assignment, and lepton-charge consistency.
+Use signed ParT $b/\bar{b}$ information, top-side assignment, and lepton-charge consistency.
 
 ## 5.2 $O_{\ell\nu}$
 
 Use the supervisor-approved lepton-neutrino angle,
 
-$$
+```math
 O_{\ell\nu}=\Delta\phi(\ell,\nu_W)
-$$
+```
 
 or its approved equivalent. Document the reconstruction-level neutrino estimator and validity flag.
 
 ## 5.3 $O_{\mathrm{top}}$
 
-Use a supervisor-approved top-level angle constructed from reconstructed $t,\bar t$ systems. Freeze the exact definition before implementation.
+Use a supervisor-approved top-level angle constructed from reconstructed $t,\bar{t}$ systems. Freeze the exact definition before implementation.
 
 ## 5.4 Required comparison
 
@@ -878,30 +878,30 @@ plus score convention, threshold, model version, and provenance.
 
 Compare
 
-$$
+```math
 I_{\mathrm{reco}}^{\mathrm{signal}}
 \quad\text{and}\quad
 I_{\mathrm{selected}}^{\mathrm{signal}}.
-$$
+```
 
 Calculate
 
-$$
+```math
 R_{\mathrm{selection}}
 =
 \frac{I_{\mathrm{selected}}^{\mathrm{signal}}}
 {I_{\mathrm{reco}}^{\mathrm{signal}}}.
-$$
+```
 
 ## 6.3 Signal plus background
 
 Use
 
-$$
+```math
 \nu_{0,i}=s_{0,i}+b_i,
 \qquad
 \nu_{1,i}=s_{1,i}.
-$$
+```
 
 Compare angular and ML observables after the nominal MVA cut.
 
@@ -927,29 +927,29 @@ Select one $X\in\{b,\ell\nu,\mathrm{top}\}$.
 
 ## 7.1 Early fusion
 
-$$
+```math
 M_{\mathrm{early}}(F_W,F_X).
-$$
+```
 
 ## 7.2 Late fusion
 
-$$
+```math
 s_W=M_W(F_W),
 \qquad
 s_X=M_X(F_X),
-$$
+```
 
-$$
+```math
 s_{\mathrm{late}}=M_{\mathrm{fusion}}(s_W,s_X).
-$$
+```
 
 ## 7.3 Multidimensional likelihood
 
 Use
 
-$$
+```math
 (s_W,s_X)
-$$
+```
 
 as a two-dimensional observable.
 
@@ -957,19 +957,19 @@ as a two-dimensional observable.
 
 Compare
 
-$$
+```math
 I(s_W),\quad
 I(s_X),\quad
 I(M_{\mathrm{early}}),\quad
 I(s_{\mathrm{late}}),\quad
 I(s_W,s_X).
-$$
+```
 
 Define
 
-$$
+```math
 \Delta I_{X|W}=I(W+X)-I(W).
-$$
+```
 
 ## 7.5 Deliverable
 
@@ -997,17 +997,17 @@ Do not:
 
 Use
 
-$$
-\mathcal L_r=f_r^{\mathrm{run}}\times 8~\mathrm{ab}^{-1}
-$$
+```math
+\mathcal{L}_r=f_r^{\mathrm{run}}\times 8~\mathrm{ab}^{-1}
+```
 
 and build one template category per configuration.
 
 Combine through
 
-$$
-\mathcal L_{\mathrm{total}}(c)=\prod_r\mathcal L_r(c).
-$$
+```math
+\mathcal{L}_{\mathrm{total}}(c)=\prod_r\mathcal{L}_r(c).
+```
 
 ## 8.4 Deliverable
 
@@ -1019,9 +1019,9 @@ Pure $LR/RL$, four running-category, and combined LCF sensitivities, with a rate
 
 Use a supervisor-approved mapping
 
-$$
+```math
 c_{\mathrm{gen}}=K\frac{C}{\Lambda^2}.
-$$
+```
 
 Record conventions, sign, units, and the local nature of the conversion. Do not claim a multi-operator fit.
 
@@ -1035,7 +1035,7 @@ Restricted scope:
 
 - use a frozen tau tagger;
 - add semitau events as a separate category;
-- retain the hadronic-$W$, $b/\bar b$, and top observables;
+- retain the hadronic-$W$, $b/\bar{b}$, and top observables;
 - do not build a tau polarimeter.
 
 Proceed only if the tagger team supplies a frozen model/interface, efficiency and fake rates, constituent links, and a usable charge convention.
@@ -1046,11 +1046,11 @@ Deliverable: sensitivity change from adding the tau category.
 
 The present assignment is already ParT-assisted. First compare current assignment with a truth-matched reconstructed-jet oracle:
 
-$$
+```math
 \Delta I_{\mathrm{pairing}}
 =
 I_{\mathrm{oracle}}-I_{\mathrm{current}}.
-$$
+```
 
 Proceed only if the gap is relevant.
 
@@ -1068,9 +1068,9 @@ Deliverable: increased CP information, not only higher pairing accuracy.
 
 Use
 
-$$
+```math
 \nu_i(c)=\nu_{0,i}+c\nu_{1,i}+c^2\nu_{2,i}.
-$$
+```
 
 Proceed if linear templates become negative, the interval is non-local, or a quadratic template is required for a physical finite-coupling scan.
 
@@ -1080,15 +1080,15 @@ Deliverable: comparison of linear and quadratic intervals, with EFT-truncation c
 
 Extend the required $W+X$ fusion to a larger controlled set, for example
 
-$$
+```math
 W+b+\mathrm{top}
-$$
+```
 
 or
 
-$$
+```math
 W+b+\ell\nu+\mathrm{top}.
-$$
+```
 
 Proceed only if the two-branch result is stable and additional branches have non-negligible conditional information.
 
@@ -1126,12 +1126,12 @@ Deliverable: an information-gain matrix for each added branch.
 
 Aim for one figure or table comparing
 
-$$
+```math
 I_{\mathrm{gen}},\qquad
 I_{\mathrm{reco}},\qquad
 I_{\mathrm{selected}},\qquad
 I_{\text{sig+bg}}
-$$
+```
 
 for:
 
@@ -1157,7 +1157,7 @@ A quoted result requires:
 
 The student is not required to:
 
-- finish the complete $t\bar tH$ analysis independently;
+- finish the complete $t\bar{t}H$ analysis independently;
 - validate the generator;
 - produce all missing MC samples;
 - derive a full optimal observable;
@@ -1168,9 +1168,9 @@ The student is not required to:
 
 # Chapter 12 — Suggested reading
 
-1. Project $t\bar tH$ generator-level CP-observable theory report.
-2. Ma et al. on frame-dependent $e^+e^-\to t\bar tH$ CP observables.
-3. CLIC $t\bar tH$ CP reconstruction study.
+1. Project $t\bar{t}H$ generator-level CP-observable theory report.
+2. Ma et al. on frame-dependent $e^+e^-\to t\bar{t}H$ CP observables.
+3. CLIC $t\bar{t}H$ CP reconstruction study.
 4. Qu et al., Particle Transformer.
 5. ILC charge-aware ParticleTransformer material.
 6. arXiv:2401.02474, on optimal-observable ideas and detector-level ML.
