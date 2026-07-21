@@ -433,25 +433,26 @@ This is exactly why Chapter 7 compares:
 
 If the branches are nearly independent projections, late fusion ≈ early fusion; if they are strongly overlapping, adding a branch gains little. Both outcomes are informative.
 
-## 2.8 Comparing gen and reco correctly: same events only
+## 2.8 Comparing gen and reco correctly: total retention first
 
-The single most common way to get a *wrong* gen/reco retention number is to compare **different event populations**. The rule:
-
-> Every gen-vs-reco comparison uses **identical event IDs** on both sides.
-
-Define the common set
+The main reconstruction metric in this project is the **total Fisher-information retention**
 
 ```math
-S_{\mathrm{common}}
+R_{\mathrm{reco}}^{\mathrm{total}}
 =
-\{\text{events with the required reconstructed objects and a valid assignment}\},
+\frac{I_{\mathrm{reco}}^{\mathrm{baseline}}}
+{I_{\mathrm{gen}}^{\mathrm{inclusive}}}.
 ```
 
-and evaluate **both** $O_i^{\mathrm{gen}}$ and $O_i^{\mathrm{reco}}$ on exactly these events. Then any difference in information is genuinely due to resolution and mis-assignment — not to one side simply having more events.
+The denominator uses the inclusive generated sample for which the chosen gen-level observable is defined. It does **not** require a corresponding reconstructed event. The numerator uses the full reconstructed baseline produced by the standard workflow: events enter only when reconstruction, the production kinfit assignment, and the validity requirements needed by the observable succeed.
 
-You may additionally show an *inclusive* gen-level curve (all generated events) as an upper reference line on plots, but it must never enter a retention ratio.
+Do **not** intersect gen and reco event IDs before evaluating this primary ratio. A generated event that is missing at reco level, fails reconstruction, has no valid assignment, or cannot define the reco observable contributes no reco template entry. Its absence is therefore part of the information loss. The per-event template weights must retain their original generated-sample normalisation, so these failures reduce $I_{\mathrm{reco}}$ instead of silently shrinking the denominator as well.
 
-Keep one global bookkeeping funnel, always up to date:
+The gen and reco calculations must still use the same physics sample and chunk scope, luminosity, coupling convention, histogram bin edges, and weight normalisation. Their event populations are deliberately different: that difference is what allows $R_{\mathrm{reco}}^{\mathrm{total}}$ to include reconstruction efficiency, missing objects, invalid assignments, detector smearing, and mis-assignment in one headline number.
+
+> **Optional matched-event diagnostic:** students who are interested in separating the sources of information loss may also define $S_{\mathrm{common}}=S_{\mathrm{gen}}\cap S_{\mathrm{reco}}$ and evaluate $R_{\mathrm{migration}}=I_{\mathrm{reco}}(S_{\mathrm{common}})/I_{\mathrm{gen}}(S_{\mathrm{common}})$. This matched-event ratio isolates migration, resolution, and mis-assignment among successfully reconstructed events. It excludes acceptance and reconstruction-efficiency losses, so never call it the total retention. This study is optional and is not required for the main result.
+
+Keep one global bookkeeping funnel, always up to date. It explains where the total retention is lost:
 
 ```math
 N_{\mathrm{generated}}
@@ -463,7 +464,7 @@ N_{\text{valid reconstruction}}
 N_{\text{MVA selected}} .
 ```
 
-Schema and matching: [DATA_SCHEMA.md](DATA_SCHEMA.md), [../tests/test_event_matching.py](../tests/test_event_matching.py).
+Schema and optional matching diagnostic: [DATA_SCHEMA.md](DATA_SCHEMA.md), [../tests/test_event_matching.py](../tests/test_event_matching.py).
 
 ## 2.9 Event-selection MVA and backgrounds
 
@@ -588,7 +589,12 @@ I_{\text{sig+bg}}(z),
 and form the ratios that answer the project questions directly:
 
 ```math
-R_{\mathrm{reco}}=\frac{I_{\mathrm{reco}}}{I_{\mathrm{gen}}}
+R_{\mathrm{reco}}
+\equiv
+R_{\mathrm{reco}}^{\mathrm{total}}
+=
+\frac{I_{\mathrm{reco}}^{\mathrm{baseline}}}
+{I_{\mathrm{gen}}^{\mathrm{inclusive}}}
 \quad\text{(what fraction survives reconstruction?)},
 ```
 ```math
@@ -604,7 +610,7 @@ G_{\text{ML/angle}}=\frac{I_{\mathrm{ML}}}{I_{\mathrm{angle}}}
 \quad\text{(what does ML gain over the plain angle?)}.
 ```
 
-> **Fair-comparison rule:** every ratio requires the *same* luminosity, the *same* coupling convention, the *same* event pool (§2.8), and the *same* binning strategy on both sides. If any of these differ, the ratio is meaningless.
+> **Fair-comparison rule:** every ratio requires the *same* luminosity, coupling convention, sample/chunk scope, weight normalisation, and binning strategy. For the primary gen-to-reco total retention, the event populations are intentionally not identical (§2.8); identical event IDs are required only for the optional matched-event migration diagnostic.
 
 ## 2.13 Beam polarisation: from ideal LR/RL to the real machine
 
@@ -811,7 +817,7 @@ Reusable, tested functions for: table reading/validation; event-ID matching; Lor
 ## 3.4 Validation checklist (all must pass before Chapter 4)
 
 - [ ] no train/validation/test overlap;
-- [ ] exact event-ID closure between gen and reco tables;
+- [ ] unique event IDs and explicit counts of gen-only, reco-only, and overlapping events;
 - [ ] SM and interference weight sums match expected normalisations;
 - [ ] signed-weight sums stable across reruns;
 - [ ] $\phi$ wrapping correct (test values around $\pm\pi$);
@@ -821,7 +827,7 @@ Reusable, tested functions for: table reading/validation; event-ID matching; Lor
 
 ## 3.5 Deliverable
 
-A frozen baseline configuration, documented schema, validated common event table, and a first gen + reco $O_W$ distribution plot.
+A frozen baseline configuration, documented schema, validated inclusive-gen and full-reco baseline tables, a reconstruction bookkeeping report, and a first gen + reco $O_W$ distribution plot.
 
 ---
 
@@ -835,7 +841,7 @@ A frozen baseline configuration, documented schema, validated common event table
 O_W=\Delta\phi(j_{W,\mathrm{up}},\,j_{W,\mathrm{down}})
 ```
 
-at gen and reco level, using the current ParT-assisted assignment, on the common event set (§2.8).
+at gen and reco level, using the current ParT-assisted assignment and the inclusive-gen/full-reco event populations defined in §2.8.
 
 ## 4.2 Frame study
 
