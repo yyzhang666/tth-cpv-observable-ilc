@@ -88,7 +88,7 @@ Everything in this project answers one of these:
 
 1. **Angle vs. ML, same objects.** For one pair of physical objects (e.g. the two $W$ jets), how much CP information is in the signed angle, and how much *extra* does an ML model using the same objects capture?
 2. **Truth vs. detector.** How much information is lost when truth-level objects are replaced by reconstructed ones?
-3. **Which branch is strongest?** How do the hadronic-$W$, top-decay $b/\bar{b}$, lepton–neutrino, and reconstructed-top observables compare with each other?
+3. **Which branch is strongest?** How do the hadronic W, top-decay $b/\bar{b}$, lepton–neutrino, and reconstructed-top observables compare with each other?
 4. **How to combine?** Is it better to train one model on all features, keep separate physical branches, fuse branch outputs at the end, or use a multidimensional likelihood? (Definitions in §2.7 and Chapter 7.)
 5. **Realistic beams.** How do you convert results from the idealised 100%-polarised LR/RL samples into the realistic LCF running scenario? (§2.13, Chapter 8.)
 
@@ -96,7 +96,7 @@ Everything in this project answers one of these:
 
 In order (this is also roughly the timeline):
 
-1. A complete gen + reco **angular–ML baseline for $O_W$** (the hadronic-$W$ angle) — Chapters 3–4. This is the main milestone.
+1. A complete gen + reco **angular–ML baseline for $O_W$** (the hadronic W angle) — Chapters 3–4. This is the main milestone.
 2. Integrate the supervisor's **event-selection MVA**; first selected-signal and signal-plus-background result — Chapter 6.
 3. **Faster baselines** for the secondary observables $O_b$, $O_{\ell\nu}$, $O_{\mathrm{top}}$ — Chapter 5 (reuse the $O_W$ machinery; do not rebuild anything).
 4. **Fusion** of $O_W$ with *one* chosen secondary observable — Chapter 7.
@@ -107,10 +107,10 @@ In order (this is also roughly the timeline):
 
 Not required. Completing **none** of them is perfectly fine; normally at most **one** is opened, and only after the required results are frozen (Chapter 10):
 
-1. add the hadronic-$\tau$ semileptonic channel as an extra category;
-2. try to improve the ParT-assisted hadronic-$W$ jet pairing;
+1. add the hadronic tau semileptonic channel as an extra category;
+2. try to improve the ParT-assisted hadronic W jet pairing;
 3. add the quadratic ($c^2$) EFT term;
-4. extend fusion beyond "$O_W$ + one secondary observable".
+4. extend fusion beyond the required $O_W$ plus one secondary observable.
 
 ## 1.6 Negative results are valid results
 
@@ -272,7 +272,7 @@ tables, so `weight_sm` remains `NaN`. The relevant columns are:
 | Column | Current meaning | Where it is used |
 |---|---|---|
 | `label` | $+1$ or $-1$ from the sign of $w_{\mathrm{int}}$ | classifier target only |
-| `weight_training` | non-negative base optimizer weight, currently $|w_{\mathrm{int}}|$ | `train_cpv_model.py` only |
+| `weight_training` | non-negative base optimizer weight, currently $\lvert w_{\mathrm{int}}\rvert$ | `train_cpv_model.py` only |
 | `weight_interference_signed` | signed MC estimate of the interference derivative $f_1$ | provenance and physics checks |
 | `weight_template` | initially the same signed weight; later multiplied by polarisation and luminosity factors | angular/ML interference templates |
 | `weight_sm` | future SM yield weight for $f_0$ | future SM denominator and Fisher calculation |
@@ -318,7 +318,7 @@ Code: [../src/ilc_tth_cpv/weights.py](../src/ilc_tth_cpv/weights.py),
 \mathrm{sign}\bigl(\hat z\cdot(\hat p_a\times\hat p_b)\bigr),
 ```
 
-and a triple product of momenta flips sign under P (every vector in it is reversed). With a **charge-aware ordering** of $a$ and $b$ (so that C maps the ordered pair onto itself — e.g. "up-type before down-type", "$b_t$ before $b_{\bar{t}}$"), the full CP operation gives
+and a triple product of momenta flips sign under P (every vector in it is reversed). With a **charge-aware ordering** of $a$ and $b$ (so that C maps the ordered pair onto itself — e.g. "up-type before down-type", or putting $b_t$ before $b_{\bar{t}}$), the full CP operation gives
 
 ```math
 \Delta\phi \;\xrightarrow{\;CP\;}\; -\Delta\phi ,
@@ -340,7 +340,7 @@ where "wrap" folds the raw difference back into $(-\pi,\pi]$ (e.g. $350°$ becom
 - **Order matters.** $\Delta\phi(a,b) = -\Delta\phi(b,a)$. Since the sign *is* the CP information, you must fix which object is "first" (e.g. up-type $W$ jet before down-type; $b_t$ before $b_{\bar{t}}$) and never deviate. Charge-aware ParT scores and the decay assignment define the ordering.
 - **Wrapping matters.** Compute $\Delta\phi$ with a proper wrap function, never a naive subtraction.
 
-For the two hadronic-$W$ jets, the observable is
+For the two hadronic W jets, the observable is
 
 ```math
 O_W=\Delta\phi(j_{W,\mathrm{up}},\,j_{W,\mathrm{down}}).
@@ -375,7 +375,7 @@ The repository keeps two axis conventions because they reproduce two different, 
 
 ### The current $O_W$ baseline: fixed lab axes after the boost
 
-The production configs freeze `basis: lab_axes`. This is the convention used by `export_features.py`, `inspect_generator_event.py`, and the original signed-$\Delta\phi$ generator study. It compares three momentum frames:
+The production configs freeze `basis: lab_axes`. This is the convention used by `export_features.py`, `inspect_generator_event.py`, and the original signed $\Delta\phi$ generator study. It compares three momentum frames:
 
 - the **laboratory** frame: no boost;
 - the **Higgs rest frame** (use $p_H$ to construct the Lorentz boost to rest);
@@ -525,7 +525,7 @@ Code: [../src/ilc_tth_cpv/features.py](../src/ilc_tth_cpv/features.py).
 
 ## 2.6 The ML observable paired with each angle
 
-The comparison in question 1 (§1.3) is only fair if the ML model uses **the same physical objects** as the angle. For the hadronic-$W$ branch, the model is a map
+The comparison in question 1 (§1.3) is only fair if the ML model uses **the same physical objects** as the angle. For the hadronic W branch, the model is a map
 
 ```math
 M_W:\ F_W\ \rightarrow\ s_W
@@ -602,7 +602,7 @@ The CP structure of the $t\bar{t}H$ vertex is imprinted in the **production spin
 
 - **Single-side objects** (decay products of only one top) mainly project out the **polarization of that single top**.
 - **Objects from both sides** (one from $t$, one from $\bar{t}$ — as in $O_b$) directly access the **$t\bar{t}$ spin-correlation matrix**, where much of the CP-odd interference information sits.
-- The **two hadronic-$W$ daughter jets** additionally encode the **$W$ helicity and decay-plane orientation** — an extra handle beyond the parent-top spin direction.
+- The **two hadronic W daughter jets** additionally encode the **$W$ helicity and decay-plane orientation** — an extra handle beyond the parent-top spin direction.
 - The **reconstructed-top observable** $O_{\mathrm{top}}$ works at production level: it probes the kinematics of the $t$, $\bar{t}$, $H$ systems themselves, in particular the interference between Higgs emission off the top line (the $t\bar{t}H$ vertex being measured) and the Higgsstrahlung-like contribution where the Higgs is radiated off the intermediate $Z$ (the "ZH"-type diagram).
 
 The projections also differ in **reconstruction quality**, not only in physics content: the isolated lepton is tagged with high efficiency, carries an unambiguous charge, and has no jet-assignment problem; a $b/\bar{b}$ ordering instead relies on flavour tagging (lower efficiency, mis-tag rates) *plus* jet assignment. A reco-level branch comparison therefore mixes analysing power with reconstruction quality — comparing gen level (physics only) against reco level (physics × detector) disentangles the two, which is exactly the $R_{\mathrm{reco}}$ logic of §2.12.
@@ -871,7 +871,7 @@ Code: [../src/ilc_tth_cpv/polarization.py](../src/ilc_tth_cpv/polarization.py), 
 
 ## 2.14 Generator convention → SMEFT convention
 
-The CPV generator sample should not be read as a physical finite-$\alpha$
+The CPV generator sample should not be read as a physical finite $\alpha$
 sample. It provides the signed scalar-pseudoscalar interference basis
 $f_1(x)$. The small parameter $c_{\mathrm{gen}}$ is applied later in the
 likelihood as the coefficient multiplying that signed template:
@@ -1035,7 +1035,7 @@ python3 scripts/inspect_reco_event.py \
   --max-events 1
 ```
 
-For the generator output, record the printed STDHEP and sidecar paths, sidecar/alignment counts, positive and negative weight counts, and one event's $t$, $\bar t$, Higgs, $b/\bar b$, and hadronic-$W$ daughter identities. `O_W` should be finite whenever both light daughters are found, but its value may differ among frames because the particle momenta are boosted.
+For the generator output, record the printed STDHEP and sidecar paths, sidecar/alignment counts, positive and negative weight counts, and one event's $t$, $\bar t$, Higgs, $b/\bar b$, and hadronic W daughter identities. `O_W` should be finite whenever both light daughters are found, but its value may differ among frames because the particle momenta are boosted.
 
 For the reco output, record the input SLCIO path and confirm that the expected collections exist. Inspect in particular `OutputErrorFlowJets6`, `RefinedJets6`, `ISOElectrons`, and `ISOMuons`; check the jet multiplicities and that the printed Weaver probabilities are present and non-constant. An unusual event is something to understand and record, not something to hide.
 
@@ -1054,7 +1054,7 @@ anajob /tmp/tthcpv_chunk0_first100.slcio
 dumpevent /tmp/tthcpv_chunk0_first100.slcio 0
 ```
 
-From one generator event, note the incoming electron direction, the parent/daughter chain for $t$, $\bar t$, $H$, and the two hadronic-$W$ daughters. From one reco event, note the run/event number, collection names and sizes, the six-jet collections, isolated-lepton collection, and any PID parameters visible for the jets. These notes establish intuition for what the later CSV columns actually mean; `dumpevent` itself is not a selection or physics-result tool.
+From one generator event, note the incoming electron direction, the parent/daughter chain for $t$, $\bar t$, $H$, and the two hadronic W daughters. From one reco event, note the run/event number, collection names and sizes, the six-jet collections, isolated-lepton collection, and any PID parameters visible for the jets. These notes establish intuition for what the later CSV columns actually mean; `dumpevent` itself is not a selection or physics-result tool.
 
 ## 3.3 Step 3: run the local generator example and inspect its table
 
@@ -1361,8 +1361,19 @@ This is the conditional information gain from adding branch $X$.
 
 1. **Pure-helicity study first:** compare LR vs RL rates, shapes, interference, Fisher.
 2. **Weighted physical training:** per run category $r$, combine LR/RL events with weights $a_r, b_r$. Do **not** use $a_r,b_r$ as features, do **not** multiply final scores by them, do **not** average independently trained scores without a calibrated common coordinate.
-3. **Templates and likelihood:** $\mathcal{L}_r = f_r^{\mathrm{run}}\times 8~\mathrm{ab}^{-1}$; one template category per run configuration; combine as $\mathcal{L}_{\mathrm{total}}(c)=\prod_r \mathcal{L}_r(c)$.
-4. Run the polarisation **closure test** (Appendix B) before quoting anything.
+3. **Templates and likelihood:** use one template category per run configuration. Its luminosity and the combined likelihood are
+
+```math
+\mathcal{L}_r
+=
+f_r^{\mathrm{run}}\times 8~\mathrm{ab}^{-1},
+\qquad
+\mathcal{L}_{\mathrm{total}}(c)
+=
+\prod_r \mathcal{L}_r(c) .
+```
+
+Finally, run the polarisation **closure test** (Appendix B) before quoting anything.
 
 **Deliverable:** pure LR/RL, four run-category, and combined LCF sensitivities, with a rate-vs-shape interpretation where possible.
 
@@ -1379,7 +1390,7 @@ multi-operator SMEFT fit.
 
 # Chapter 10 — Optional extensions (at most one, only after required results are frozen)
 
-## Option 1 — Hadronic-$\tau$ category
+## Option 1 — Hadronic tau category
 Add semitau events as a separate statistical category, using a *frozen* tau tagger; keep the existing observables; **no tau polarimeter**. Prerequisites from the tagger team: frozen model/interface, efficiency and fake rates, constituent links, usable charge convention. Deliverable: sensitivity change from adding the category.
 
 ## Option 2 — W-pairing optimisation
@@ -1387,7 +1398,7 @@ First measure the ceiling with a truth-matched oracle assignment:
 ```math
 \Delta I_{\mathrm{pairing}}=I_{\mathrm{oracle}}-I_{\mathrm{current}} .
 ```
-Proceed only if the gap is relevant. Possible methods: probability calibration, global assignment, top-$K$ candidates, soft assignment, posterior-weighted observables. Deliverable: increased **CP information**, not just higher pairing accuracy.
+Proceed only if the gap is relevant. Possible methods: probability calibration, global assignment, top-K candidates, soft assignment, posterior-weighted observables. Deliverable: increased **CP information**, not just higher pairing accuracy.
 
 ## Option 3 — Quadratic EFT term
 $\nu_i(c)=\nu_{0,i}+c\,\nu_{1,i}+c^2\nu_{2,i}$. Justified if linear templates go negative, the interval is non-local, or a finite-coupling scan needs it. Deliverable: linear vs quadratic intervals, with EFT-truncation caveats.
@@ -1464,7 +1475,7 @@ for three observables: $O_W$ (angle), $M_W$ (ML), and one fused observable. This
 6. arXiv:2401.02474 — optimal-observable ideas and detector-level ML.
 7. A Linear Collider Vision for the Future of Particle Physics, arXiv:2503.19983.
 8. Project ZH CPV WORKLOG.
-9. Current hadronic-$\tau$ ParticleTransformer report.
+9. Current hadronic tau ParticleTransformer report.
 10. DESY Summer Student 2026 supervisor guidelines.
 
 ---
