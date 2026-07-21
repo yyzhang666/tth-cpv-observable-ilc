@@ -88,7 +88,7 @@ Everything in this project answers one of these:
 
 1. **Angle vs. ML, same objects.** For one pair of physical objects (e.g. the two $W$ jets), how much CP information is in the signed angle, and how much *extra* does an ML model using the same objects capture?
 2. **Truth vs. detector.** How much information is lost when truth-level objects are replaced by reconstructed ones?
-3. **Which branch is strongest?** How do the hadronic-$W$, top-decay $b/\bar b$, lepton–neutrino, and reconstructed-top observables compare with each other?
+3. **Which branch is strongest?** How do the hadronic-$W$, top-decay $b/\bar{b}$, lepton–neutrino, and reconstructed-top observables compare with each other?
 4. **How to combine?** Is it better to train one model on all features, keep separate physical branches, fuse branch outputs at the end, or use a multidimensional likelihood? (Definitions in §2.7 and Chapter 7.)
 5. **Realistic beams.** How do you convert results from the idealised 100%-polarised LR/RL samples into the realistic LCF running scenario? (§2.13, Chapter 8.)
 
@@ -132,9 +132,9 @@ This chapter is the toolbox. Read it once fully, then come back to individual se
 
 ## 2.1 Scalar–pseudoscalar interference: where the signal lives
 
-### From $(\kappa_t,\widetilde\kappa_t)$ to the mixing angle $\xi$
+### From $(\kappa_t,\widetilde{\kappa}_t)$ to the mixing angle $\xi$
 
-Section 1.1 wrote the vertex with two real couplings $(\kappa_t,\widetilde\kappa_t)$. An equivalent one-parameter convention uses a single **CP mixing angle** $\xi$:
+Section 1.1 wrote the vertex with two real couplings $(\kappa_t,\widetilde{\kappa}_t)$. An equivalent one-parameter convention uses a single **CP mixing angle** $\xi$:
 
 ```math
 \mathcal{L}_{t\bar{t}H}
@@ -146,16 +146,16 @@ Section 1.1 wrote the vertex with two real couplings $(\kappa_t,\widetilde\kappa
 \widetilde{\kappa}_t=\sin\xi .
 ```
 
-This convention fixes the total Yukawa strength ($\kappa_t^2+\widetilde{\kappa}_t^2=1$) and keeps the scalar–pseudoscalar mixing as the only free parameter. The SM is $\xi=0$. Near the SM point $\widetilde\kappa_t=\sin\xi\approx\xi$, so the small "local" parameter $c$ introduced below can be read as $c\propto\widetilde\kappa_t\approx\xi$; the exact proportionality constant is a generator convention, fixed once in §2.14.
+This convention fixes the total Yukawa strength ($\kappa_t^2+\widetilde{\kappa}_t^2=1$) and keeps the scalar–pseudoscalar mixing as the only free parameter. The SM is $\xi=0$. Near the SM point $\widetilde{\kappa}_t=\sin\xi\approx\xi$, so the small "local" parameter $c$ introduced below can be read as $c\propto\widetilde{\kappa}_t\approx\xi$; the exact proportionality constant is a generator convention, fixed once in §2.14.
 
 ### CP transformations: CP-even vs CP-odd at the Lagrangian level
 
 CP is the combination of charge conjugation C (particle $\leftrightarrow$ antiparticle) and parity P (space inversion: momenta flip, $\vec p\to-\vec p$, while spins do not). A Lagrangian term is **CP-even** if CP maps it onto itself, and **CP-odd** if CP maps it onto minus itself. Taking the Higgs field as a CP-even scalar, the two top bilinears transform oppositely:
 
-- $H\,\bar t t$ — the scalar ($\kappa_t$) term — is **CP-even**;
-- $H\,i\bar t\gamma_5 t$ — the pseudoscalar ($\widetilde\kappa_t$) term — is **CP-odd**.
+- $H\,\bar{t} t$ — the scalar ($\kappa_t$) term — is **CP-even**;
+- $H\,i\bar{t}\gamma_5 t$ — the pseudoscalar ($\widetilde{\kappa}_t$) term — is **CP-odd**.
 
-Note that either term *alone* does not violate CP: if only the pseudoscalar term were present, one could simply declare $H$ to be a CP-odd particle and CP would again be conserved. CP violation requires **both terms simultaneously** ($\kappa_t\widetilde\kappa_t\neq0$, i.e. $\sin\xi\cos\xi\neq0$) — then no consistent CP assignment for $H$ leaves the Lagrangian invariant, and it is precisely the *interference* between the two terms that exposes this.
+Note that either term *alone* does not violate CP: if only the pseudoscalar term were present, one could simply declare $H$ to be a CP-odd particle and CP would again be conserved. CP violation requires **both terms simultaneously** ($\kappa_t\widetilde{\kappa}_t\neq0$, i.e. $\sin\xi\cos\xi\neq0$) — then no consistent CP assignment for $H$ leaves the Lagrangian invariant, and it is precisely the *interference* between the two terms that exposes this.
 
 ### CP-even vs CP-odd at the amplitude and observable level
 
@@ -253,7 +253,7 @@ Code: [../src/ilc_tth_cpv/weights.py](../src/ilc_tth_cpv/weights.py).
 \mathrm{sign}\bigl(\hat z\cdot(\hat p_a\times\hat p_b)\bigr),
 ```
 
-and a triple product of momenta flips sign under P (every vector in it is reversed). With a **charge-aware ordering** of $a$ and $b$ (so that C maps the ordered pair onto itself — e.g. "up-type before down-type", "$b_t$ before $b_{\bar t}$"), the full CP operation gives
+and a triple product of momenta flips sign under P (every vector in it is reversed). With a **charge-aware ordering** of $a$ and $b$ (so that C maps the ordered pair onto itself — e.g. "up-type before down-type", "$b_t$ before $b_{\bar{t}}$"), the full CP operation gives
 
 ```math
 \Delta\phi \;\xrightarrow{\;CP\;}\; -\Delta\phi ,
@@ -272,7 +272,7 @@ The basic building block is therefore a **signed azimuthal difference** between 
 
 where "wrap" folds the raw difference back into $(-\pi,\pi]$ (e.g. $350°$ becomes $-10°$). Two things students often get wrong:
 
-- **Order matters.** $\Delta\phi(a,b) = -\Delta\phi(b,a)$. Since the sign *is* the CP information, you must fix which object is "first" (e.g. up-type $W$ jet before down-type; $b_t$ before $b_{\bar t}$) and never deviate. Charge-aware ParT scores and the decay assignment define the ordering.
+- **Order matters.** $\Delta\phi(a,b) = -\Delta\phi(b,a)$. Since the sign *is* the CP information, you must fix which object is "first" (e.g. up-type $W$ jet before down-type; $b_t$ before $b_{\bar{t}}$) and never deviate. Charge-aware ParT scores and the decay assignment define the ordering.
 - **Wrapping matters.** Compute $\Delta\phi$ with a proper wrap function, never a naive subtraction.
 
 The observable families studied in this project:
@@ -287,7 +287,7 @@ O_b=\Delta\phi(b_t,\,b_{\bar{t}}) \quad\text{(the two top-decay }b\text{ jets)},
 O_{\ell\nu}=\Delta\phi(\ell,\,\nu_W) \quad\text{(lepton and neutrino from the leptonic }W\text{)},
 ```
 
-plus a supervisor-approved $O_{\mathrm{top}}$ built from the reconstructed $t$ and $\bar t$ systems.
+plus a supervisor-approved $O_{\mathrm{top}}$ built from the reconstructed $t$ and $\bar{t}$ systems.
 
 > **Freeze conventions early.** Exact definitions, charge conventions, and axis conventions must be written down **once**, in a configuration file, and used everywhere (see the decision log, Appendix C). Silent convention changes are the classic way to waste two weeks.
 
@@ -299,7 +299,7 @@ An azimuthal angle is only defined *relative to a frame*, and CP-sensitive corre
 
 - the **laboratory** (collider centre-of-mass) frame;
 - the **Higgs rest frame** (boost everything by $-\vec p_H$);
-- the **$t\bar t$ rest frame**.
+- the **$t\bar{t}$ rest frame**.
 
 Practical recipe: keep four-vectors as the internal representation, apply Lorentz boosts to the chosen frame, and *only then* evaluate angles.
 
@@ -415,14 +415,14 @@ t_z(z)=\mathrm{E}\!\left[t(x)\mid z\right].
 
 ### What makes the projections physically different?
 
-The CP structure of the $t\bar tH$ vertex is imprinted in the **production spin-density matrix** of the $t\bar t(H)$ system. Because the top decays before hadronising, its decay products act as **spin analysers**: each decay product reads out the parent top's spin through its own decay matrix, with its own analysing power, so the *same* spin-density matrix is projected into *different* angular distributions depending on which objects you use (see arXiv:1809.07127 for the formalism). Concretely:
+The CP structure of the $t\bar{t}H$ vertex is imprinted in the **production spin-density matrix** of the $t\bar{t}(H)$ system. Because the top decays before hadronising, its decay products act as **spin analysers**: each decay product reads out the parent top's spin through its own decay matrix, with its own analysing power, so the *same* spin-density matrix is projected into *different* angular distributions depending on which objects you use (see arXiv:1809.07127 for the formalism). Concretely:
 
 - **Single-side objects** (decay products of only one top) mainly project out the **polarization of that single top**.
-- **Objects from both sides** (one from $t$, one from $\bar t$ — as in $O_b$) directly access the **$t\bar t$ spin-correlation matrix**, where much of the CP-odd interference information sits.
+- **Objects from both sides** (one from $t$, one from $\bar{t}$ — as in $O_b$) directly access the **$t\bar{t}$ spin-correlation matrix**, where much of the CP-odd interference information sits.
 - The **two hadronic-$W$ daughter jets** additionally encode the **$W$ helicity and decay-plane orientation** — an extra handle beyond the parent-top spin direction.
-- The **reconstructed-top observable** $O_{\mathrm{top}}$ works at production level: it probes the kinematics of the $t$, $\bar t$, $H$ systems themselves, in particular the interference between Higgs emission off the top line (the $t\bar tH$ vertex being measured) and the Higgsstrahlung-like contribution where the Higgs is radiated off the intermediate $Z$ (the "ZH"-type diagram).
+- The **reconstructed-top observable** $O_{\mathrm{top}}$ works at production level: it probes the kinematics of the $t$, $\bar{t}$, $H$ systems themselves, in particular the interference between Higgs emission off the top line (the $t\bar{t}H$ vertex being measured) and the Higgsstrahlung-like contribution where the Higgs is radiated off the intermediate $Z$ (the "ZH"-type diagram).
 
-The projections also differ in **reconstruction quality**, not only in physics content: the isolated lepton is tagged with high efficiency, carries an unambiguous charge, and has no jet-assignment problem; a $b/\bar b$ ordering instead relies on flavour tagging (lower efficiency, mis-tag rates) *plus* jet assignment. A reco-level branch comparison therefore mixes analysing power with reconstruction quality — comparing gen level (physics only) against reco level (physics × detector) disentangles the two, which is exactly the $R_{\mathrm{reco}}$ logic of §2.12.
+The projections also differ in **reconstruction quality**, not only in physics content: the isolated lepton is tagged with high efficiency, carries an unambiguous charge, and has no jet-assignment problem; a $b/\bar{b}$ ordering instead relies on flavour tagging (lower efficiency, mis-tag rates) *plus* jet assignment. A reco-level branch comparison therefore mixes analysing power with reconstruction quality — comparing gen level (physics only) against reco level (physics × detector) disentangles the two, which is exactly the $R_{\mathrm{reco}}$ logic of §2.12.
 
 This is exactly why Chapter 7 compares:
 
@@ -668,19 +668,114 @@ Code: [../src/ilc_tth_cpv/polarization.py](../src/ilc_tth_cpv/polarization.py), 
 
 ## 2.14 Generator convention → SMEFT convention
 
-The generator parameter $c_{\mathrm{gen}}$ and a SMEFT Wilson coefficient are, at leading order, linearly related:
+The CPV generator sample should not be read as a physical finite-$\alpha$
+sample. It provides the signed scalar-pseudoscalar interference basis
+$f_1(x)$. The small parameter $c_{\mathrm{gen}}$ is applied later in the
+likelihood as the coefficient multiplying that signed template:
 
 ```math
-c_{\mathrm{gen}}=K\frac{C}{\Lambda^2}
-\quad\Longrightarrow\quad
-I_{C/\Lambda^2}=K^2\, I_{c_{\mathrm{gen}}},
-\qquad
-\Delta\!\left(\frac{C}{\Lambda^2}\right)
+\frac{d\sigma}{dx}
 =
-\frac{\Delta c_{\mathrm{gen}}}{|K|}.
+f_0(x)+c_{\mathrm{gen}}f_1(x)+\mathcal{O}(c_{\mathrm{gen}}^2).
 ```
 
-So the entire conversion is one constant $K$ — but $K$ depends on normalisation and sign conventions, and **must be supplied or approved by the supervisor**. Be honest in wording: this is a one-parameter reinterpretation, *not* a multi-operator SMEFT fit.
+Connect this to the coupling convention of §1.1 and §2.1 by writing
+
+```math
+\kappa_t=\kappa\cos\alpha,
+\qquad
+\widetilde{\kappa}_t=\kappa\sin\alpha .
+```
+
+For a one-parameter Warsaw-basis reinterpretation of the CP-odd top-Yukawa
+operator $O_{t\varphi}$, in a fixed input scheme, the linear dimension-6
+relations are
+
+```math
+\kappa\cos\alpha
+=
+1-\frac{v^3}{\sqrt{2}m_t}\frac{C^R_{t\varphi}}{\Lambda^2},
+\qquad
+\kappa\sin\alpha
+=
+-\frac{v^3}{\sqrt{2}m_t}\frac{C^I_{t\varphi}}{\Lambda^2}.
+```
+
+The coefficient of the scalar-pseudoscalar interference template is
+
+```math
+c_{\mathrm{gen}}
+=
+\kappa_t\widetilde{\kappa}_t
+=
+(\kappa\cos\alpha)(\kappa\sin\alpha).
+```
+
+Near the SM point, keeping only the linear SMEFT term,
+
+```math
+\kappa_t\simeq 1,
+\qquad
+c_{\mathrm{gen}}
+\simeq
+\widetilde{\kappa}_t
+=
+-\frac{v^3}{\sqrt{2}m_t}\frac{C^I_{t\varphi}}{\Lambda^2}.
+```
+
+The real scalar coefficient $C^R_{t\varphi}$ changes $\kappa_t$, but its
+product with $C^I_{t\varphi}$ enters the CP-odd interference only beyond the
+linear dimension-6 reinterpretation. That is why the first result can quote a
+one-parameter constraint on $C^I_{t\varphi}/\Lambda^2$ without fitting
+$C^R_{t\varphi}$.
+
+Using $v\simeq246~\mathrm{GeV}$ and $m_t\simeq172.5~\mathrm{GeV}$, and quoting
+$C^I_{t\varphi}/\Lambda^2$ in $\mathrm{TeV}^{-2}$,
+
+```math
+c_{\mathrm{gen}}
+\simeq
+-0.061
+\left[
+\frac{C^I_{t\varphi}/\Lambda^2}{\mathrm{TeV}^{-2}}
+\right],
+```
+
+or equivalently
+
+```math
+\frac{C^I_{t\varphi}}{\Lambda^2}
+\simeq
+-16.4\,c_{\mathrm{gen}}\ \mathrm{TeV}^{-2}.
+```
+
+Define the dimensionless numeric parameter
+
+```math
+x^I_{t\varphi}
+\equiv
+\frac{C^I_{t\varphi}/\Lambda^2}{\mathrm{TeV}^{-2}},
+\qquad
+c_{\mathrm{gen}}=Kx^I_{t\varphi},
+\qquad
+K\simeq -0.061 .
+```
+
+Then the Fisher-information conversion is
+
+```math
+I_{x^I_{t\varphi}}
+=
+K^2 I_{c_{\mathrm{gen}}},
+\qquad
+\Delta\!\left(\frac{C^I_{t\varphi}}{\Lambda^2}\right)
+=
+\frac{\Delta c_{\mathrm{gen}}}{|K|}\ \mathrm{TeV}^{-2}.
+```
+
+The numerical factor and the sign convention must still be supervisor-approved
+before quoting a result. This is a one-parameter reinterpretation, not a
+multi-operator SMEFT fit.
 
 ---
 
@@ -744,7 +839,7 @@ at gen and reco level, using the current ParT-assisted assignment, on the common
 
 ## 4.2 Frame study
 
-Evaluate $O_W$ in the laboratory frame, the Higgs rest frame, and the $t\bar t$ rest frame (§2.4). Pick a default frame based on the results and freeze it (Appendix C).
+Evaluate $O_W$ in the laboratory frame, the Higgs rest frame, and the $t\bar{t}$ rest frame (§2.4). Pick a default frame based on the results and freeze it (Appendix C).
 
 ## 4.3 Feature schemes
 
@@ -782,9 +877,9 @@ Configs and driver: [../configs/analysis_ow_lr.yaml](../configs/analysis_ow_lr.y
 
 **Start only after the $O_W$ framework is stable.** Reuse the frozen default frame and model configuration — the point is a *quick, uniform* survey, not three new projects.
 
-## 5.1 $O_b=\Delta\phi(b_t,b_{\bar t})$
+## 5.1 $O_b=\Delta\phi(b_t,b_{\bar{t}})$
 
-Ordering from signed ParT $b/\bar b$ scores + top-side assignment + lepton-charge consistency.
+Ordering from signed ParT $b/\bar{b}$ scores + top-side assignment + lepton-charge consistency.
 
 ## 5.2 $O_{\ell\nu}=\Delta\phi(\ell,\nu_W)$ (or approved equivalent)
 
@@ -792,7 +887,7 @@ The reco-level neutrino is an *estimate* (from missing momentum / kinematic fit)
 
 ## 5.3 $O_{\mathrm{top}}$
 
-A top-level angle from the reconstructed $t,\bar t$ systems. **Freeze the exact definition with the supervisor before writing code.**
+A top-level angle from the reconstructed $t,\bar{t}$ systems. **Freeze the exact definition with the supervisor before writing code.**
 
 ## 5.4 Required comparison (identical recipe for each)
 
@@ -879,7 +974,10 @@ I(s_W),\quad I(s_X),\quad I(M_{\mathrm{early}}),\quad I(s_{\mathrm{late}}),\quad
 
 # Chapter 9 — Minimal BSM interpretation
 
-**Only after the final likelihood is stable.** Apply the supervisor-approved constant $K$ of §2.14, record conventions/sign/units and the local nature of the conversion, and do not present it as a multi-operator SMEFT fit.
+**Only after the final likelihood is stable.** Apply the supervisor-approved
+$C^I_{t\varphi}/\Lambda^2$ conversion of §2.14, record conventions/sign/units
+and the local nature of the conversion, and do not present it as a
+multi-operator SMEFT fit.
 
 ---
 
@@ -949,7 +1047,7 @@ for three observables: $O_W$ (angle), $M_W$ (ML), and one fused observable. This
 
 ## 11.5 Non-goals — you are explicitly NOT required to
 
-- finish the complete $t\bar t H$ analysis independently;
+- finish the complete $t\bar{t} H$ analysis independently;
 - validate the generator;
 - produce all missing MC samples;
 - derive a full optimal observable;
@@ -962,9 +1060,9 @@ for three observables: $O_W$ (angle), $M_W$ (ML), and one fused observable. This
 
 # Chapter 12 — Suggested reading
 
-1. Project $t\bar t H$ generator-level CP-observable theory report.
-2. Ma et al. on frame-dependent $e^+e^-\to t\bar t H$ CP observables.
-3. CLIC $t\bar t H$ CP reconstruction study.
+1. Project $t\bar{t} H$ generator-level CP-observable theory report.
+2. Ma et al. on frame-dependent $e^+e^-\to t\bar{t} H$ CP observables.
+3. CLIC $t\bar{t} H$ CP reconstruction study.
 4. Qu et al., Particle Transformer.
 5. ILC charge-aware ParticleTransformer material.
 6. arXiv:2401.02474 — optimal-observable ideas and detector-level ML.
