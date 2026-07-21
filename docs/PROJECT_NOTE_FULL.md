@@ -62,7 +62,7 @@ The required scope is:
 
 1. establish a complete generator/reconstruction angular–ML baseline for $O_W$;
 2. add the supervisor-provided event-selection MVA and obtain a first selected-signal and signal-plus-background result;
-3. establish faster baselines for $O_b$, $O_{\ell\nu}$, and $O_{\rm top}$;
+3. establish faster baselines for $O_b$, $O_{\ell\nu}$, and $O_{\mathrm{top}}$;
 4. combine $O_W$ with one selected secondary observable;
 5. produce the physical LCF polarisation combination;
 6. provide a minimal supervisor-approved conversion from the generator coupling convention to a SMEFT convention.
@@ -114,19 +114,19 @@ $$
 where
 
 $$
-f_0=\frac{d\sigma_{\rm SM}}{dx},
+f_0=\frac{d\sigma_{\mathrm{SM}}}{dx},
 $$
 
 $$
-f_1=\frac{d\sigma_{\rm int}}{dx}
+f_1=\frac{d\sigma_{\mathrm{int}}}{dx}
 =
-2\operatorname{Re}\left(\mathcal M_{\rm SM}^{\ast}\mathcal M_{\rm CPV}\right)d\Phi,
+2\operatorname{Re}\left(\mathcal M_{\mathrm{SM}}^{\ast}\mathcal M_{\mathrm{CPV}}\right)d\Phi,
 $$
 
 and
 
 $$
-f_2=\frac{d\sigma_{\rm CPV^2}}{dx}.
+f_2=\frac{d\sigma_{\mathrm{CPV}^2}}{dx}.
 $$
 
 The required study begins with $f_0+c f_1$. The quadratic term is optional.
@@ -146,9 +146,9 @@ $$
 using training weights proportional to $|f_1|$. Final physics templates must use the signed interference weight,
 
 $$
-w_{\rm int}
+w_{\mathrm{int}}
 =
-\operatorname{sign}(f_1)|w_{\rm int}|.
+\operatorname{sign}(f_1)|w_{\mathrm{int}}|.
 $$
 
 Training weights and physics-template weights must remain separate. Class balancing may be used in training but never in final yield templates.
@@ -180,7 +180,7 @@ $$
 O_{\ell\nu}=\Delta\phi(\ell,\nu_W),
 $$
 
-and a supervisor-approved $O_{\rm top}$ based on reconstructed $t,\bar t$ systems.
+and a supervisor-approved $O_{\mathrm{top}}$ based on reconstructed $t,\bar t$ systems.
 
 Exact definitions, charge conventions, and axis conventions must be frozen in one configuration file.
 
@@ -197,7 +197,7 @@ Four-vectors remain the internal representation for Lorentz boosts. After boosti
 A production-plane basis for a system $X$ may be defined as
 
 $$
-\hat z=\frac{\vec p_X^{\,\rm lab}}{|\vec p_X^{\,\rm lab}|},
+\hat z=\frac{\vec p_X^{\,\mathrm{lab}}}{|\vec p_X^{\,\mathrm{lab}}|},
 $$
 
 $$
@@ -280,7 +280,7 @@ $$
 A minimal feature set is
 
 $$
-F_W^{\rm min}
+F_W^{\mathrm{min}}
 =
 \left\{
 E,\theta,\phi
@@ -292,30 +292,30 @@ $$
 An extended set may include
 
 $$
-F_W^{\rm ext}
+F_W^{\mathrm{ext}}
 =
-F_W^{\rm min}
+F_W^{\mathrm{min}}
 +
 \left\{
 m_{jj},
-P_{\rm pair},
-P_{\rm orientation},
+P_{\mathrm{pair}},
+P_{\mathrm{orientation}},
 \text{signed ParT probabilities}
 \right\}.
 $$
 
-Analogous branches are $M_b$, $M_{\ell\nu}$, and $M_{\rm top}$.
+Analogous branches are $M_b$, $M_{\ell\nu}$, and $M_{\mathrm{top}}$.
 
 A binary ML observable may be
 
 $$
-O_{\rm ML}=P(+)-P(-),
+O_{\mathrm{ML}}=P(+)-P(-),
 $$
 
 or
 
 $$
-O_{\rm logit}=\log\frac{P(+)}{P(-)}.
+O_{\mathrm{logit}}=\log\frac{P(+)}{P(-)}.
 $$
 
 The output convention must be stored in model metadata.
@@ -349,7 +349,7 @@ This motivates comparing:
 All gen/reco comparisons must use identical event IDs. Define
 
 $$
-S_{\rm common}
+S_{\mathrm{common}}
 =
 \{
 \text{events with required reconstructed objects and valid assignment}
@@ -359,9 +359,9 @@ $$
 For these events, evaluate both
 
 $$
-O_i^{\rm gen}
+O_i^{\mathrm{gen}}
 \quad\text{and}\quad
-O_i^{\rm reco}.
+O_i^{\mathrm{reco}}.
 $$
 
 An inclusive gen-level curve may be shown as an upper reference, but it must not enter a gen/reco retention ratio unless the event populations match.
@@ -369,13 +369,13 @@ An inclusive gen-level curve may be shown as an upper reference, but it must not
 A single global bookkeeping table should record
 
 $$
-N_{\rm generated}
+N_{\mathrm{generated}}
 \rightarrow
-N_{\rm isolated\ lepton}
+N_{\text{isolated lepton}}
 \rightarrow
-N_{\rm valid\ reconstruction}
+N_{\text{valid reconstruction}}
 \rightarrow
-N_{\rm MVA\ selected}.
+N_{\text{MVA selected}}.
 $$
 
 ## 2.9 Event-selection MVA and backgrounds
@@ -383,13 +383,13 @@ $$
 For signal,
 
 $$
-f_{\rm sig}(x;c)=f_0(x)+c f_1(x).
+f_{\mathrm{sig}}(x;c)=f_0(x)+c f_1(x).
 $$
 
 A fixed selection $a(x)$ gives
 
 $$
-f_{\rm selected}(x;c)=a(x)\left[f_0(x)+c f_1(x)\right].
+f_{\mathrm{selected}}(x;c)=a(x)\left[f_0(x)+c f_1(x)\right].
 $$
 
 For accepted signal events, the local score remains $f_1/f_0$. Selection changes the retained event population and total information, but does not invalidate the signal-only study.
@@ -397,7 +397,7 @@ For accepted signal events, the local score remains $f_1/f_0$. Selection changes
 With parameter-independent background $b(x)$,
 
 $$
-t_{\rm sig+bg}(x)
+t_{\text{sig+bg}}(x)
 =
 \frac{f_1(x)}{f_0(x)+b(x)}
 =
@@ -408,7 +408,7 @@ $$
 This motivates a two-dimensional observable
 
 $$
-(q_{SB},O_{\rm CP}),
+(q_{SB},O_{\mathrm{CP}}),
 $$
 
 rather than treating $q_{SB}$ only as a hard cut.
@@ -468,7 +468,7 @@ High purity alone is not enough; a useful bin must have large interference relat
 Absolute-yield Fisher includes rate and shape. If the total normalisation is removed or profiled,
 
 $$
-I_{\rm shape}
+I_{\mathrm{shape}}
 =
 \sum_i\frac{\nu_{1,i}^2}{\nu_{0,i}}
 -
@@ -513,7 +513,7 @@ Fisher information is primarily a local ranking metric. A final interval must co
 With nuisance parameters $\theta$,
 
 $$
-I_{\rm prof}
+I_{\mathrm{prof}}
 =
 I_{cc}
 -
@@ -525,30 +525,30 @@ $$
 For observable $z$, define
 
 $$
-I_{\rm gen}(z),\quad
-I_{\rm reco}(z),\quad
-I_{\rm selected}(z),\quad
-I_{\rm sig+bg}(z).
+I_{\mathrm{gen}}(z),\quad
+I_{\mathrm{reco}}(z),\quad
+I_{\mathrm{selected}}(z),\quad
+I_{\text{sig+bg}}(z).
 $$
 
 Then
 
 $$
-R_{\rm reco}(z)=\frac{I_{\rm reco}(z)}{I_{\rm gen}(z)},
+R_{\mathrm{reco}}(z)=\frac{I_{\mathrm{reco}}(z)}{I_{\mathrm{gen}}(z)},
 $$
 
 $$
-R_{\rm selection}(z)=\frac{I_{\rm selected}(z)}{I_{\rm reco}(z)},
+R_{\mathrm{selection}}(z)=\frac{I_{\mathrm{selected}}(z)}{I_{\mathrm{reco}}(z)},
 $$
 
 $$
-R_{\rm background}(z)=\frac{I_{\rm sig+bg}(z)}{I_{\rm selected}(z)},
+R_{\mathrm{background}}(z)=\frac{I_{\text{sig+bg}}(z)}{I_{\mathrm{selected}}(z)},
 $$
 
 and
 
 $$
-G_{\rm ML/angle}=\frac{I_{\rm ML}}{I_{\rm angle}}.
+G_{\text{ML/angle}}=\frac{I_{\mathrm{ML}}}{I_{\mathrm{angle}}}.
 $$
 
 All ratios require the same luminosity, coupling convention, event pool, and binning.
@@ -607,7 +607,7 @@ For physical running configuration $r$:
 1. combine $LR$ and $RL$ events;
 2. assign mixture weights
    $$
-   w_{e,r}^{\rm phys}
+   w_{e,r}^{\mathrm{phys}}
    =
    \begin{cases}
    a_r w_e^{LR},&e\in LR,\\
@@ -621,7 +621,7 @@ For physical running configuration $r$:
 For final templates,
 
 $$
-w_{e,r}^{\rm template}
+w_{e,r}^{\mathrm{template}}
 =
 \mathcal L_r a_r w_e^{LR}
 $$
@@ -629,7 +629,7 @@ $$
 or
 
 $$
-w_{e,r}^{\rm template}
+w_{e,r}^{\mathrm{template}}
 =
 \mathcal L_r b_r w_e^{RL}.
 $$
@@ -637,7 +637,7 @@ $$
 Dedicated mixed-polarisation classifiers may be trained for the four running categories. Their likelihoods are combined as
 
 $$
-\mathcal L_{\rm LCF}(c)=\prod_r\mathcal L_r(c).
+\mathcal L_{\mathrm{LCF}}(c)=\prod_r\mathcal L_r(c).
 $$
 
 The initial physics study should still keep pure $LR$ and $RL$ separate.
@@ -647,13 +647,13 @@ The initial physics study should still keep pure $LR$ and $RL$ separate.
 If
 
 $$
-c_{\rm gen}=K\frac{C}{\Lambda^2},
+c_{\mathrm{gen}}=K\frac{C}{\Lambda^2},
 $$
 
 then
 
 $$
-I_{C/\Lambda^2}=K^2 I_{c_{\rm gen}},
+I_{C/\Lambda^2}=K^2 I_{c_{\mathrm{gen}}},
 $$
 
 and
@@ -661,7 +661,7 @@ and
 $$
 \Delta\left(\frac{C}{\Lambda^2}\right)
 =
-\frac{\Delta c_{\rm gen}}{|K|}.
+\frac{\Delta c_{\mathrm{gen}}}{|K|}.
 $$
 
 The factor $K$ depends on conventions and must be supplied or approved by the supervisor. A one-parameter conversion is not a multi-operator SMEFT fit.
@@ -753,7 +753,7 @@ Test:
 Minimal:
 
 $$
-F_W^{\rm min}
+F_W^{\mathrm{min}}
 =
 \left\{
 \log(E/E_0),
@@ -768,14 +768,14 @@ for both W jets.
 Extended:
 
 $$
-F_W^{\rm ext}
+F_W^{\mathrm{ext}}
 =
-F_W^{\rm min}
+F_W^{\mathrm{min}}
 +
 \left\{
 m_{jj},
-P_{\rm pair},
-P_{\rm orientation},
+P_{\mathrm{pair}},
+P_{\mathrm{orientation}},
 \text{signed ParT probabilities}
 \right\}.
 $$
@@ -794,13 +794,13 @@ This is a stability study, not a large architecture search.
 Calculate
 
 $$
-I_{\rm angle}^{\rm gen},
+I_{\mathrm{angle}}^{\mathrm{gen}},
 \quad
-I_{\rm angle}^{\rm reco},
+I_{\mathrm{angle}}^{\mathrm{reco}},
 \quad
-I_{\rm ML}^{\rm gen},
+I_{\mathrm{ML}}^{\mathrm{gen}},
 \quad
-I_{\rm ML}^{\rm reco},
+I_{\mathrm{ML}}^{\mathrm{reco}},
 $$
 
 and the corresponding retention and gain ratios.
@@ -840,7 +840,7 @@ $$
 
 or its approved equivalent. Document the reconstruction-level neutrino estimator and validity flag.
 
-## 5.3 $O_{\rm top}$
+## 5.3 $O_{\mathrm{top}}$
 
 Use a supervisor-approved top-level angle constructed from reconstructed $t,\bar t$ systems. Freeze the exact definition before implementation.
 
@@ -879,18 +879,18 @@ plus score convention, threshold, model version, and provenance.
 Compare
 
 $$
-I_{\rm reco}^{\rm signal}
+I_{\mathrm{reco}}^{\mathrm{signal}}
 \quad\text{and}\quad
-I_{\rm selected}^{\rm signal}.
+I_{\mathrm{selected}}^{\mathrm{signal}}.
 $$
 
 Calculate
 
 $$
-R_{\rm selection}
+R_{\mathrm{selection}}
 =
-\frac{I_{\rm selected}^{\rm signal}}
-{I_{\rm reco}^{\rm signal}}.
+\frac{I_{\mathrm{selected}}^{\mathrm{signal}}}
+{I_{\mathrm{reco}}^{\mathrm{signal}}}.
 $$
 
 ## 6.3 Signal plus background
@@ -909,9 +909,9 @@ Compare angular and ML observables after the nominal MVA cut.
 
 Compare, where statistics permit:
 
-- a loose/common pool with $(q_{SB},O_{\rm CP})$;
-- nominal MVA cut with one-dimensional $O_{\rm CP}$;
-- nominal cut with two-dimensional $(q_{SB},O_{\rm CP})$.
+- a loose/common pool with $(q_{SB},O_{\mathrm{CP}})$;
+- nominal MVA cut with one-dimensional $O_{\mathrm{CP}}$;
+- nominal cut with two-dimensional $(q_{SB},O_{\mathrm{CP}})$.
 
 The nominal cut remains the event-selection baseline. The loose-pool result measures information loss.
 
@@ -928,7 +928,7 @@ Select one $X\in\{b,\ell\nu,\mathrm{top}\}$.
 ## 7.1 Early fusion
 
 $$
-M_{\rm early}(F_W,F_X).
+M_{\mathrm{early}}(F_W,F_X).
 $$
 
 ## 7.2 Late fusion
@@ -940,7 +940,7 @@ s_X=M_X(F_X),
 $$
 
 $$
-s_{\rm late}=M_{\rm fusion}(s_W,s_X).
+s_{\mathrm{late}}=M_{\mathrm{fusion}}(s_W,s_X).
 $$
 
 ## 7.3 Multidimensional likelihood
@@ -960,8 +960,8 @@ Compare
 $$
 I(s_W),\quad
 I(s_X),\quad
-I(M_{\rm early}),\quad
-I(s_{\rm late}),\quad
+I(M_{\mathrm{early}}),\quad
+I(s_{\mathrm{late}}),\quad
 I(s_W,s_X).
 $$
 
@@ -998,7 +998,7 @@ Do not:
 Use
 
 $$
-\mathcal L_r=f_r^{\rm run}\times 8~\mathrm{ab}^{-1}
+\mathcal L_r=f_r^{\mathrm{run}}\times 8~\mathrm{ab}^{-1}
 $$
 
 and build one template category per configuration.
@@ -1006,7 +1006,7 @@ and build one template category per configuration.
 Combine through
 
 $$
-\mathcal L_{\rm total}(c)=\prod_r\mathcal L_r(c).
+\mathcal L_{\mathrm{total}}(c)=\prod_r\mathcal L_r(c).
 $$
 
 ## 8.4 Deliverable
@@ -1020,7 +1020,7 @@ Pure $LR/RL$, four running-category, and combined LCF sensitivities, with a rate
 Use a supervisor-approved mapping
 
 $$
-c_{\rm gen}=K\frac{C}{\Lambda^2}.
+c_{\mathrm{gen}}=K\frac{C}{\Lambda^2}.
 $$
 
 Record conventions, sign, units, and the local nature of the conversion. Do not claim a multi-operator fit.
@@ -1047,9 +1047,9 @@ Deliverable: sensitivity change from adding the tau category.
 The present assignment is already ParT-assisted. First compare current assignment with a truth-matched reconstructed-jet oracle:
 
 $$
-\Delta I_{\rm pairing}
+\Delta I_{\mathrm{pairing}}
 =
-I_{\rm oracle}-I_{\rm current}.
+I_{\mathrm{oracle}}-I_{\mathrm{current}}.
 $$
 
 Proceed only if the gap is relevant.
@@ -1102,7 +1102,7 @@ Deliverable: an information-gain matrix for each added branch.
 2. Corresponding BDT/CatBoost and MLP baselines.
 3. Controlled frame study for $O_W$.
 4. Gen-to-reco information-retention result.
-5. Fast $O_b,O_{\ell\nu},O_{\rm top}$ baselines.
+5. Fast $O_b,O_{\ell\nu},O_{\mathrm{top}}$ baselines.
 6. Event-selection MVA integration.
 7. First signal-plus-background result when available.
 8. Fusion of $O_W$ with one secondary observable.
@@ -1127,10 +1127,10 @@ Deliverable: an information-gain matrix for each added branch.
 Aim for one figure or table comparing
 
 $$
-I_{\rm gen},\qquad
-I_{\rm reco},\qquad
-I_{\rm selected},\qquad
-I_{\rm sig+bg}
+I_{\mathrm{gen}},\qquad
+I_{\mathrm{reco}},\qquad
+I_{\mathrm{selected}},\qquad
+I_{\text{sig+bg}}
 $$
 
 for:
@@ -1181,7 +1181,7 @@ The student is not required to:
 
 # Appendix A — Recommended result table
 
-| Family | Level | Frame | Representation | Model | Polarisation | $I$ | $R_{\rm reco}$ | $G_{\rm ML/angle}$ | Status |
+| Family | Level | Frame | Representation | Model | Polarisation | $I$ | $R_{\mathrm{reco}}$ | $G_{\text{ML/angle}}$ | Status |
 |---|---|---|---|---|---|---:|---:|---:|---|
 | $W$ | gen | Higgs rest | angle | — | LR |  | — | — |  |
 | $W$ | reco | Higgs rest | angle | — | LR |  |  | — |  |
