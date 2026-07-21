@@ -3,7 +3,8 @@
 Unified entry point for the ILC/LCF `e+e- -> ttH` CP-violation summer-student
 project on the DESY NAF.
 
-Local working copy name on NAF: `ilc-tth-cpv-v2` (not yet pushed to GitHub).
+Local working copy name on NAF: `ilc-tth-cpv-v2`.
+GitHub mirror: `git@github.com:yyzhang666/tth-cpv-observable-ilc.git`.
 
 ## What this repository studies
 
@@ -61,6 +62,37 @@ bash scripts/run_baseline.sh configs/analysis_ow_lr.yaml --max-events 500
 # kinfit + jet assignment smoke test on one chunk
 bash scripts/run_kinfit_assignment.sh --config configs/analysis_ow_lr.yaml --chunk 0 --max-events 50
 ```
+
+## Inspect event files directly
+
+These LCIO command-line tools are useful for building intuition about what is
+actually stored in event files. They are inspection/debug tools, not the
+production analysis workflow.
+
+```bash
+source env/setup.sh
+
+# summarize an SLCIO file: events, collections, collection types, parameters
+anajob /path/to/file.slcio
+
+# dump the n-th event in an SLCIO file
+dumpevent /path/to/file.slcio 0
+
+# dump one specific run/event pair
+dumpevent /path/to/file.slcio <runNum> <evtNum>
+
+# restrict the dump to selected collections
+LCIO_READ_COL_NAMES="MCParticle RefinedJets6 OutputErrorFlowJets6" dumpevent /path/to/file.slcio 0
+
+# convert stdhep -> SLCIO for inspection; maxEvt=-1 means all events
+stdhepjob_new /path/to/input.stdhep /tmp/stdhep_subset.slcio 100
+```
+
+Use real sample paths from [configs/samples.yaml](configs/samples.yaml).
+For reconstructed analysis inputs, inspect the `complete_reco_kinfit_ready`
+`.slcio` files; for generator-only checks, use
+`scripts/inspect_generator_event.py` or first convert a small subset with
+`stdhepjob_new`.
 
 ## The pipeline
 
