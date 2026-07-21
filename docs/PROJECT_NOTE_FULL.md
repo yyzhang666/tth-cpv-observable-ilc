@@ -274,9 +274,7 @@ sign label.
 The distinction that must be preserved is therefore simple:
 `weight_training` controls how the classifier is fitted;
 `weight_template` controls how the already evaluated score or angle contributes
-to the signed $f_1$ histogram. Class balancing during `model.fit` is not itself
-a physics error, because the template builder returns to the original signed
-`weight_template`. The error would be to fill an interference template with
+to the signed $f_1$ histogram. Class balancing changes only the loss used to learn the score. When building the physics template, the code fills each event with its original signed weight_template, not the class-balanced optimizer weight. Class balancing may still change the learned score and must be validated, but it does not directly replace the physical event weight. The error would be to fill an interference template with
 the non-negative or class-balanced training weights: that would estimate
 $|f_1|$, not the signed derivative $f_1$ needed in
 $\nu(c)=\nu_0+c\nu_1$.
