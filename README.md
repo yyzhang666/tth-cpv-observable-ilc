@@ -27,8 +27,9 @@ The full scientific programme: [docs/PROJECT_NOTE_FULL.md](docs/PROJECT_NOTE_FUL
 - **Signal samples are produced**: 1M CPV events per polarization
   (`eL.pR`, `eR.pL`), 80 chunks each, from Physsim through SGV to
   kinfit-ready complete reconstruction, with per-chunk CPV weight sidecars
-  ([configs/samples.yaml](configs/samples.yaml)). Generator *physics*
-  validation is still the supervisor's task.
+  ([configs/samples.yaml](configs/samples.yaml)). Generator physics and
+  production validation are complete; see
+  [docs/SAMPLE_PROVENANCE.md](docs/SAMPLE_PROVENANCE.md).
 - **Jet assignment + kinematic fit** is a standard, frozen pipeline stage
   ([docs/KINFIT_JET_ASSIGNMENT.md](docs/KINFIT_JET_ASSIGNMENT.md));
   production final selection uses `FinalSelectionMode=logchi2_plus_flavor`
@@ -182,7 +183,7 @@ outputs/     all products (gitignored)
    [src/ilc_tth_cpv/angles.py](src/ilc_tth_cpv/angles.py) — import it
    everywhere.
 3. ML inputs are **raw variables** (E, theta, phi, masses, scores), exactly
-   as exported (frozen decision, KNOWN_ISSUES #15).
+   as exported (frozen decision; see `docs/DATA_SCHEMA.md`).
 4. Training weights and physics-template weights live in separate columns;
    each output uses its own kind ([docs/DATA_SCHEMA.md](docs/DATA_SCHEMA.md)).
 5. Reco-level observables come from the production kinfit selected candidate:

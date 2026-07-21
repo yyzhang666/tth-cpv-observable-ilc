@@ -7,7 +7,7 @@
 #   readable                    verified openable with pyLCIO
 #   reconstructed               reco chain has been run
 #   method-development-ready    usable for pipeline development
-#   physics-validation-pending  NOT usable for final physics numbers
+#   physics-validated           generator physics and production gates passed
 #   superseded                  kept for history; use the replacement sample
 #   pending                     nothing exists yet, interface reserved
 #
@@ -25,7 +25,10 @@ meta:
     docs/KINFIT_JET_ASSIGNMENT.md)
   helicity_convention: "LR = eL.pR = (-100%,+100%); RL = eR.pL = (+100%,-100%)"
   production_root: /data/dust/user/zhangyuy/analysis/tth/events_physsim/production
-  chunking: "80 chunks per polarization, 12500 generated events per chunk"
+  chunking: >
+    CPV: 80 chunks x 12500 sidecar events per polarization. SM: 80 generator
+    jobs requested 12500 events each, but the actual written-event totals must
+    be read from the production logs before yield normalisation.
   sidecar_alignment: >
     accepted-event-order matching: sidecar row i corresponds to the i-th
     usable LCIO event of the same chunk. Weights live only in the sidecar,
@@ -55,7 +58,7 @@ signals:
     n_events: 1000000
     generator: "Physsim TTHCPVSpring + JSFHadronizer"
     weight_source: "per-chunk sidecar CSV (see meta.sidecar_columns)"
-    status: [available, readable, method-development-ready, physics-validation-pending]
+    status: [available, readable, method-development-ready, physics-validated]
     notes: "Per-chunk stdhep + sidecar; chunk id is the number before .stdhep."
 
   tthcpv_gen_erpl:
@@ -70,7 +73,7 @@ signals:
     n_events: 1000000
     generator: "Physsim TTHCPVSpring + JSFHadronizer"
     weight_source: "per-chunk sidecar CSV"
-    status: [available, readable, method-development-ready, physics-validation-pending]
+    status: [available, readable, method-development-ready, physics-validated]
     notes: ""
 
   tthcpv_reco_elpr:
@@ -83,7 +86,7 @@ signals:
     n_events: "80 x 12499 usable events (one event per chunk lost; validator OK)"
     reconstruction_version: "complete_reco_kinfit_ready (production 2026-07-20)"
     weight_source: "matching generator sidecar, accepted-event-order alignment"
-    status: [available, reconstructed, method-development-ready, physics-validation-pending]
+    status: [available, reconstructed, method-development-ready, physics-validated]
     notes: >
       Input for the kinfit + jet assignment stage (docs/KINFIT_JET_ASSIGNMENT.md).
       Key collections: OutputErrorFlowJets6 (jet p4+covariance),
@@ -100,7 +103,7 @@ signals:
     n_events: "80 x 12499 usable events"
     reconstruction_version: "complete_reco_kinfit_ready (production 2026-07-20)"
     weight_source: "matching generator sidecar, accepted-event-order alignment"
-    status: [available, reconstructed, method-development-ready, physics-validation-pending]
+    status: [available, reconstructed, method-development-ready, physics-validated]
     notes: ""
 
   # ---- ttH SM production ------------------------------------------------------
@@ -112,7 +115,7 @@ signals:
     file_pattern: "complete_reco_kinfit_ready_E550-Test.Ptth.Gphyssim.eL.pR.I01234_0.*_sgv.slcio"
     n_files: 80
     status: [available, reconstructed, method-development-ready]
-    notes: "SM yield template source (weight_sm) once cross-section bookkeeping is frozen."
+    notes: "SM yield-template source; pure-LR cross section, written-event total, and export are not yet wired into this repo."
 
   tth_sm_reco_erpl:
     process: "e+e- -> ttH, SM, kinfit-ready complete reco"
@@ -122,7 +125,7 @@ signals:
     file_pattern: "complete_reco_kinfit_ready_E550-Test.Ptth.Gphyssim.eR.pL.I01234_0.*_sgv.slcio"
     n_files: 80
     status: [available, reconstructed, method-development-ready]
-    notes: ""
+    notes: "SM yield-template source; pure-RL cross section, written-event total, and export are not yet wired into this repo."
 
   # ---- historical validation sample (superseded by the production above) ----
   tthcpv_absint_val_12500:

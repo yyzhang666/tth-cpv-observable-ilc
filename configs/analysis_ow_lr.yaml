@@ -25,8 +25,7 @@ kinfit:
     accepted: 1
     fit_success: 1
   selected_pairs:
-    O_W: [W1, W2]              # selected light-jet slots; quark/antiquark ordering
-                               # via signed flavor is confirmed with the supervisor
+    O_W: [W1, W2]              # current technical slot order; not yet q/qbar oriented
     O_b: [b_had, b_lep]        # selected top-side b slots
 
 observable:
@@ -68,7 +67,7 @@ model:
 weights:
   training_weight: weight_training              # base |w_int|; class balance is trainer-only
   template_weight: weight_interference_signed   # NEVER class-balanced
-  sm_template_weight: weight_sm                 # pending SM sample (KNOWN_ISSUES #5)
+  sm_template_weight: weight_sm                 # existing SM production not yet wired/exported
 
 selection:
   enabled: false

@@ -42,7 +42,7 @@ directory is gitignored.
   Keep that pattern in anything you add (condor/README.md rule 1).
 - `TTHSemiLepKinFit` may crash in finalization (exit 134/139) after writing a
   valid output ROOT file; wrappers accept these exits only with a non-empty
-  output (KNOWN_ISSUES #9).
+  output (see the Marlin finalization item in `KNOWN_ISSUES.md`).
 - GPU is not required for the CatBoost baseline. Weaver/ParT retraining
   (optional extension) is out of scope for this repo.
 

@@ -20,12 +20,12 @@ phi   in [-pi, pi)        # frozen from the authoritative implementation
 `wrap(x) = ((x + pi) mod 2pi) - pi`, mapped into `[-pi, pi)`.
 
 Provenance: `compute_tthcpv_ma2018_observables.py::wrap_phi` (see
-CODE_PROVENANCE.md). The project note writes `(-pi, pi]`; the boundary
-difference is documented as KNOWN_ISSUES #2 and the code convention wins.
+CODE_PROVENANCE.md). This half-open range is used by the code, tests, configs,
+and Project Note.
 
 ## 3. Signed azimuthal difference
 
-$$\Delta\phi(a,b) = \operatorname{wrap}(\phi_a - \phi_b)$$
+$$\Delta\phi(a,b) = \mathrm{wrap}(\phi_a - \phi_b)$$
 
 Pairs are ordered **particle − antiparticle** (theory-study convention).
 
@@ -40,11 +40,15 @@ O_lnu  : CP-ordered same-W lepton-neutrino angle
          W+: Delta phi(nu, l+)             # nu is the particle
 ```
 
-These match the theory-study "Original Phi" observable family; the strongest
-validated observable is `delta_phi_light_quark_antiquark` (our `O_W`) in the
-Higgs rest frame. At reconstruction level the selected kinfit slots `W1/W2`
-map onto quark/antiquark via the signed flavor information; that mapping is
-confirmed with the supervisor (KNOWN_ISSUES #1).
+These are frozen generator-level definitions matching the theory-study
+"Original Phi" observable family. The strongest validated observable is
+`delta_phi_light_quark_antiquark` (our `O_W`) in the Higgs rest frame.
+
+The current reco implementation has not yet reproduced all of these signed
+orderings. In particular, kinfit `W1/W2` are ordered by source-jet index and
+their W-pair flavor score is symmetric, so `W1-W2` is not yet a reconstructed
+quark-antiquark ordering. The concrete reco gaps are listed in
+`../KNOWN_ISSUES.md`.
 
 ## 5. Reference frames and the two basis conventions
 
@@ -131,8 +135,13 @@ $$a(P_-,P_+) = \tfrac{(1-P_-)(1+P_+)}{4},\qquad b(P_-,P_+) = \tfrac{(1+P_-)(1-P_
 
 `a` multiplies pure-LR event weights, `b` pure-RL. `a+b < 1` in general; do
 not renormalise. LCF scenario: 8 ab^-1 with fractions (10,40,40,10)% for
-(--, -+, +-, ++), see `configs/lcf_polarization.yaml`. Check the generator
-spin-averaging convention before using yields (KNOWN_ISSUES #7).
+(--, -+, +-, ++), see `configs/lcf_polarization.yaml`.
+
+The Physsim convention is resolved for the registered samples: with
+`POLE=-1, POLP=+1` or the reversed signs, `functthf.F` selects one initial
+helicity with unit weight, and `sgtthf.F` uses `SPIN=1`. Thus the registered
+LR/RL cross sections are pure-helicity cross sections. They do not already
+contain the quarter factors above.
 
 `a_r, b_r` are later physics-template/yield factors. The current pure-LR and
 pure-RL baseline models are trained separately without polarisation
@@ -173,7 +182,13 @@ kinfit + jet assignment stage (docs/KINFIT_JET_ASSIGNMENT.md):
 - events: `accepted = 1` and `fit_success = 1`, one entry per selected event;
 - selected candidate: `FinalSelectionMode=logchi2_plus_flavor` with
   `FlavorWeight=0.3`;
-- `O_W` from selected slots `W1 - W2`; `O_b` from `b_had - b_lep`;
+- the current technical reco table fills `O_W` from `W1-W2`; this slot order
+  is not yet the physical quark-antiquark order because the W score is
+  symmetric and the slots follow source-jet index;
+- reco `O_b` and `O_top` still need lepton-charge-dependent top/antitop side
+  ordering;
+- reco `O_lnu` is unavailable until the fitted neutrino four-vector is
+  persisted by the kinfit stage;
 - these distributions include every selected event; truth-signed variants
   (with their smaller denominator) are separate diagnostics;
 - single-jet angular residuals/pulls use `theta = atan2(pt, pz)`,
@@ -198,3 +213,6 @@ kinfit + jet assignment stage (docs/KINFIT_JET_ASSIGNMENT.md):
   degeneracy guard.
 - 2026-07-21: clarified sidecar-to-event alignment and separated base training
   weights, signed template weights, and later polarisation/yield factors.
+- 2026-07-21: froze the half-open phi range consistently, recorded the
+  Physsim pure-helicity normalisation check, and replaced the claimed reco
+  W-quark orientation with the actual implementation status.

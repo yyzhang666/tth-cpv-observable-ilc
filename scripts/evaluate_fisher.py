@@ -4,9 +4,10 @@
 I = sum_i nu1_i^2 / nu0_i  (absolute yield), optional shape-only variant,
 optional parameter-independent background. Warns on invalid bins.
 
-The SM template (nu0) is pending for the CPV |I| sample (KNOWN_ISSUES #5);
-until then use --nu0-from-abs as a documented technical placeholder, which is
-NOT a physics result.
+The SM production exists, but its normalised event template is not wired into
+this repository yet (KNOWN_ISSUES: SM denominator template). Until then use
+--nu0-from-abs only as a technical pipeline placeholder; it is NOT a physics
+result.
 
 Usage:
     python3 scripts/evaluate_fisher.py \

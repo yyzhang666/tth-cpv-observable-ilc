@@ -318,7 +318,7 @@ Code: [../src/ilc_tth_cpv/weights.py](../src/ilc_tth_cpv/weights.py),
 \mathrm{sign}\bigl(\hat z\cdot(\hat p_a\times\hat p_b)\bigr),
 ```
 
-and a triple product of momenta flips sign under P (every vector in it is reversed). With a **charge-aware ordering** of $a$ and $b$ (so that C maps the ordered pair onto itself — e.g. "up-type before down-type", or putting $b_t$ before $b_{\bar{t}}$), the full CP operation gives
+and a triple product of momenta flips sign under P (every vector in it is reversed). With a **charge-aware ordering** of $a$ and $b$ (so that C maps the ordered pair onto itself, for example particle before antiparticle), the full CP operation gives
 
 ```math
 \Delta\phi \;\xrightarrow{\;CP\;}\; -\Delta\phi ,
@@ -332,18 +332,18 @@ The basic building block is therefore a **signed azimuthal difference** between 
 \Delta\phi(a,b)
 =
 \mathrm{wrap}(\phi_a-\phi_b)
-\in(-\pi,\pi],
+\in[-\pi,\pi),
 ```
 
-where "wrap" folds the raw difference back into $(-\pi,\pi]$ (e.g. $350°$ becomes $-10°$). Two things students often get wrong:
+where "wrap" folds the raw difference back into $[-\pi,\pi)$ (e.g. $350°$ becomes $-10°$). Two things students often get wrong:
 
-- **Order matters.** $\Delta\phi(a,b) = -\Delta\phi(b,a)$. Since the sign *is* the CP information, you must fix which object is "first" (e.g. up-type $W$ jet before down-type; $b_t$ before $b_{\bar{t}}$) and never deviate. Charge-aware ParT scores and the decay assignment define the ordering.
+- **Order matters.** $\Delta\phi(a,b) = -\Delta\phi(b,a)$. Since the sign *is* the CP information, you must fix which object is first (e.g. light quark before light antiquark; $b_t$ before $b_{\bar{t}}$) and never deviate. Generator truth supplies this identity directly; a reco result needs an explicitly implemented and validated orientation rule.
 - **Wrapping matters.** Compute $\Delta\phi$ with a proper wrap function, never a naive subtraction.
 
 For the two hadronic W jets, the observable is
 
 ```math
-O_W=\Delta\phi(j_{W,\mathrm{up}},\,j_{W,\mathrm{down}}).
+O_W=\Delta\phi(j_{W,q},\,j_{W,\bar q}).
 ```
 
 For the two top-decay $b$ jets, it is
@@ -352,13 +352,27 @@ For the two top-decay $b$ jets, it is
 O_b=\Delta\phi(b_t,\,b_{\bar{t}}).
 ```
 
-For the lepton and neutrino from the leptonic $W$, it is
+For the lepton and neutrino from the leptonic $W$, use the charge-dependent
+CP ordering
 
 ```math
-O_{\ell\nu}=\Delta\phi(\ell,\,\nu_W).
+O_{\ell\nu}(W^-)=\Delta\phi(\ell^-,\,\bar\nu),
 ```
 
-plus a supervisor-approved $O_{\mathrm{top}}$ built from the reconstructed $t$ and $\bar{t}$ systems.
+```math
+O_{\ell\nu}(W^+)=\Delta\phi(\nu,\,\ell^+),
+```
+
+and $O_{\mathrm{top}}=\Delta\phi(t,\bar t)$.
+
+These four definitions are frozen at generator level. At reco level, the
+kinfit currently selects the relevant jet **slots**, but the exporter does not
+yet reproduce every particle-antiparticle orientation: W1/W2 are source-index
+ordered rather than quark/antiquark ordered, b/top sides are not yet swapped
+using the lepton charge, and the fitted neutrino four-vector is not stored.
+Therefore current reco signed angles are technical diagnostics, not headline
+physics observables. The exact implementation gaps are intentionally kept in
+[../KNOWN_ISSUES.md](../KNOWN_ISSUES.md).
 
 > **Freeze conventions early.** Exact definitions, charge conventions, and axis conventions must be written down **once**, in a configuration file, and used everywhere (see the decision log, Appendix C). Silent convention changes are the classic way to waste two weeks.
 
@@ -539,9 +553,9 @@ the quantities required to define the frame:
 ```math
 F_W^{\mathrm{min}}
 =
-\{E,\theta,\phi\}_{j_{W,\mathrm{up}}}
+\{E,\theta,\phi\}_{j_{W,q}}
 \cup
-\{E,\theta,\phi\}_{j_{W,\mathrm{down}}}
+\{E,\theta,\phi\}_{j_{W,\bar q}}
 \cup
 F_{\mathrm{frame}} .
 ```
@@ -824,7 +838,12 @@ For the ILC-like $80\%/60\%$ beams:
 
 The **LCF 550 GeV scenario** assumed here: total $8~\mathrm{ab}^{-1}$, shared among the four sign configurations as $(--,-+,+-,++)=(10\%,40\%,40\%,10\%)$.
 
-> **Check before use:** the generator's cross-section normalisation convention (spin averaging, factors of 4) must be verified before applying these mixture factors — that is the closure test of Appendix B.
+The Physsim source convention has been checked for these productions. At
+`POLE=-1, POLP=+1` and `POLE=+1, POLP=-1`, `functthf.F` selects a single
+initial helicity with unit weight, while `sgtthf.F` uses `SPIN=1`. The stored
+LR/RL cross sections are therefore pure-helicity cross sections, not values
+that already contain an initial-state factor of four. Apply the factors above
+once, without renormalising $a+b$.
 
 **Polarisation in ML training — three rules:**
 
@@ -1208,21 +1227,24 @@ Use this minimum validation-table structure; add rows when something unusual is 
 | gen and reco $O_W$ templates |  | invalids recorded, out-of-range 0 | angular `.meta.json` files |
 | HTCondor accounting |  | every requested chunk completed or has an explained failure | `condor_q`, `condor_history`, output inventory |
 
-Chapter 4 starts only when another person can follow these records from the configured input files to the two $O_W$ plots and understand every event loss. SM CP closure and physical Fisher numbers remain deferred until the supervisor-provided SM normalisation and templates are available.
+Chapter 4 starts only when another person can follow these records from the configured input files to the two $O_W$ plots and understand every event loss. SM CP closure and physical Fisher numbers remain deferred until the existing SM production is exported with its cross section and actual written-event normalisation.
 
 ---
 
 # Chapter 4 — The full $O_W$ angular–ML baseline (main milestone)
 
-**This is the core of the project** — expect roughly two to three effective weeks including debugging. Everything later reuses this machinery.
+**This is the core of the project** — expect roughly two to three effective weeks including debugging. Everything later reuses this machinery. The generator baseline can start immediately; the headline reco comparison starts only after the signed W-slot orientation in §2.3 is implemented and validated.
 
 ## 4.1 Observable
 
 ```math
-O_W=\Delta\phi(j_{W,\mathrm{up}},\,j_{W,\mathrm{down}})
+O_W=\Delta\phi(j_{W,q},\,j_{W,\bar q})
 ```
 
-at gen and reco level, using the current ParT-assisted assignment and the inclusive-gen/full-reco event populations defined in §2.8.
+at gen and reco level, using the ParT-assisted pair assignment, a validated
+quark-antiquark orientation for the selected reco pair, and the
+inclusive-gen/full-reco event populations defined in §2.8. The current
+`W1-W2` slot-order output is useful only for pipeline checks.
 
 ## 4.2 Frame study
 
@@ -1270,19 +1292,23 @@ Configs and driver: [../configs/analysis_ow_lr.yaml](../configs/analysis_ow_lr.y
 
 # Chapter 5 — Secondary-observable baselines (fast, by reuse)
 
-**Start only after the $O_W$ framework is stable.** Reuse the frozen default frame and model configuration — the point is a *quick, uniform* survey, not three new projects.
+**Start only after the $O_W$ framework and reco signed-object ordering are stable.** Reuse the frozen default frame and model configuration — the point is a *quick, uniform* survey, not three new projects.
 
 ## 5.1 $O_b=\Delta\phi(b_t,b_{\bar{t}})$
 
 Ordering from signed ParT $b/\bar{b}$ scores + top-side assignment + lepton-charge consistency.
 
-## 5.2 $O_{\ell\nu}=\Delta\phi(\ell,\nu_W)$ (or approved equivalent)
+## 5.2 $O_{\ell\nu}$
 
-The reco-level neutrino is an *estimate* (from missing momentum / kinematic fit) — document which estimator is used and its validity flag.
+The generator definition is the charge-dependent CP ordering in §2.3. Reco requires the fitted neutrino
+four-vector to be persisted by kinfit; it is currently unavailable, so do not
+substitute an undocumented missing-momentum estimate.
 
 ## 5.3 $O_{\mathrm{top}}$
 
-A top-level angle from the reconstructed $t,\bar{t}$ systems. **Freeze the exact definition with the supervisor before writing code.**
+The definition is $\Delta\phi(t,\bar t)$. At reco level, use the isolated
+lepton charge to identify which reconstructed side is top and which is
+antitop, and include the fitted neutrino in the leptonic-side composite.
 
 ## 5.4 Required comparison (identical recipe for each)
 
@@ -1503,7 +1529,8 @@ For each physical run configuration:
 3. compare with a partially polarised sample if one exists;
 4. compare total cross sections;
 5. compare at least one angular distribution;
-6. document any generator factor-of-four or spin-average convention found.
+6. verify the pure limits $a(-1,+1)=1$, $b(-1,+1)=0$ and the reversed RL
+   limits, and confirm that $a+b$ was not renormalised.
 
 # Appendix C — Decision log template
 

@@ -23,7 +23,7 @@ try:
     from pyLCIO import IOIMPL
 except Exception as exc:
     raise SystemExit(
-        f"pyLCIO unavailable ({exc}); source env/setup.sh first (KNOWN_ISSUES #11)."
+        f"pyLCIO unavailable ({exc}); source env/setup.sh first (see KNOWN_ISSUES.md)."
     )
 
 out, inputs = sys.argv[1], sys.argv[2:]

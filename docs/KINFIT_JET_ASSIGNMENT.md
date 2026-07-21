@@ -148,9 +148,16 @@ O_W  : selected slots W1 - W2
 O_b  : selected slots b_had - b_lep
 ```
 
-One entry per selected event passing `accepted=1 && fit_success=1`. These
-distributions include every selected event; truth-signed variants (with
-their smaller denominator) are separate diagnostics and get their own plots.
+These are selected **slots**, not yet final particle-antiparticle orientations.
+The processor enumerates `W1/W2` in source-index order and scores the W pair
+symmetrically, so `W1-W2` must not be labelled quark-antiquark at reco level.
+The exporter also still needs lepton-charge-dependent ordering for the b and
+top pairs. The concrete blocker is recorded in `../KNOWN_ISSUES.md`.
+
+One entry per selected event passing `accepted=1 && fit_success=1`. Slot-order
+distributions can be used to validate plumbing. A physics signed-angle result
+requires the reco orientation layer described above; truth-oriented variants
+remain separate diagnostics with their own denominator.
 
 ## Out of scope for the student baseline
 

@@ -521,9 +521,9 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
         h2 = jet_by_index(jets, fit_row["idx_H2"])
         lepton = snapshot["lepton"]
 
-        # Reco names follow the frozen selected-pair contract:
-        # W1-W2 for O_W and b_had-b_lep for O_b. The neutrino fit p4 is not
-        # stored in the best tree, so the leptonic top composite is visible-only.
+        # Technical selected-slot aliases only. W1/W2 are source-index ordered,
+        # not quark/antiquark oriented, and the had/lep top sides are not yet
+        # charge ordered. The fitted neutrino p4 is also absent from the tree.
         object_p4 = {
             "wjet_quark": w1,
             "wjet_antiquark": w2,
@@ -579,7 +579,8 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
         "level": "reco",
         "frame": frame_name,
         "basis": "lab_axes (boost only, phi vs fixed lab axes)",
-        "pair_ordering": "selected W1-W2 for O_W; selected b_had-b_lep for O_b",
+        "pair_ordering": "technical slots W1-W2 and b_had-b_lep; physical particle-antiparticle reco orientation not implemented",
+        "reco_orientation_status": "not_physics_ready; see KNOWN_ISSUES.md",
         "feature_policy": "raw variables only (E, theta, phi, mass)",
         "kinfit_root": root_path,
         "reco_slcio": reco["slcio"],
@@ -590,7 +591,7 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
         "max_events": max_events,
         "event_index_alignment": "TTHSemiLepKinFit event_index is the input SLCIO record index; sidecar uses accepted-event-order matching",
         "n_event_number_mismatch": n_event_number_mismatch,
-        "neutrino_note": "best-tree fitted neutrino p4 is not stored; neutrino columns are NaN and leptonic-top composite is visible-only",
+        "neutrino_note": "best-tree fitted neutrino p4 is not stored; neutrino columns are NaN and the leptonic-top slot is visible-only",
         "kinfit_report": kinfit_report,
         "weight_report": {k: v for k, v in weight_report.items() if k != "problems"},
         "schema_report": report,

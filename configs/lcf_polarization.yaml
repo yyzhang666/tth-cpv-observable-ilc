@@ -8,8 +8,8 @@
 #   - a+b is NOT normalised to 1 (remaining fraction feeds LL/RR, which do
 #     not contribute to this s-channel-like process at leading order);
 #   - fractions sum to 1;
-#   - generator cross-section spin-averaging convention must be checked
-#     before multiplying yields (KNOWN_ISSUES #7).
+#   - registered Physsim LR/RL cross sections are verified pure-helicity
+#     cross sections; apply a/b once, without an extra factor of four.
 # =============================================================================
 
 total_luminosity_ab: 8.0

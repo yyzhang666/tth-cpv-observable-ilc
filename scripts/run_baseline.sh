@@ -58,7 +58,7 @@ echo "== [5/6] ML observable template (test split)"
 python3 scripts/build_ml_observable.py --config "$CONFIG" \
   --features "$FEATURES" --model "$OUT_BASE/model/cpv_xgboost.json"
 
-echo "== [6/6] Fisher (TECHNICAL placeholder nu0; see KNOWN_ISSUES #5)"
+echo "== [6/6] Fisher (TECHNICAL placeholder nu0; see KNOWN_ISSUES: SM denominator)"
 OBS="$(python3 -c "
 import sys; sys.path.insert(0, 'src')
 from ilc_tth_cpv.io import load_analysis_config

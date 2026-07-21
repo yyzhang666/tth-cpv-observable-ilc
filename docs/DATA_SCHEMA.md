@@ -22,7 +22,7 @@ note in the metadata, so missing weights stay visible.
 
 | column | description |
 |---|---|
-| `weight_sm` | SM yield weight `xsec*lumi/n_gen` (pending SM samples, KNOWN_ISSUES #5) |
+| `weight_sm` | SM yield weight `xsec*lumi/n_written`; currently `NaN` because the existing SM production is not yet exported and normalised in this repo |
 | `weight_interference_signed` | signed interference weight (fb-scaled), physics templates only |
 | `weight_interference_abs` | `abs(weight_interference_signed)` |
 | `weight_quadratic` | optional `c^2` term weight (Optional extension 3) |
@@ -55,10 +55,12 @@ lepton      neutrino         isolated lepton and neutrino estimator
 top         antitop  higgs   composite systems
 ```
 
-Pairs follow the particle−antiparticle ordering (PHYSICS_CONVENTIONS §3–§4).
-Reco-level tables use the kinfit selected-candidate slots and record the
-mapping `W1, W2 -> wjet_quark/antiquark` (via signed flavor), `b_had, b_lep`,
-`H_b1, H_b2`.
+Generator-level pairs follow the particle-antiparticle ordering in
+`PHYSICS_CONVENTIONS.md` sections 3 and 4. The current reco table uses the
+kinfit selected slots `W1, W2, b_had, b_lep, H_b1, H_b2`, but its legacy
+column aliases do not yet guarantee the corresponding particle-antiparticle
+ordering. In particular, W1/W2 are not quark/antiquark oriented. See
+`../KNOWN_ISSUES.md` before interpreting a reco signed angle.
 
 ## Kinfit stage columns (reco level)
 

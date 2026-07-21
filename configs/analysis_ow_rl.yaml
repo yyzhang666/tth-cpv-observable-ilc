@@ -22,7 +22,7 @@ kinfit:
     accepted: 1
     fit_success: 1
   selected_pairs:
-    O_W: [W1, W2]
+    O_W: [W1, W2]              # current technical slot order; not yet q/qbar oriented
     O_b: [b_had, b_lep]
 
 observable:
@@ -59,7 +59,7 @@ model:
 weights:
   training_weight: weight_training
   template_weight: weight_interference_signed
-  sm_template_weight: weight_sm
+  sm_template_weight: weight_sm                 # existing SM production not yet wired/exported
 
 selection:
   enabled: false

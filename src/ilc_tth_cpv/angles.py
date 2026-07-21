@@ -17,7 +17,7 @@ TWO_PI = 2.0 * math.pi
 def wrap_phi(x: float) -> float:
     """Wrap an angle into [-pi, pi).
 
-    Frozen convention (docs/PHYSICS_CONVENTIONS.md section 2, KNOWN_ISSUES #2).
+    Frozen convention (docs/PHYSICS_CONVENTIONS.md section 2).
     """
     wrapped = (float(x) + math.pi) % TWO_PI - math.pi
     if wrapped >= math.pi:
@@ -28,8 +28,8 @@ def wrap_phi(x: float) -> float:
 def delta_phi(phi_a: float, phi_b: float) -> float:
     """Signed azimuthal difference wrap(phi_a - phi_b).
 
-    Argument order matters: first argument is the up-type / top-side object
-    (docs/PHYSICS_CONVENTIONS.md sections 3-4).
+    Argument order matters. Each observable defines its own frozen
+    particle-minus-antiparticle order (docs/PHYSICS_CONVENTIONS.md sections 3-4).
     """
     return wrap_phi(float(phi_a) - float(phi_b))
 

@@ -10,7 +10,7 @@ from ilc_tth_cpv.angles import delta_phi, observable_signs, sign_of, wrap_phi
 
 
 def test_wrap_range_half_open():
-    # frozen convention [-pi, pi): +pi maps to -pi (KNOWN_ISSUES #2)
+    # Frozen convention [-pi, pi): +pi maps to -pi.
     assert wrap_phi(math.pi) == -math.pi
     assert wrap_phi(-math.pi) == -math.pi
     assert wrap_phi(0.0) == 0.0

@@ -83,7 +83,7 @@ def fisher_information(
 def intervals(fisher: float) -> dict:
     """Approximate Gaussian 68%/95% intervals; local estimate only.
 
-    Final intervals require a likelihood scan (KNOWN_ISSUES #14).
+    Final intervals require a likelihood scan (see KNOWN_ISSUES.md).
     """
     if fisher <= 0.0:
         return {"sigma_c": math.inf, "c68": math.inf, "c95": math.inf}

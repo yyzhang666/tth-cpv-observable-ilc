@@ -39,7 +39,7 @@ try:
 except Exception as exc:
     raise SystemExit(
         f"pyLCIO unavailable ({exc}); source env/setup.sh first, or use "
-        "--max-events early stopping instead of splitting (KNOWN_ISSUES #11)."
+        "--max-events early stopping instead of splitting (see KNOWN_ISSUES.md)."
     )
 
 src, prefix, chunk = sys.argv[1], sys.argv[2], int(sys.argv[3])

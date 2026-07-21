@@ -17,8 +17,11 @@ production/<process>/<polarization>/<run_id>/
     manifests/  condor/  logs_and_dumps/  aida/
 ```
 
-with `<process>` in `cpv_tth, sm_tth, sm_ttz`, `<polarization>` in
-`eL.pR, eR.pL`, and 80 chunks of 12500 generated events each.
+with `<process>` in `cpv_tth, sm_tth, sm_ttz` and `<polarization>` in
+`eL.pR, eR.pL`. The CPV samples contain 80 chunks of 12500 sidecar events per
+polarization. The SM jobs requested 12500 events each, but their actual
+written-event counts must be taken from the generator logs rather than the
+request value.
 
 ## ttH CPV |interference| production (primary signal sample)
 
@@ -37,14 +40,20 @@ with `<process>` in `cpv_tth, sm_tth, sm_ttz`, `<polarization>` in
   the i-th usable LCIO event of the same chunk. Weights are kept external to
   the LCIO files. Spot checks confirmed `accepted_order_match=true` and
   `sidecar_covers_lcio=true` for SGV and complete reco.
-- Generator **physics** validation is still pending (KNOWN_ISSUES); the
-  production is `method-development-ready`.
+- Generator physics validation is complete. The 2026-05-04 validation checked
+  event accounting, sign balance, the signed integral, non-negative component
+  weights, the matrix-element Cauchy bound, the finite-mixing-angle identity,
+  and sidecar ordering. The 2026-07-20 production validation then checked both
+  million-event helicity samples through SGV and complete reconstruction. The
+  registered CPV samples are `physics-validated`.
 
 ## SM ttH and ttZ productions
 
-Same chain and layout under `sm_tth/` and `sm_ttz/`. The SM ttH samples will
-provide the `weight_sm` yield templates; ttZ is the first background
-(interface: docs/BACKGROUND_INTERFACE.md).
+Same chain and layout under `sm_tth/` and `sm_ttz/`. The SM ttH files exist,
+but this repository still needs their pure-helicity cross sections, actual
+written-event totals, and feature export before it can build `weight_sm` and
+the SM denominator template. ttZ is the first background (interface:
+`docs/BACKGROUND_INTERFACE.md`).
 
 ## Kinfit + jet assignment stage
 
