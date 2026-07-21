@@ -92,7 +92,15 @@ bash scripts/run_kinfit_assignment.sh \
 The 50-event kinfit output is deliberately isolated from the canonical
 full-chunk directory. The standard reco feature exporter reads only a validated
 full-chunk ROOT; follow PROJECT_NOTE_FULL.md Chapter 3 for the one-chunk
-HTCondor gate and reco export.
+HTCondor gate and reco export. Kinfit ROOT files made before the 2026-07-22
+processor update do not contain `nu_fit_{E,px,py,pz}` and are rejected by the
+validator; rerun the kinfit stage rather than reusing those files.
+
+At reco level, kinfit chooses the W pair. `export_features.py` then orients its
+two jets with Weaver light-flavour probabilities. Opposite q/qbar preferences
+are used directly; for two q-like jets the larger `P(q)` is q, and for two
+qbar-like jets the larger `P(qbar)` is qbar. The orientation status, decision
+margin, and both jets' scores are saved in the feature table for inspection.
 
 ## Inspect event files directly
 

@@ -37,7 +37,10 @@ rerun commands of that study.
 | `docs/KINFIT_JET_ASSIGNMENT.md` | supervisor's final kinfit & jet assignment scheme note plus `20260720_tth_semilep_logchi2_flavor_production_update.md` | adapted |
 
 The `TTHSemiLepKinFit` Marlin processor itself is part of the ZHH software
-stack loaded by `env/setup.sh`.
+stack loaded by `env/setup.sh`. On 2026-07-22 its best tree output was extended
+to persist the already-fitted `FitOutcome.nuAfter` as
+`nu_fit_{E,px,py,pz}`. This was output plumbing only; fit logic and candidate
+selection were unchanged.
 
 ## Reconstruction reading
 
@@ -45,6 +48,7 @@ stack loaded by `env/setup.sh`.
 |---|---|---|
 | collection contract in `templates/reco_reader_template.py` | production `complete_reco_kinfit_ready` steering + kinfit scheme note | documented |
 | `src/ilc_tth_cpv/slcio.py` reader pattern | supervisor's MVA-inputs LCIO helper module | ported |
+| `src/ilc_tth_cpv/flavor.py::orient_w_pair` | frozen supervisor rule using Weaver signed light-flavour probabilities within the selected W pair | new, tested |
 | sample weight rule `xsec*lumi/n_gen` | same module | ported |
 
 ## ML observable

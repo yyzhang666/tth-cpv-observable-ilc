@@ -25,7 +25,7 @@ kinfit:
     accepted: 1
     fit_success: 1
   selected_pairs:
-    O_W: [W1, W2]              # current technical slot order; not yet q/qbar oriented
+    O_W: [W1, W2]              # exporter applies conditional Weaver q/qbar orientation
     O_b: [b_had, b_lep]        # selected top-side b slots
 
 observable:
@@ -67,7 +67,7 @@ model:
 weights:
   training_weight: weight_training              # base |w_int|; class balance is trainer-only
   template_weight: weight_interference_signed   # NEVER class-balanced
-  sm_template_weight: weight_sm                 # existing SM production not yet wired/exported
+  sm_template_weight: weight_sm                 # SM event export/RL normalization not yet wired
 
 selection:
   enabled: false

@@ -125,6 +125,11 @@ flavor_weight
 final_selection_score
 final_fit_score
 final_flavor_score
+nu_fit_E
+nu_fit_px
+nu_fit_py
+nu_fit_pz
+lepton_charge
 ```
 
 For the canonical mode:
@@ -141,23 +146,31 @@ mode in the processor.
 
 ## Reco-level observables from the selected candidate
 
-Standard selected pairs for the CP observables:
+Kinfit supplies the selected slots for the CP observables:
 
 ```
-O_W  : selected slots W1 - W2
+O_W  : selected W1/W2 pair, oriented after selection by the feature exporter
 O_b  : selected slots b_had - b_lep
 ```
 
-These are selected **slots**, not yet final particle-antiparticle orientations.
-The processor enumerates `W1/W2` in source-index order and scores the W pair
-symmetrically, so `W1-W2` must not be labelled quark-antiquark at reco level.
-The exporter also still needs lepton-charge-dependent ordering for the b and
-top pairs. The concrete blocker is recorded in `../KNOWN_ISSUES.md`.
+The processor enumerates `W1/W2` in source-index order and scores their pair
+symmetrically. `export_features.py` then computes each selected jet's
+`P(q)` and `P(qbar)` from the Weaver u/d/s/c and anti-u/d/s/c probabilities.
+Opposite preferences are used directly. For two q-like jets, larger `P(q)` is
+q; for two qbar-like jets, larger `P(qbar)` is qbar. b probabilities are
+ignored for this orientation. The rule, scores, decision margin, and
+same-sign/tie status are persisted in the feature table. This is an
+orientation of the selected pair, not an offline reranking of kinfit
+candidates.
 
-One entry per selected event passing `accepted=1 && fit_success=1`. Slot-order
-distributions can be used to validate plumbing. A physics signed-angle result
-requires the reco orientation layer described above; truth-oriented variants
-remain separate diagnostics with their own denominator.
+The best tree also stores the selected fit's `nu_fit_{E,px,py,pz}`. These
+branches and `lepton_charge` are required by the validator/exporter so reco
+`O_lnu` can use the same charge-dependent ordering as generator level. The
+`b_had/b_lep` and hadronic/leptonic top sides remain selected slots until their
+charge ordering is implemented and checked in Chapter 4.
+
+One entry per selected event passing `accepted=1 && fit_success=1`.
+Truth-oriented variants remain separate diagnostics with their own denominator.
 
 ## Out of scope for the student baseline
 

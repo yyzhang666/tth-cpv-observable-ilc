@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -21,6 +22,11 @@ DEFAULT_BRANCHES = (
     "final_selection_score",
     "final_fit_score",
     "final_flavor_score",
+    "nu_fit_px",
+    "nu_fit_py",
+    "nu_fit_pz",
+    "nu_fit_E",
+    "lepton_charge",
 )
 
 
@@ -45,6 +51,68 @@ def count_selected(tree, branches: set[str]) -> int | None:
         except Exception:
             return None
     return selected
+
+
+def neutrino_report(
+    tree,
+    branches: set[str],
+    mass2_tolerance: float,
+) -> dict:
+    needed = {
+        "accepted",
+        "fit_success",
+        "nu_fit_px",
+        "nu_fit_py",
+        "nu_fit_pz",
+        "nu_fit_E",
+    }
+    report = {
+        "checked": False,
+        "selected_entries": 0,
+        "finite_entries": 0,
+        "positive_energy_entries": 0,
+        "max_abs_mass2_gev2": None,
+        "mass2_tolerance_gev2": mass2_tolerance,
+        "problems": [],
+    }
+    if not needed.issubset(branches):
+        return report
+
+    max_abs_mass2 = 0.0
+    for idx in range(int(tree.GetEntries())):
+        tree.GetEntry(idx)
+        if int(getattr(tree, "accepted")) != 1 or int(getattr(tree, "fit_success")) != 1:
+            continue
+        report["selected_entries"] += 1
+        px = float(getattr(tree, "nu_fit_px"))
+        py = float(getattr(tree, "nu_fit_py"))
+        pz = float(getattr(tree, "nu_fit_pz"))
+        energy = float(getattr(tree, "nu_fit_E"))
+        if not all(math.isfinite(value) for value in (px, py, pz, energy)):
+            continue
+        report["finite_entries"] += 1
+        if energy > 0.0:
+            report["positive_energy_entries"] += 1
+        mass2 = energy * energy - px * px - py * py - pz * pz
+        max_abs_mass2 = max(max_abs_mass2, abs(mass2))
+
+    report["checked"] = True
+    report["max_abs_mass2_gev2"] = max_abs_mass2
+    if report["finite_entries"] != report["selected_entries"]:
+        report["problems"].append(
+            "non-finite fitted neutrino four-vector in selected entries"
+        )
+    if report["positive_energy_entries"] != report["selected_entries"]:
+        report["problems"].append(
+            "non-positive fitted neutrino energy in selected entries"
+        )
+    if max_abs_mass2 > mass2_tolerance:
+        report["problems"].append(
+            "fitted neutrino massless closure failed "
+            f"(max |E^2-p^2|={max_abs_mass2:g} GeV^2, "
+            f"tolerance={mass2_tolerance:g} GeV^2)"
+        )
+    return report
 
 
 def final_selection_report(
@@ -120,6 +188,8 @@ def main() -> int:
     parser.add_argument("--expected-flavor-weight", type=float, default=0.3,
                         help="set negative to disable the weight check")
     parser.add_argument("--score-tolerance", type=float, default=1.0e-5)
+    parser.add_argument("--neutrino-mass2-tolerance", type=float, default=0.1,
+                        help="maximum selected-event |E^2-p^2| in GeV^2")
     parser.add_argument("--out", default=None, help="write validation JSON")
     args = parser.parse_args()
 
@@ -159,6 +229,11 @@ def main() -> int:
         expected_weight,
         args.score_tolerance,
     )
+    fitted_neutrino_report = neutrino_report(
+        tree,
+        branches,
+        args.neutrino_mass2_tolerance,
+    )
     payload = {
         "root": str(root_path),
         "tree": args.tree,
@@ -168,7 +243,15 @@ def main() -> int:
         "missing_branches": missing,
         "selected_entries": selected_entries,
         "final_selection_report": selection_report,
-        "ok": entries >= args.min_entries and not missing and not selection_report["problems"],
+        "fitted_neutrino_report": fitted_neutrino_report,
+        "ok": (
+            entries >= args.min_entries
+            and not missing
+            and selected_entries is not None
+            and selected_entries > 0
+            and not selection_report["problems"]
+            and not fitted_neutrino_report["problems"]
+        ),
     }
     handle.Close()
 
@@ -183,6 +266,10 @@ def main() -> int:
             return root_error(f"tree {args.tree!r} has {entries} entries")
         if missing:
             return root_error(f"missing required branches: {', '.join(missing)}")
+        if selected_entries is None or selected_entries <= 0:
+            return root_error("tree has no accepted, successful selected entries")
+        if fitted_neutrino_report["problems"]:
+            return root_error("; ".join(fitted_neutrino_report["problems"]))
         return root_error("; ".join(selection_report["problems"]))
 
     suffix = (
@@ -196,7 +283,16 @@ def main() -> int:
             f", mode={','.join(selection_report['modes'])}"
             f", max_score_residual={selection_report['max_abs_score_residual']:.3g}"
         )
-    print(f"[validate_kinfit_root] OK: entries={entries}{suffix}{score_suffix}")
+    neutrino_suffix = ""
+    if fitted_neutrino_report["checked"]:
+        neutrino_suffix = (
+            f", finite_neutrinos={fitted_neutrino_report['finite_entries']}"
+            f", max_abs_nu_mass2={fitted_neutrino_report['max_abs_mass2_gev2']:.3g} GeV^2"
+        )
+    print(
+        f"[validate_kinfit_root] OK: entries={entries}{suffix}"
+        f"{score_suffix}{neutrino_suffix}"
+    )
     return 0
 
 

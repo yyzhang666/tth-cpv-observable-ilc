@@ -267,7 +267,12 @@ valid. This is why Chapter 3 asks for sidecar counts, event-index checks, and
 
 The current CPV sidecar supplies the signed interference weight used for
 $f_1$. A usable SM yield weight for $f_0$ is not yet available in these feature
-tables, so `weight_sm` remains `NaN`. The relevant columns are:
+tables, so `weight_sm` remains `NaN`. For unweighted SM events its
+normalisation would be $\sigma_{\mathrm{SM}}\mathcal L/N_{\mathrm{written}}$,
+but the denominator histogram also requires the SM kinematics to be exported
+into the same bins. The event-count audit and available LR cross section are
+recorded in [SAMPLE_PROVENANCE.md](SAMPLE_PROVENANCE.md); the pure-RL cross
+section and SM feature export remain outstanding. The relevant columns are:
 
 | Column | Current meaning | Where it is used |
 |---|---|---|
@@ -365,14 +370,27 @@ O_{\ell\nu}(W^+)=\Delta\phi(\nu,\,\ell^+),
 
 and $O_{\mathrm{top}}=\Delta\phi(t,\bar t)$.
 
-These four definitions are frozen at generator level. At reco level, the
-kinfit currently selects the relevant jet **slots**, but the exporter does not
-yet reproduce every particle-antiparticle orientation: W1/W2 are source-index
-ordered rather than quark/antiquark ordered, b/top sides are not yet swapped
-using the lepton charge, and the fitted neutrino four-vector is not stored.
-Therefore current reco signed angles are technical diagnostics, not headline
-physics observables. The exact implementation gaps are intentionally kept in
-[../KNOWN_ISSUES.md](../KNOWN_ISSUES.md).
+At reco level, kinfit first selects the W pair. For each of those two jets the
+exporter sums the signed Weaver light-flavour probabilities,
+
+```math
+P(q)=P(u)+P(d)+P(s)+P(c),
+\qquad
+P(\bar q)=P(\bar u)+P(\bar d)+P(\bar s)+P(\bar c).
+```
+
+An opposite-preference pair is assigned directly. If both jets are q-like, the
+jet with larger $P(q)$ is q; if both are qbar-like, the jet with larger
+$P(\bar q)$ is qbar. The highest Weaver class may be b and is ignored for this
+decision because the task is only to orient the already selected W pair. The
+table stores the two scores, assignment status, and decision margin; an exact
+tie uses W1 as q only as a labelled deterministic fallback.
+
+The 2026-07-22 kinfit best tree also stores the fitted neutrino four-vector, so
+reco $O_{\ell\nu}$ uses the charge ordering above. The remaining unfinished
+signed-object step is the lepton-charge-dependent top/antitop orientation for
+$O_b$ and $O_{\mathrm{top}}$; Chapter 4 asks the student to derive, implement,
+and validate it before those observables are used.
 
 > **Freeze conventions early.** Exact definitions, charge conventions, and axis conventions must be written down **once**, in a configuration file, and used everywhere (see the decision log, Appendix C). Silent convention changes are the classic way to waste two weeks.
 
@@ -1039,7 +1057,7 @@ less scripts/run_baseline.sh
 less scripts/export_features.py
 ```
 
-You do not need to understand every Python line. Confirm the sample keys, `basis: lab_axes`, default frame, number of bins, output base directory, the six commands called by `run_baseline.sh`, and the fact that `--nu0-from-abs` is only a technical placeholder.
+You do not need to understand every Python line. Confirm the sample keys, `basis: lab_axes`, default frame, number of bins, output base directory, the six commands called by `run_baseline.sh`, and the fact that `--nu0-from-abs` is only a technical placeholder because it is not a binned SM template.
 
 ### Step 1 — inspect generator and reconstructed events
 
@@ -1124,7 +1142,7 @@ python3 -m json.tool \
 
 This separate output directory prevents a partial 50-event ROOT file from occupying the canonical full-chunk filename. It is only a processor smoke test and is not read by the standard reco exporter.
 
-**Pass condition:** the validation JSON has `ok: true`, a non-zero `entries` count, a non-zero `selected_entries` count, and an empty `missing_branches` list. Inside `final_selection_report`, require `modes = ["logchi2_plus_flavor"]`, `flavor_weights = [0.3]`, and `max_abs_score_residual <= 1e-5`. Marlin exit 134/139 is acceptable only when this content validation passes; otherwise inspect the kinfit `.log` and, for Condor jobs, the corresponding `err/` file.
+**Pass condition:** the validation JSON has `ok: true`, a non-zero `entries` count, a non-zero `selected_entries` count, and an empty `missing_branches` list. Inside `final_selection_report`, require `modes = ["logchi2_plus_flavor"]`, `flavor_weights = [0.3]`, and `max_abs_score_residual <= 1e-5`. Inside `fitted_neutrino_report`, require every selected entry to have a finite four-vector and positive energy, and require `max_abs_mass2_gev2 <= mass2_tolerance_gev2` (default `0.1 GeV^2`) as the numerical massless-closure check. Marlin exit 134/139 is acceptable only when this content validation passes; otherwise inspect the kinfit `.log` and, for Condor jobs, the corresponding `err/` file. A ROOT made before 2026-07-22 lacks these neutrino branches and must be rerun, not patched offline.
 
 ### Step 5 — run one complete chunk through HTCondor
 
@@ -1185,7 +1203,7 @@ cp outputs/ow_lr/angular/O_W/O_W_all_bins.meta.json \
 
 The copies are intentional: the current angular builder uses the same default filename for gen and reco, so the level-labelled copies preserve both examples. Check the associated metadata rather than identifying a plot only by its appearance.
 
-**Pass condition:** both feature tables have `schema_report.ok=true`; the reco metadata points to the expected kinfit ROOT and SLCIO; `n_event_number_mismatch=0`; the kinfit mode and score checks remain valid; both histograms have `n_out_of_range=0`; and the gen/reco event counts are recorded separately. Do not force identical event populations: §2.8 defines inclusive gen and full reco baseline populations.
+**Pass condition:** both feature tables have `schema_report.ok=true`; the reco metadata points to the expected kinfit ROOT and SLCIO; `n_event_number_mismatch=0`; the kinfit mode, score, and fitted-neutrino checks remain valid; all selected reco rows have finite $O_W$ and $O_{\ell\nu}$; the `w_orientation.counts` metadata and per-event status/margin columns are present; both histograms have `n_out_of_range=0`; and the gen/reco event counts are recorded separately. Inspect at least one event from each available W-orientation status. Do not force identical event populations: §2.8 defines inclusive gen and full reco baseline populations.
 
 ### Step 6 — only after chunk 0 passes, submit the remaining kinfit chunks
 
@@ -1209,8 +1227,8 @@ The expected argument count is 79 when all registered chunks are present. Monito
 Before starting Chapter 4, show the supervisor all of the following:
 
 1. **One event-inspection note:** one generator event and one reco event, listing the input paths, run/event identifiers, main physics objects, relevant collection sizes, selected jet/PID information, and anything missing or surprising.
-2. **One validation table:** environment/data status; sidecar/alignment counts; positive/negative weight counts; kinfit ROOT entries and selected entries; final-selection mode, flavour weight, and score residual; gen/reco feature-row counts; invalid-object counts; $O_W$ filled/invalid/out-of-range counts; signed and absolute weight sums. Every row must say pass/fail and point to its JSON, log, or metadata evidence.
-3. **Two clearly labelled technical plots:** `O_W_gen_chunk0_all.png` and `O_W_reco_chunk0_all.png`, both using the same frame, `lab_axes` convention, binning, and chunk scope. They validate the pipeline and are not yet the full-sample retention result.
+2. **One validation table:** environment/data status; sidecar/alignment counts; positive/negative weight counts; kinfit ROOT entries and selected entries; final-selection mode, flavour weight, score residual, and fitted-neutrino checks; gen/reco feature-row counts; W-orientation status counts and minimum/typical margin; invalid-object counts; $O_W$ and $O_{\ell\nu}$ filled/invalid/out-of-range counts; signed and absolute weight sums. Every row must say pass/fail and point to its JSON, log, or metadata evidence.
+3. **Two clearly labelled one-chunk validation plots:** `O_W_gen_chunk0_all.png` and `O_W_reco_chunk0_all.png`, both using the same frame, `lab_axes` convention, binning, and chunk scope. The reco plot uses the frozen Weaver q/qbar orientation. These validate the physical observable implementation but are not yet the full-sample retention result.
 4. **The underlying machine-readable products:** the gen and reco feature CSVs with `.meta.json`, the canonical chunk-0 kinfit ROOT with validation JSON/log/XML, and the preserved gen/reco angular bin CSVs with metadata. Large ROOT/CSV outputs stay under `outputs/` and are not committed to GitHub.
 5. **Batch evidence:** the first full HTCondor chunk passed end to end before the remaining chunks were submitted, and failed/held jobs have been accounted for rather than silently omitted.
 
@@ -1223,17 +1241,19 @@ Use this minimum validation-table structure; add rows when something unusual is 
 | generator feature table |  | schema OK, unique IDs, expected frame/basis | gen `.meta.json` |
 | kinfit content |  | validator OK, selected entries $>0$ | `.validation.json` |
 | final-selection score |  | mode correct, weight 0.3, residual $\leq10^{-5}$ | `.validation.json` |
-| reco feature table |  | schema OK, event-number mismatches 0 | reco `.meta.json` |
+| fitted neutrino |  | finite and positive energy for every selected event | `.validation.json` |
+| reco W orientation |  | scores/status/margin present; counts explained | reco CSV and `.meta.json` |
+| reco feature table |  | schema OK, event-number mismatches 0, finite $O_W$/$O_{\ell\nu}$ | reco `.meta.json` |
 | gen and reco $O_W$ templates |  | invalids recorded, out-of-range 0 | angular `.meta.json` files |
 | HTCondor accounting |  | every requested chunk completed or has an explained failure | `condor_q`, `condor_history`, output inventory |
 
-Chapter 4 starts only when another person can follow these records from the configured input files to the two $O_W$ plots and understand every event loss. SM CP closure and physical Fisher numbers remain deferred until the existing SM production is exported with its cross section and actual written-event normalisation.
+Chapter 4 starts only when another person can follow these records from the configured input files to the two $O_W$ plots and understand every event loss. SM CP closure and physical Fisher numbers remain deferred until the SM events are exported and the missing pure-RL BASES cross section is frozen; the audited event totals and LR cross section are already recorded in [SAMPLE_PROVENANCE.md](SAMPLE_PROVENANCE.md).
 
 ---
 
 # Chapter 4 — The full $O_W$ angular–ML baseline (main milestone)
 
-**This is the core of the project** — expect roughly two to three effective weeks including debugging. Everything later reuses this machinery. The generator baseline can start immediately; the headline reco comparison starts only after the signed W-slot orientation in §2.3 is implemented and validated.
+**This is the core of the project** — expect roughly two to three effective weeks including debugging. Everything later reuses this machinery. Chapter 3 has already exercised the frozen reco W orientation on one chunk; Chapter 4 scales it out and quantifies its physics performance.
 
 ## 4.1 Observable
 
@@ -1243,8 +1263,9 @@ O_W=\Delta\phi(j_{W,q},\,j_{W,\bar q})
 
 at gen and reco level, using the ParT-assisted pair assignment, a validated
 quark-antiquark orientation for the selected reco pair, and the
-inclusive-gen/full-reco event populations defined in §2.8. The current
-`W1-W2` slot-order output is useful only for pipeline checks.
+inclusive-gen/full-reco event populations defined in §2.8. The orientation is
+the Weaver $P(q)-P(\bar q)$ rule of §2.3; always report its status and margin
+distributions alongside the result.
 
 ## 4.2 Frame study
 
@@ -1282,7 +1303,27 @@ edges, but do not intersect event IDs (§2.8). The optional common-event
 $R_{\mathrm{migration}}$ may be added as a diagnostic, clearly labelled and
 kept separate from the total-retention result.
 
-## 4.6 Deliverable
+## 4.6 Student checkpoint: orient the top sides before Chapter 5
+
+The exporter already supplies the selected hadronic and leptonic sides, the
+isolated-lepton charge, and the fitted neutrino. Before calling the existing
+hadronic-minus-leptonic columns $O_b$ or $O_{\mathrm{top}}$, answer and test:
+
+1. For each lepton sign, which side is $t$ and which is $\bar t$ under
+   $t\to W^+b$ and $\bar t\to W^-\bar b$?
+2. Which selected b slot must therefore become $b_t$ and which must become
+   $b_{\bar t}$?
+3. Does the reconstructed top composite include the fitted neutrino on the
+   leptonic side, and does swapping the lepton sign swap the expected labels?
+4. On a truth-labelled diagnostic subset only, what are the orientation
+   accuracy, failure count, and sign-flip rate for $O_b$ and $O_{\mathrm{top}}$?
+
+Write unit tests with one positive- and one negative-lepton toy event, then
+show the supervisor the mapping table and truth diagnostic before Chapter 5.
+Until this checkpoint passes, the exported `O_b`/`O_top` columns are selected
+hadronic-minus-leptonic diagnostics, not physics-labelled signed observables.
+
+## 4.7 Deliverable
 
 One result matrix (template: Appendix A) covering: frame dependence; angle vs ML; BDT vs MLP; minimal vs extended features; gen→reco retention; LR vs RL.
 
@@ -1292,7 +1333,9 @@ Configs and driver: [../configs/analysis_ow_lr.yaml](../configs/analysis_ow_lr.y
 
 # Chapter 5 — Secondary-observable baselines (fast, by reuse)
 
-**Start only after the $O_W$ framework and reco signed-object ordering are stable.** Reuse the frozen default frame and model configuration — the point is a *quick, uniform* survey, not three new projects.
+**Start only after the $O_W$ framework is stable and the Chapter 4 top-side
+checkpoint has passed.** Reuse the frozen default frame and model
+configuration — the point is a *quick, uniform* survey, not three new projects.
 
 ## 5.1 $O_b=\Delta\phi(b_t,b_{\bar{t}})$
 
@@ -1300,9 +1343,9 @@ Ordering from signed ParT $b/\bar{b}$ scores + top-side assignment + lepton-char
 
 ## 5.2 $O_{\ell\nu}$
 
-The generator definition is the charge-dependent CP ordering in §2.3. Reco requires the fitted neutrino
-four-vector to be persisted by kinfit; it is currently unavailable, so do not
-substitute an undocumented missing-momentum estimate.
+The generator definition is the charge-dependent CP ordering in §2.3. Reco
+uses the selected fit's persisted `nu_fit_{E,px,py,pz}` and the isolated-lepton
+charge. Do not silently substitute a different missing-momentum estimator.
 
 ## 5.3 $O_{\mathrm{top}}$
 
@@ -1420,17 +1463,41 @@ multi-operator SMEFT fit.
 Add semitau events as a separate statistical category, using a *frozen* tau tagger; keep the existing observables; **no tau polarimeter**. Prerequisites from the tagger team: frozen model/interface, efficiency and fake rates, constituent links, usable charge convention. Deliverable: sensitivity change from adding the category.
 
 ## Option 2 — W-pairing optimisation
+The current baseline has two distinct steps: kinfit selects the W pair, then
+the exporter orients only those two jets. Opposite q/qbar preferences are used
+directly. For two q-like jets, larger $P(q)$ is q; for two qbar-like jets,
+larger $P(\bar q)$ is qbar. It records opposite, both-q-like, both-qbar-like,
+or exact-tie status plus the decision margin. b scores do not enter this
+orientation.
+
 First measure the ceiling with a truth-matched oracle assignment:
 ```math
 \Delta I_{\mathrm{pairing}}=I_{\mathrm{oracle}}-I_{\mathrm{current}} .
 ```
-Proceed only if the gap is relevant. Possible methods: probability calibration, global assignment, top-K candidates, soft assignment, posterior-weighted observables. Deliverable: increased **CP information**, not just higher pairing accuracy.
+Proceed only if the gap is relevant. Possible improvements include calibrating
+the signed light-flavour probabilities; replacing the hard two-jet orientation
+by an orientation likelihood; handling low-margin or same-sign pairs
+explicitly; jointly optimising pair choice and orientation over top-K kinfit
+candidates; and soft/posterior-weighted observables. Truth labels are a
+diagnostic, never an analysis input. Deliverable: increased **CP information**,
+not just higher pairing or orientation accuracy.
 
 ## Option 3 — Quadratic EFT term
 $\nu_i(c)=\nu_{0,i}+c\,\nu_{1,i}+c^2\nu_{2,i}$. Justified if linear templates go negative, the interval is non-local, or a finite-coupling scan needs it. Deliverable: linear vs quadratic intervals, with EFT-truncation caveats.
 
 ## Option 4 — Wider fusion
 Extend to e.g. $W+b+\mathrm{top}$ or $W+b+\ell\nu+\mathrm{top}$, only if the two-branch result is stable and additional branches show non-negligible conditional information $\Delta I$. Deliverable: an information-gain matrix per added branch.
+
+## Option 5 — Neutrino correction
+
+The baseline is now the kinematic fit's persisted massless `nuAfter`
+four-vector; no new processor is needed to calculate reco $O_{\ell\nu}$.
+Optionally compare it with raw missing momentum and a separately documented
+neutrino-correction method. Keep this distinct from the existing SLD neutrino
+handling inside heavy-flavour jets. Validate energy/momentum residuals, angular
+bias and resolution, failure rate, $O_{\ell\nu}$ stability, and Fisher
+information. Adopt a correction only if it improves the physics result without
+introducing a charge- or sign-dependent bias.
 
 ---
 
@@ -1486,7 +1553,8 @@ for three observables: $O_W$ (angle), $M_W$ (ML), and one fused observable. This
 - derive a full optimal observable;
 - derive SMEFT matching from first principles;
 - rewrite the ParT tagger;
-- develop a full neutrino-correction Marlin processor;
+- develop a full neutrino-correction Marlin processor unless Option 5 is
+  explicitly chosen;
 - complete any optional extension.
 
 ---

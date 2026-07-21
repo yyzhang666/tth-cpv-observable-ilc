@@ -4,10 +4,11 @@
 I = sum_i nu1_i^2 / nu0_i  (absolute yield), optional shape-only variant,
 optional parameter-independent background. Warns on invalid bins.
 
-The SM production exists, but its normalised event template is not wired into
-this repository yet (KNOWN_ISSUES: SM denominator template). Until then use
---nu0-from-abs only as a technical pipeline placeholder; it is NOT a physics
-result.
+The SM production exists, and its written-event totals plus LR cross section
+are audited, but SM feature export and the pure-RL cross section are not wired
+into a normalised binned template yet (KNOWN_ISSUES: SM denominator template).
+Until then use --nu0-from-abs only as a technical pipeline placeholder; it is
+NOT a physics result.
 
 Usage:
     python3 scripts/evaluate_fisher.py \

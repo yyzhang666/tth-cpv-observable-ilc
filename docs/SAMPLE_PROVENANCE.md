@@ -19,9 +19,8 @@ production/<process>/<polarization>/<run_id>/
 
 with `<process>` in `cpv_tth, sm_tth, sm_ttz` and `<polarization>` in
 `eL.pR, eR.pL`. The CPV samples contain 80 chunks of 12500 sidecar events per
-polarization. The SM jobs requested 12500 events each, but their actual
-written-event counts must be taken from the generator logs rather than the
-request value.
+polarization. The 80 SM generator logs record 11505 written events in every LR
+chunk (920400 total) and 11515 in every RL chunk (921200 total).
 
 ## ttH CPV |interference| production (primary signal sample)
 
@@ -49,10 +48,39 @@ request value.
 
 ## SM ttH and ttZ productions
 
-Same chain and layout under `sm_tth/` and `sm_ttz/`. The SM ttH files exist,
-but this repository still needs their pure-helicity cross sections, actual
-written-event totals, and feature export before it can build `weight_sm` and
-the SM denominator template. ttZ is the first background (interface:
+The same chain and layout exist under `sm_tth/` and `sm_ttz/`. The SM event
+count audit is complete: `N_written=920400` for LR and `921200` for RL. The
+accepted LR BASES integration log
+`TTHStudy_first_run/bases.tth_example_vtx_patched_1000.out` reports
+
+```text
+Total Cross section = 2.96055 +/- 0.00581374 fb
+PolElectron=-1, PolPositron=+1, Ecm=550 GeV
+```
+
+No matching accepted SM eR.pL BASES integration was found. This matters
+because the production guardrail requires a polarization-matched BASES
+template/integration before an eR.pL production is normalised.
+
+The complete-reco LCIO parameters are not authoritative cross-section
+provenance. A checked LR file and a checked RL file both carry
+`crossSection=296.0`, `beamPol1=-1`, and `beamPol2=+1`; the RL metadata are
+therefore demonstrably generic, and 296.0 is inconsistent with the accepted LR
+BASES result. STDHEP inspection/conversion exposes event IDs and unit event
+weights but no usable production cross section.
+
+For an unweighted SM sample, the eventual per-event yield factor is
+
+```math
+w_{\mathrm{SM}}=
+\frac{\sigma_{\mathrm{SM}}\mathcal{L}}{N_{\mathrm{written}}}.
+```
+
+That factor supplies the overall normalisation, while exporting the SM event
+kinematics into the same observable bins supplies the denominator shape. The
+repository still needs SM feature export and a frozen RL cross section before
+it can build the physical `weight_sm`/`nu0` templates. `--nu0-from-abs` tests
+only pipeline plumbing. ttZ is the first background (interface:
 `docs/BACKGROUND_INTERFACE.md`).
 
 ## Kinfit + jet assignment stage
@@ -62,6 +90,12 @@ The `complete_reco` files are "kinfit-ready": they carry
 required by the `TTHSemiLepKinFit` processor. The assignment/fit stage is part
 of THIS repository's pipeline — see docs/KINFIT_JET_ASSIGNMENT.md — and its
 outputs live under `outputs/<analysis>/kinfit/`.
+
+On 2026-07-22 the processor best tree was extended with
+`nu_fit_{E,px,py,pz}` from the already fitted `FitOutcome.nuAfter`. The fit,
+constraints, candidate ranking, and final score did not change. ROOT files
+made before this update are rejected by the current validator and must be
+regenerated for reco `O_lnu`.
 
 ## Historical validation sample
 

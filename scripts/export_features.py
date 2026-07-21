@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import datetime
 import glob
 import math
@@ -27,7 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from ilc_tth_cpv import angles, frames, weights  # noqa: E402
+from ilc_tth_cpv import angles, flavor, frames, weights  # noqa: E402
 from ilc_tth_cpv.features import deterministic_split  # noqa: E402
 from ilc_tth_cpv.io import (  # noqa: E402
     load_analysis_config,
@@ -75,6 +76,11 @@ RECO_KINFIT_BRANCHES = (
     "final_selection_score",
     "final_fit_score",
     "final_flavor_score",
+    "nu_fit_px",
+    "nu_fit_py",
+    "nu_fit_pz",
+    "nu_fit_E",
+    "lepton_charge",
 )
 
 RECO_KINFIT_OPTIONAL_BRANCHES = (
@@ -94,15 +100,12 @@ RECO_KINFIT_OPTIONAL_BRANCHES = (
     "mt_had_postfit",
     "mt_lep_postfit",
     "mH_postfit",
-    "lepton_charge",
     "lepton_flavor",
 )
 
 RECO_STRING_BRANCHES = {"constraint_mode", "final_selection_mode"}
 
-RECO_SLOT_BRANCHES = {
-    "wjet_quark": "idx_W1",
-    "wjet_antiquark": "idx_W2",
+RECO_FIXED_SLOT_BRANCHES = {
     "top_b": "idx_bhad",
     "antitop_bbar": "idx_blep",
 }
@@ -119,6 +122,16 @@ def add_p4s(*items):
         sum(item[2] for item in items),
         sum(item[3] for item in items),
     )
+
+
+def fitted_neutrino_p4(fit_row: dict):
+    values = (
+        float(fit_row["nu_fit_E"]),
+        float(fit_row["nu_fit_px"]),
+        float(fit_row["nu_fit_py"]),
+        float(fit_row["nu_fit_pz"]),
+    )
+    return values if all(math.isfinite(value) for value in values) else None
 
 
 def safe_theta(cos_theta: float) -> float:
@@ -476,6 +489,7 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
     snapshots = read_reco_snapshots(reco["slcio"], needed_indices)
     rows = []
     n_event_number_mismatch = 0
+    orientation_counts = Counter()
     for fit_row in kinfit_rows:
         event_index = int(fit_row["event_index"])
         if event_index < 0 or event_index >= len(aligned):
@@ -513,26 +527,55 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
             record[key] = value
 
         jets = snapshot["jets"]
-        w1 = jet_by_index(jets, fit_row["idx_W1"])
-        w2 = jet_by_index(jets, fit_row["idx_W2"])
+        weaver = snapshot["weaver"]
+        w1_index = int(fit_row["idx_W1"])
+        w2_index = int(fit_row["idx_W2"])
+        try:
+            orientation = flavor.orient_w_pair(
+                weaver[w1_index],
+                weaver[w2_index],
+            )
+        except (IndexError, ValueError) as exc:
+            raise RuntimeError(
+                f"Cannot orient selected W pair in event_index={event_index}: {exc}"
+            ) from exc
+        selected_w_indices = (w1_index, w2_index)
+        wq_index = selected_w_indices[orientation["quark_slot"]]
+        wqbar_index = selected_w_indices[orientation["antiquark_slot"]]
+        wq = jet_by_index(jets, wq_index)
+        wqbar = jet_by_index(jets, wqbar_index)
+        orientation_counts[orientation["status"]] += 1
+
+        record.update({
+            "idx_W_quark": wq_index,
+            "idx_W_antiquark": wqbar_index,
+            "w_orientation_status": orientation["status"],
+            "w_orientation_margin": orientation["margin"],
+            "W1_weaver_pq": orientation["w1"]["p_quark"],
+            "W1_weaver_pqbar": orientation["w1"]["p_antiquark"],
+            "W1_weaver_qminusqbar": orientation["w1"]["signed_score"],
+            "W2_weaver_pq": orientation["w2"]["p_quark"],
+            "W2_weaver_pqbar": orientation["w2"]["p_antiquark"],
+            "W2_weaver_qminusqbar": orientation["w2"]["signed_score"],
+        })
         bhad = jet_by_index(jets, fit_row["idx_bhad"])
         blep = jet_by_index(jets, fit_row["idx_blep"])
         h1 = jet_by_index(jets, fit_row["idx_H1"])
         h2 = jet_by_index(jets, fit_row["idx_H2"])
         lepton = snapshot["lepton"]
+        neutrino = fitted_neutrino_p4(fit_row)
 
-        # Technical selected-slot aliases only. W1/W2 are source-index ordered,
-        # not quark/antiquark oriented, and the had/lep top sides are not yet
-        # charge ordered. The fitted neutrino p4 is also absent from the tree.
+        # The W pair is oriented from signed Weaver light-flavor scores. The
+        # had/lep top sides remain a separate charge-ordering exercise.
         object_p4 = {
-            "wjet_quark": w1,
-            "wjet_antiquark": w2,
+            "wjet_quark": wq,
+            "wjet_antiquark": wqbar,
             "top_b": bhad,
             "antitop_bbar": blep,
             "lepton": lepton,
-            "neutrino": None,
-            "top": add_p4s(w1, w2, bhad),
-            "antitop": add_p4s(lepton, blep),
+            "neutrino": neutrino,
+            "top": add_p4s(wq, wqbar, bhad),
+            "antitop": add_p4s(lepton, neutrino, blep),
             "higgs": add_p4s(h1, h2),
         }
         rest_p4 = frames.rest_p4_for_frame(
@@ -551,18 +594,28 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
         record["O_W"] = dphi("wjet_quark", "wjet_antiquark")
         record["O_b"] = dphi("top_b", "antitop_bbar")
         record["O_top"] = dphi("top", "antitop")
-        record["O_lnu"] = dphi("lepton", "neutrino")
+        lepton_charge = float(fit_row.get("lepton_charge", NAN))
+        if lepton_charge < 0.0:
+            record["O_lnu"] = dphi("lepton", "neutrino")
+        elif lepton_charge > 0.0:
+            record["O_lnu"] = dphi("neutrino", "lepton")
+        else:
+            record["O_lnu"] = NAN
 
         yth = snapshot["yth"]
         for key in ("y45", "y56", "y67"):
             record[key] = float(yth.get(key, NAN))
 
-        weaver = snapshot["weaver"]
         for key in WEAVER_SUMMARY_KEYS:
             values = [float(row[key]) for row in weaver if key in row]
             record[f"max_weaver_{key}"] = max(values) if values else NAN
-        for slot_name, branch in RECO_SLOT_BRANCHES.items():
-            idx = int(fit_row[branch])
+        oriented_slots = {
+            "wjet_quark": wq_index,
+            "wjet_antiquark": wqbar_index,
+        }
+        for slot_name, branch in RECO_FIXED_SLOT_BRANCHES.items():
+            oriented_slots[slot_name] = int(fit_row[branch])
+        for slot_name, idx in oriented_slots.items():
             scores = weaver[idx] if 0 <= idx < len(weaver) else {}
             for key in WEAVER_SUMMARY_KEYS:
                 record[f"{slot_name}_weaver_{key}"] = float(scores.get(key, NAN))
@@ -579,8 +632,14 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
         "level": "reco",
         "frame": frame_name,
         "basis": "lab_axes (boost only, phi vs fixed lab axes)",
-        "pair_ordering": "technical slots W1-W2 and b_had-b_lep; physical particle-antiparticle reco orientation not implemented",
-        "reco_orientation_status": "not_physics_ready; see KNOWN_ISSUES.md",
+        "pair_ordering": "O_W uses conditional Weaver q/qbar orientation inside the selected pair; b/top had-lep slots are not yet charge ordered",
+        "top_side_orientation": "O_b and O_top are hadronic-minus-leptonic diagnostics until the Chapter 4 lepton-charge mapping is implemented",
+        "w_orientation": {
+            "p_quark": "mc_u+mc_d+mc_s+mc_c",
+            "p_antiquark": "mc_ubar+mc_dbar+mc_sbar+mc_cbar",
+            "rule": "opposite preferences direct; both q-like compare P(q); both qbar-like compare P(qbar)",
+            "counts": dict(sorted(orientation_counts.items())),
+        },
         "feature_policy": "raw variables only (E, theta, phi, mass)",
         "kinfit_root": root_path,
         "reco_slcio": reco["slcio"],
@@ -591,7 +650,7 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
         "max_events": max_events,
         "event_index_alignment": "TTHSemiLepKinFit event_index is the input SLCIO record index; sidecar uses accepted-event-order matching",
         "n_event_number_mismatch": n_event_number_mismatch,
-        "neutrino_note": "best-tree fitted neutrino p4 is not stored; neutrino columns are NaN and the leptonic-top slot is visible-only",
+        "neutrino_note": "neutrino uses nu_fit_{E,px,py,pz} from the selected best-tree fit; O_lnu is charge ordered",
         "kinfit_report": kinfit_report,
         "weight_report": {k: v for k, v in weight_report.items() if k != "problems"},
         "schema_report": report,

@@ -40,15 +40,14 @@ O_lnu  : CP-ordered same-W lepton-neutrino angle
          W+: Delta phi(nu, l+)             # nu is the particle
 ```
 
-These are frozen generator-level definitions matching the theory-study
-"Original Phi" observable family. The strongest validated observable is
+These are frozen definitions matching the theory-study "Original Phi"
+observable family. The strongest validated generator observable is
 `delta_phi_light_quark_antiquark` (our `O_W`) in the Higgs rest frame.
 
-The current reco implementation has not yet reproduced all of these signed
-orderings. In particular, kinfit `W1/W2` are ordered by source-jet index and
-their W-pair flavor score is symmetric, so `W1-W2` is not yet a reconstructed
-quark-antiquark ordering. The concrete reco gaps are listed in
-`../KNOWN_ISSUES.md`.
+At reco level, the selected W pair is now oriented with Weaver light-flavour
+scores and `O_lnu` uses the fitted neutrino plus lepton charge. The top-side
+charge orientation for `O_b` and `O_top` is intentionally a separate Chapter 4
+implementation and validation task.
 
 ## 5. Reference frames and the two basis conventions
 
@@ -182,13 +181,13 @@ kinfit + jet assignment stage (docs/KINFIT_JET_ASSIGNMENT.md):
 - events: `accepted = 1` and `fit_success = 1`, one entry per selected event;
 - selected candidate: `FinalSelectionMode=logchi2_plus_flavor` with
   `FlavorWeight=0.3`;
-- the current technical reco table fills `O_W` from `W1-W2`; this slot order
-  is not yet the physical quark-antiquark order because the W score is
-  symmetric and the slots follow source-jet index;
+- kinfit selects the W pair; the exporter uses opposite q/qbar preferences
+  directly, compares `P(q)` for two q-like jets, and compares `P(qbar)` for two
+  qbar-like jets, ignoring b scores and recording status plus decision margin;
 - reco `O_b` and `O_top` still need lepton-charge-dependent top/antitop side
-  ordering;
-- reco `O_lnu` is unavailable until the fitted neutrino four-vector is
-  persisted by the kinfit stage;
+  ordering, which is a Chapter 4 student checkpoint;
+- reco `O_lnu` uses `nu_fit_{E,px,py,pz}` from the selected fit and the frozen
+  W-minus/W-plus charge ordering in section 4;
 - these distributions include every selected event; truth-signed variants
   (with their smaller denominator) are separate diagnostics;
 - single-jet angular residuals/pulls use `theta = atan2(pt, pz)`,
@@ -215,4 +214,7 @@ kinfit + jet assignment stage (docs/KINFIT_JET_ASSIGNMENT.md):
   weights, signed template weights, and later polarisation/yield factors.
 - 2026-07-21: froze the half-open phi range consistently, recorded the
   Physsim pure-helicity normalisation check, and replaced the claimed reco
-  W-quark orientation with the actual implementation status.
+  W-quark orientation with the then-current implementation status.
+- 2026-07-22: froze the conditional Weaver q/qbar orientation within the
+  kinfit-selected W pair; persisted the fitted neutrino in the best tree and
+  enabled charge-ordered reco `O_lnu`.

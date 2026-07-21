@@ -22,7 +22,7 @@ note in the metadata, so missing weights stay visible.
 
 | column | description |
 |---|---|
-| `weight_sm` | SM yield weight `xsec*lumi/n_written`; currently `NaN` because the existing SM production is not yet exported and normalised in this repo |
+| `weight_sm` | SM yield weight `xsec*lumi/n_written`; currently `NaN` because SM events are not yet exported into this table and the pure-RL cross section is not frozen |
 | `weight_interference_signed` | signed interference weight (fb-scaled), physics templates only |
 | `weight_interference_abs` | `abs(weight_interference_signed)` |
 | `weight_quadratic` | optional `c^2` term weight (Optional extension 3) |
@@ -56,11 +56,12 @@ top         antitop  higgs   composite systems
 ```
 
 Generator-level pairs follow the particle-antiparticle ordering in
-`PHYSICS_CONVENTIONS.md` sections 3 and 4. The current reco table uses the
-kinfit selected slots `W1, W2, b_had, b_lep, H_b1, H_b2`, but its legacy
-column aliases do not yet guarantee the corresponding particle-antiparticle
-ordering. In particular, W1/W2 are not quark/antiquark oriented. See
-`../KNOWN_ISSUES.md` before interpreting a reco signed angle.
+`PHYSICS_CONVENTIONS.md` sections 3 and 4. At reco level, kinfit supplies the
+selected slots `W1, W2, b_had, b_lep, H_b1, H_b2`. The exporter orients the
+selected W pair with Weaver light-flavour probabilities, uses the fitted
+neutrino for `O_lnu`, and records the details below. The `b_had/b_lep` and
+hadronic/leptonic top aliases are not yet charge-oriented; Chapter 4 makes
+that a separate student validation task before `O_b` or `O_top` is quoted.
 
 ## Kinfit stage columns (reco level)
 
@@ -72,6 +73,7 @@ final_selection_mode  flavor_weight
 final_selection_score  final_fit_score  final_flavor_score
 best_combo_id
 idx_W1  idx_W2  idx_bhad  idx_blep  idx_H1  idx_H2
+nu_fit_E  nu_fit_px  nu_fit_py  nu_fit_pz  lepton_charge
 mW_had_prefit  mt_had_prefit  mt_lep_prefit  mH_prefit
 mW_had_postfit mt_had_postfit mt_lep_postfit mH_postfit
 ```
@@ -80,6 +82,32 @@ The canonical selected candidate minimizes
 `final_selection_score = log(1 + fit_chi2) + 0.3*signed_flavor_NLL` after
 preferring successful fits. Physics selections require `accepted = 1` and
 `fit_success = 1`.
+
+The fitted neutrino branches are required. Old kinfit ROOT files without them
+are rejected and must be regenerated with the 2026-07-22 processor build.
+
+## Reco W orientation columns
+
+For each selected W jet, the exporter defines
+
+```math
+P(q)=P(u)+P(d)+P(s)+P(c),
+\qquad
+P(\bar q)=P(\bar u)+P(\bar d)+P(\bar s)+P(\bar c),
+```
+
+Opposite q/qbar preferences are used directly. If both jets are q-like, the
+one with larger `P(q)` is q; if both are qbar-like, the one with larger
+`P(qbar)` is qbar. Exact decision-score ties keep W1 as q only as a
+deterministic fallback and are explicitly labelled. The highest Weaver class
+may be b; b scores are deliberately irrelevant here.
+
+```text
+idx_W_quark  idx_W_antiquark
+w_orientation_status  w_orientation_margin
+W1_weaver_pq  W1_weaver_pqbar  W1_weaver_qminusqbar
+W2_weaver_pq  W2_weaver_pqbar  W2_weaver_qminusqbar
+```
 
 Reco feature export reads selected indices/status/score from this ROOT tree and
 the selected jet four-vectors from the matching `complete_reco_kinfit_ready`

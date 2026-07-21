@@ -14,10 +14,10 @@ polarisation mixture.
 ## Required Result Path
 
 1. Complete the guided event inspection and one-chunk gen/reco validation,
-   producing the first generator `O_W` and reco slot-order diagnostic.
-2. Implement and validate the reco quark-antiquark orientation, then complete
-   the full `O_W` angular-vs-ML baseline at gen and reco level.
-3. Reuse that machinery for `O_b`, `O_lnu`, and `O_top`.
+   producing the first generator and Weaver-oriented reco `O_W` results.
+2. Complete the full `O_W` angular-vs-ML baseline at gen and reco level.
+3. Derive and validate the top/antitop side orientation, then reuse the
+   machinery for `O_b`, `O_lnu`, and `O_top`.
 4. Add the supervisor-provided event-selection MVA and backgrounds.
 5. Fuse `O_W` with one secondary observable.
 6. Convert pure `LR/RL` samples to the physical LCF polarisation scenario.
@@ -32,9 +32,9 @@ is acceptable.
 |---|---|---|
 | 1 | Separate what is already provided from what the student must produce; understand the five questions, six required deliverables, non-goals, and why a negative result can still be complete. | [README.md](../README.md), [KNOWN_ISSUES.md](../KNOWN_ISSUES.md) |
 | 2 | Understand sidecar-to-event alignment, signed template weights versus optimizer weights, CP-odd object ordering, the fixed-lab and Ma frame conventions, total gen-to-reco retention, Fisher information, polarisation, and the local SMEFT conversion. | [DATA_SCHEMA.md](DATA_SCHEMA.md), [PHYSICS_CONVENTIONS.md](PHYSICS_CONVENTIONS.md), `src/ilc_tth_cpv/weights.py`, `angles.py`, `frames.py`, `fisher.py`, `polarization.py` |
-| 3 | Follow the first-run workflow in order: inspect real events, validate the generator table, isolate a kinfit smoke test, complete one HTCondor chunk, export reco features, and preserve a generator `O_W` example plus the explicitly labelled reco slot-order diagnostic before scaling out. | [NAF_STUDENT_SETUP.md](NAF_STUDENT_SETUP.md), [DATA_SCHEMA.md](DATA_SCHEMA.md), `scripts/inspect_generator_event.py`, `scripts/inspect_reco_event.py`, `scripts/run_kinfit_assignment.sh`, `scripts/validate_kinfit_root.py`, `scripts/export_features.py`, `scripts/build_angular_observable.py`, `condor/README.md` |
-| 4 | First validate the reco quark-antiquark orientation. Then produce the main `O_W` result matrix: frame study, angle versus ML, minimal versus extended features, model cross-check, pure LR/RL comparison, and inclusive-gen/full-reco information retention. | `configs/analysis_ow_lr.yaml`, `configs/analysis_ow_rl.yaml`; `scripts/run_baseline.sh` for the generator starting chain; then the export, angular-template, training, ML-template, and Fisher scripts listed in the full guide |
-| 5 | Reuse the frozen Chapter 4 recipe for `O_b`, `O_lnu`, and `O_top`; compare Fisher strength and correlation with `O_W`, then select one complementary branch for fusion. | the same export/train/template tools as Chapter 4; full guide §5.4–§5.5 |
+| 3 | Follow the first-run workflow in order: inspect real events, validate the generator table, isolate a kinfit smoke test, check the fitted neutrino, complete one HTCondor chunk, inspect the Weaver W-orientation scores/statuses, export reco features, and preserve one generator/reco `O_W` example before scaling out. | [NAF_STUDENT_SETUP.md](NAF_STUDENT_SETUP.md), [DATA_SCHEMA.md](DATA_SCHEMA.md), `scripts/inspect_generator_event.py`, `scripts/inspect_reco_event.py`, `scripts/run_kinfit_assignment.sh`, `scripts/validate_kinfit_root.py`, `scripts/export_features.py`, `scripts/build_angular_observable.py`, `condor/README.md` |
+| 4 | Produce the main `O_W` result matrix: frame study, angle versus ML, minimal versus extended features, model cross-check, pure LR/RL comparison, and inclusive-gen/full-reco information retention. Then derive and test the lepton-charge top/antitop mapping required by `O_b` and `O_top`. | `configs/analysis_ow_lr.yaml`, `configs/analysis_ow_rl.yaml`; `scripts/run_baseline.sh` for the generator starting chain; then the export, angular-template, training, ML-template, and Fisher scripts listed in the full guide |
+| 5 | Reuse the frozen Chapter 4 recipe for `O_b`, the now-available fitted-neutrino `O_lnu`, and `O_top`; compare Fisher strength and correlation with `O_W`, then select one complementary branch for fusion. | the same export/train/template tools as Chapter 4; full guide §5.4–§5.5 |
 | 6 | Only after the frozen inputs arrive, join the event-selection MVA and backgrounds, quantify selection loss and background dilution, and compare the nominal 1D result with the optional 2D purity diagnostic. | [MVA_INTERFACE.md](MVA_INTERFACE.md), [BACKGROUND_INTERFACE.md](BACKGROUND_INTERFACE.md), `scripts/join_selection_mva.py` |
 | 7 | Implement and compare early fusion, late fusion, and a 2D likelihood for `O_W + X`; report the conditional information gain rather than only classifier performance. | reuse `scripts/build_ml_observable.py` and `scripts/evaluate_fisher.py`; no frozen fusion driver exists yet |
 | 8 | Start from frozen pure-LR/RL results, construct the four physical run categories, apply luminosity and helicity factors only as weights, run the closure test, and combine per-category likelihoods. | `configs/lcf_polarization.yaml`, `scripts/apply_polarization_weights.py`, Appendix B |
@@ -51,10 +51,11 @@ jets and not offline re-ranking:
 `steering/tth_semilep_kinfit.xml`, and
 `scripts/run_kinfit_assignment.sh`.
 
-The selected candidate identifies the W pair but does not yet orient its two
-light jets as quark versus antiquark. Current `W1-W2` output is a technical
-slot-order diagnostic until the blocker in [KNOWN_ISSUES.md](../KNOWN_ISSUES.md)
-is resolved.
+The selected candidate identifies the W pair. `export_features.py` then
+orients only those two jets with the frozen conditional Weaver q/qbar rule,
+without reranking kinfit candidates. The fitted neutrino is read from the
+selected best-tree entry. The top/antitop side orientation for `O_b` and
+`O_top` remains the Chapter 4 student checkpoint.
 
 ## Current Feature Policy
 
