@@ -9,7 +9,7 @@ analysis:
   name: ow_lr_baseline
   observable_family: O_W
   helicity: LR
-  level: [gen, reco]          # both levels on the matched event pool
+  level: [gen, reco]          # inclusive gen + full reco; matching is optional diagnostic
 
 samples:
   manifest: configs/samples.yaml

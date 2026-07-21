@@ -79,6 +79,25 @@ with the electron beam from the parentless PDG 11 particle of highest energy
 (fallback +z), and basis orthonormality checked to 1e-9.
 Implementation: `frames.make_frame` + `frames.frame_angles`.
 
+The `lab` frame is handled separately with fixed detector axes; applying the
+beam-transverse formula when both the beam and lab z axis are the same would
+give a zero x axis. For `Rh`/`Rpsi`, `make_frame` returns no frame when the
+projected x vector has norm at most `1e-12`. Just above that threshold the
+production plane may still be numerically ill-conditioned, so a Ma-style study
+must record frame failures and test stability versus the system-to-beam angle.
+See PROJECT_NOTE_FULL.md §2.4.
+
+There is no hard-coded beam-crossing-angle correction. The `lab_axes` baseline
+uses the event four-momenta in fixed detector coordinates. The authoritative Ma
+generator script uses the actual parentless incoming-electron direction from
+STDHEP when available, so a crossing angle stored there enters the
+production-plane basis; its `+z`/`-z` fallback contains no such information.
+
+The current feature exporter is frozen to `lab_axes` and does not dispatch on
+the YAML `basis` label. Ma-style results must explicitly call the
+production-plane functions; changing the label alone is not an implementation
+change.
+
 Keep each observable family with its own basis; the theory report treats
 them as separate conventions. There is exactly ONE implementation of both:
 `src/ilc_tth_cpv/frames.py`, shared by gen and reco.
@@ -165,3 +184,6 @@ kinfit + jet assignment stage (docs/KINFIT_JET_ASSIGNMENT.md):
   observables).
 - 2026-07-20: reco selected-candidate convention updated to the production
   `logchi2_plus_flavor` final selection mode.
+- 2026-07-21: clarified fixed-lab-axes versus Ma production-plane usage, the
+  separate lab definition, beam-crossing-angle handling, and the near-beam
+  degeneracy guard.

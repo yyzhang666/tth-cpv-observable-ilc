@@ -295,15 +295,47 @@ Code: [../src/ilc_tth_cpv/angles.py](../src/ilc_tth_cpv/angles.py); conventions:
 
 ## 2.4 Reference frames
 
-An azimuthal angle is only defined *relative to a frame*, and CP-sensitive correlations can look sharper in one frame than another. The $O_W$ pilot study (Chapter 4) compares three frames:
+An azimuthal angle needs two separate choices:
 
-- the **laboratory** (collider centre-of-mass) frame;
-- the **Higgs rest frame** (boost everything by $-\vec p_H$);
-- the **$t\bar{t}$ rest frame**.
+1. **which rest frame** supplies the particle four-momenta;
+2. **which coordinate axes** define $\theta$ and $\phi$ in that frame.
 
-Practical recipe: keep four-vectors as the internal representation, apply Lorentz boosts to the chosen frame, and *only then* evaluate angles.
+The repository keeps two axis conventions because they reproduce two different, already existing generator studies. Do not mix them or call them interchangeable.
 
-To define axes in the boosted frame, use a **production-plane basis** for a system $X$:
+### The current $O_W$ baseline: fixed lab axes after the boost
+
+The production configs freeze `basis: lab_axes`. This is the convention used by `export_features.py`, `inspect_generator_event.py`, and the original signed-$\Delta\phi$ generator study. It compares three momentum frames:
+
+- the **laboratory** frame: no boost;
+- the **Higgs rest frame** (use $p_H$ to construct the Lorentz boost to rest);
+- the **$t\bar{t}$ rest frame** (use $p_t+p_{\bar t}$ to construct the Lorentz boost to rest).
+
+In all three cases the axes remain the fixed detector/lab axes
+
+```math
+\hat x_{\mathrm{lab}}=(1,0,0),\qquad
+\hat y_{\mathrm{lab}}=(0,1,0),\qquad
+\hat z_{\mathrm{lab}}=(0,0,1),
+```
+
+with $\hat z_{\mathrm{lab}}$ along the nominal beam direction. After a Higgs-rest or $t\bar t$-rest boost, **no coordinate rotation is applied**. Thus
+
+```math
+\phi_i
+=
+\mathrm{atan2}(p_{i,y}^{\mathrm{boosted}},p_{i,x}^{\mathrm{boosted}}).
+```
+
+This fixed-axis convention is reference-axis dependent, but it is the convention behind the validated original $O_W$ result and is therefore the required starting baseline in Chapter 4.
+
+### Ma2018: a production-plane basis for $R_h$ and $R_\psi$
+
+The Ma2018 observables use two rest frames, each with its own production-plane axes:
+
+- $R_h$: the Higgs rest frame;
+- $R_\psi$: the $t\bar t$ rest frame.
+
+For the corresponding system $X=H$ or $t\bar t$, save its lab-frame momentum **before** the boost and define
 
 ```math
 \hat z=\frac{\vec p_X^{\,\mathrm{lab}}}{|\vec p_X^{\,\mathrm{lab}}|}
@@ -326,7 +358,64 @@ Then the azimuth of any particle $i$ is
 \phi_i=\mathrm{atan2}(\vec p_i\cdot\hat y,\;\vec p_i\cdot\hat x).
 ```
 
-> **One implementation, used by everyone.** The approved frame convention must live in exactly one shared library — [../src/ilc_tth_cpv/frames.py](../src/ilc_tth_cpv/frames.py) — so that a convention fix propagates everywhere at once.
+This is the Fig. 1 convention of [Ma2018](https://arxiv.org/abs/1809.07127): $\hat z_{R_\psi}$ follows the lab flight direction of the $t\bar t$ system, while $\hat z_{R_h}$ follows the lab flight direction of the Higgs. In an ideal collider centre-of-mass event,
+
+```math
+\vec p_{t\bar t}^{\,\mathrm{lab}}
+=
+-\vec p_H^{\,\mathrm{lab}},
+```
+
+so $\hat z_{R_\psi}=-\hat z_{R_h}$, the projected $\hat x$ axes are equal, and $\hat y_{R_\psi}=-\hat y_{R_h}$. A sign change in a signed $\phi$ observable between these frames can therefore be a direct consequence of the convention rather than a bug.
+
+The laboratory frame is handled separately. If $\hat z_{\mathrm{lab}}$ is the beam axis, it is invalid to reuse the Ma projection formula with the same beam vector: the projected $\hat x$ would be exactly zero. The code correctly uses fixed detector axes for `lab`.
+
+### Beam crossing angle
+
+There is no hard-coded crossing-angle correction in the repository. In the
+fixed-`lab_axes` baseline, the stored particle four-momenta are used in detector
+coordinates and the axes remain exactly $(\hat x_{\mathrm{lab}},\hat
+y_{\mathrm{lab}},\hat z_{\mathrm{lab}})$ above. Therefore any crossing-angle
+effect already present in the event momenta remains in the event kinematics,
+but the analysis does not rotate or boost the event into an ideal head-on beam
+frame.
+
+The authoritative generator-level Ma script instead takes $\hat p_{e^-}$ from
+the highest-energy parentless PDG-11 particle in each STDHEP event. Thus a
+crossing angle encoded in that incoming-electron momentum is automatically used
+when the production-plane $\hat x$ axis is constructed. If that particle is
+missing, the script falls back to the configured $+z$ or $-z$ direction and no
+crossing-angle information is recovered. The helper functions in `frames.py`
+support the same rule, but the current feature exporter does not call the Ma
+path (§2.4, final note below).
+
+### Near-beam degeneracy in the Ma basis
+
+If the Higgs or $t\bar t$ system travels almost parallel to the electron beam, the production plane becomes ill-defined:
+
+```math
+\vec x_{\mathrm{raw}}
+=
+\hat p_{e^-}-(\hat p_{e^-}\cdot\hat z)\hat z
+\longrightarrow 0.
+```
+
+The current implementation treats $|\vec x_{\mathrm{raw}}|\leq10^{-12}$ as an invalid frame and returns no angle. Numerical toy probes give an invalid frame for $\sin\theta_X=0$ and $5\times10^{-13}$, but accept $\sin\theta_X=2\times10^{-12}$. Just above the threshold the normalized $\hat x$ can still be sensitive to tiny momentum perturbations; `BasisQuality` checks the orthonormality of the already normalized axes and therefore cannot diagnose this conditioning problem. Any Ma-style study must record the frame-failure count and inspect stability versus the system-to-beam angle. Do not invent an arbitrary fallback axis and interpret its $\phi$ as physical.
+
+### How the signed cross-object angle is formed
+
+The shared code first computes one azimuth per object in the chosen basis and then forms
+
+```math
+\Delta\phi(a,b)
+=
+\mathrm{wrap}(\phi_a-\phi_b)
+\in[-\pi,\pi).
+```
+
+The cross product appears only in constructing the right-handed Ma axis $\hat y=\hat z\times\hat x$; the production $\Delta\phi$ implementation uses the explicit signed difference above. Argument order fixes the sign: quark minus antiquark for $O_W$, $b$ minus $\bar b$ for $O_b$, and top minus antitop for $O_{\mathrm{top}}$. The lepton-neutrino observable uses the CP-ordered convention of §2.3.
+
+> **One shared implementation.** Boosts and both axis conventions live in [../src/ilc_tth_cpv/frames.py](../src/ilc_tth_cpv/frames.py); wrapping and signed differences live in [../src/ilc_tth_cpv/angles.py](../src/ilc_tth_cpv/angles.py). The current feature exporter always follows the frozen `lab_axes` path. Ma-style observables must call the dedicated production-plane functions explicitly; changing a YAML label alone does not switch the implementation.
 
 ## 2.5 ML input representation: why $(E,\theta,\phi)$?
 
@@ -444,27 +533,11 @@ R_{\mathrm{reco}}^{\mathrm{total}}
 {I_{\mathrm{gen}}^{\mathrm{inclusive}}}.
 ```
 
-The denominator uses the inclusive generated sample for which the chosen gen-level observable is defined. It does **not** require a corresponding reconstructed event. The numerator uses the full reconstructed baseline produced by the standard workflow: events enter only when reconstruction, the production kinfit assignment, and the validity requirements needed by the observable succeed.
-
-Do **not** intersect gen and reco event IDs before evaluating this primary ratio. A generated event that is missing at reco level, fails reconstruction, has no valid assignment, or cannot define the reco observable contributes no reco template entry. Its absence is therefore part of the information loss. The per-event template weights must retain their original generated-sample normalisation, so these failures reduce $I_{\mathrm{reco}}$ instead of silently shrinking the denominator as well.
-
-The gen and reco calculations must still use the same physics sample and chunk scope, luminosity, coupling convention, histogram bin edges, and weight normalisation. Their event populations are deliberately different: that difference is what allows $R_{\mathrm{reco}}^{\mathrm{total}}$ to include reconstruction efficiency, missing objects, invalid assignments, detector smearing, and mis-assignment in one headline number.
+The denominator uses the inclusive generated population for which the chosen gen observable is defined; the numerator uses the full reconstructed baseline. Do **not** intersect event IDs for this headline ratio. Missing reco events, failed reconstruction, invalid assignments, smearing, and mis-assignment are all part of the loss, while the original generated-sample weight normalisation is retained.
 
 > **Optional matched-event diagnostic:** students who are interested in separating the sources of information loss may also define $S_{\mathrm{common}}=S_{\mathrm{gen}}\cap S_{\mathrm{reco}}$ and evaluate $R_{\mathrm{migration}}=I_{\mathrm{reco}}(S_{\mathrm{common}})/I_{\mathrm{gen}}(S_{\mathrm{common}})$. This matched-event ratio isolates migration, resolution, and mis-assignment among successfully reconstructed events. It excludes acceptance and reconstruction-efficiency losses, so never call it the total retention. This study is optional and is not required for the main result.
 
-Keep one global bookkeeping funnel, always up to date. It explains where the total retention is lost:
-
-```math
-N_{\mathrm{generated}}
-\rightarrow
-N_{\text{isolated lepton}}
-\rightarrow
-N_{\text{valid reconstruction}}
-\rightarrow
-N_{\text{MVA selected}} .
-```
-
-Schema and optional matching diagnostic: [DATA_SCHEMA.md](DATA_SCHEMA.md), [../tests/test_event_matching.py](../tests/test_event_matching.py).
+The practical bookkeeping and pass/fail checks are introduced step by step in Chapter 3; the actual $I_{\mathrm{reco}}/I_{\mathrm{gen}}$ comparison belongs to Chapter 4.5. Schema and optional matching diagnostic: [DATA_SCHEMA.md](DATA_SCHEMA.md), [../tests/test_event_matching.py](../tests/test_event_matching.py).
 
 ## 2.9 Event-selection MVA and backgrounds
 
@@ -785,49 +858,233 @@ multi-operator SMEFT fit.
 
 ---
 
-# Chapter 3 — Common analysis baseline (build this first)
+# Chapter 3 — First end-to-end validation (do this first)
 
-**Goal:** one shared data + code layer that *every* angle and *every* ML model uses. **Finish the data contract, weight checks, event matching, and a first angular distribution before doing any model scans.**
+**Goal:** learn what one real event looks like, run every required stage once, and produce one trustworthy generator table plus one trustworthy reconstruction table before attempting the Chapter 4 physics comparison. Follow the steps in order. A command finishing without an error is not enough; each step below says what evidence must be checked.
 
-## 3.1 Why this comes first
+## 3.1 What this chapter is for
 
-Every result in Chapters 4–9 is a ratio between two runs of the same machinery. If the machinery (weights, matching, frames, splits) is not trustworthy, every later number is silently wrong. One week here saves several weeks later.
+This chapter is the bridge between the README Quick Start and the first physics result. It is not a request to redesign the data format. [DATA_SCHEMA.md](DATA_SCHEMA.md) already defines the columns; here it is used as an **acceptance contract** for tables produced by the scripts.
 
-## 3.2 The standard event table
+By the end of the chapter, the student should be able to answer, without guessing:
 
-One table (see [DATA_SCHEMA.md](DATA_SCHEMA.md)), one row per event, containing:
+- Which generator STDHEP, sidecar, reco SLCIO, and kinfit ROOT file entered the run?
+- Which objects and collections were read from one event?
+- Which frame, axis convention, object ordering, and weight column were used?
+- How many events entered, failed reconstruction, passed kinfit, and filled $O_W$?
+- Where are the event table, metadata, validation JSON, histogram CSV, and plot?
 
-- unique **event ID** (the backbone of all gen/reco matching);
-- **LR/RL** sample label;
-- gen and reco **validity flags**;
-- isolated-lepton flavour and charge;
-- **SM event weight** and **signed interference weight** (separate columns, §2.2), optional quadratic weight;
-- event-selection **MVA score** (filled when it arrives, Chapter 6);
-- gen and reco **four-vectors** of all analysis objects;
-- the current ParT-assisted **assignments** and **signed ParT probabilities**;
-- reconstruction-quality variables;
-- a **deterministic train/validation/test split** label (same event always in the same split, for every model).
+## 3.2 Step 0–2: environment, source, and event inspection
 
-Reconstruction-level objects come from the kinfit + jet-assignment stage — students use its selected candidate (slots `W1, W2, b_had, b_lep, H_b1, H_b2` + fitted lepton/neutrino), *not* raw jets: [KINFIT_JET_ASSIGNMENT.md](KINFIT_JET_ASSIGNMENT.md).
+### Step 0 — check the environment and registered data
 
-## 3.3 Shared software
+```bash
+cd /data/dust/user/zhangyuy/analysis/ilc-tth-cpv-v2
+source env/setup.sh
+bash env/check_environment.sh
+bash env/check_environment.sh --data
+```
 
-Reusable, tested functions for: table reading/validation; event-ID matching; Lorentz boosts; frame axes; $\theta,\phi,\Delta\phi$; feature construction; deterministic splitting; angular and ML templates; Fisher; likelihood scans; polarisation weights; metadata and plotting. These live in [../src/ilc_tth_cpv/](../src/ilc_tth_cpv/) — extend them, do not fork private copies into notebooks.
+**Pass condition:** the required software checks report `OK`, the analysis config parses, `outputs/` is writable, and the LR/RL generator and reco sample paths are found. Stop and resolve any `FAIL`, `MISS`, or unexpected `NOFI` before running the analysis.
 
-## 3.4 Validation checklist (all must pass before Chapter 4)
+Before executing the Quick Start, read these four files in this order:
 
-- [ ] no train/validation/test overlap;
-- [ ] unique event IDs and explicit counts of gen-only, reco-only, and overlapping events;
-- [ ] SM and interference weight sums match expected normalisations;
-- [ ] signed-weight sums stable across reruns;
-- [ ] $\phi$ wrapping correct (test values around $\pm\pi$);
-- [ ] exactly one frame implementation in use;
-- [ ] **SM CP closure**: on the SM sample alone, every CP-odd observable is symmetric within statistics (if not, a convention bug exists);
-- [ ] every output file carries complete metadata (config, code version, seed).
+```bash
+less configs/analysis_ow_lr.yaml
+less configs/samples.yaml
+less scripts/run_baseline.sh
+less scripts/export_features.py
+```
 
-## 3.5 Deliverable
+You do not need to understand every Python line. Confirm the sample keys, `basis: lab_axes`, default frame, number of bins, output base directory, the six commands called by `run_baseline.sh`, and the fact that `--nu0-from-abs` is only a technical placeholder.
 
-A frozen baseline configuration, documented schema, validated inclusive-gen and full-reco baseline tables, a reconstruction bookkeeping report, and a first gen + reco $O_W$ distribution plot.
+### Step 1 — inspect generator and reconstructed events
+
+```bash
+python3 scripts/inspect_generator_event.py \
+  --config configs/analysis_ow_lr.yaml \
+  --chunk 0 \
+  --max-events 3
+
+python3 scripts/inspect_reco_event.py \
+  --config configs/analysis_ow_lr.yaml \
+  --max-events 1
+```
+
+For the generator output, record the printed STDHEP and sidecar paths, sidecar/alignment counts, positive and negative weight counts, and one event's $t$, $\bar t$, Higgs, $b/\bar b$, and hadronic-$W$ daughter identities. `O_W` should be finite whenever both light daughters are found, but its value may differ among frames because the particle momenta are boosted.
+
+For the reco output, record the input SLCIO path and confirm that the expected collections exist. Inspect in particular `OutputErrorFlowJets6`, `RefinedJets6`, `ISOElectrons`, and `ISOMuons`; check the jet multiplicities and that the printed Weaver probabilities are present and non-constant. An unusual event is something to understand and record, not something to hide.
+
+### Step 2 — inspect the underlying LCIO records directly
+
+Use the paths printed in Step 1:
+
+```bash
+anajob <reco-slcio-path>
+
+LCIO_READ_COL_NAMES="MCParticle RefinedJets6 OutputErrorFlowJets6 ISOElectrons ISOMuons" \
+  dumpevent <reco-slcio-path> 0
+
+stdhepjob_new <generator-stdhep-path> /tmp/tthcpv_chunk0_first100.slcio 100
+anajob /tmp/tthcpv_chunk0_first100.slcio
+dumpevent /tmp/tthcpv_chunk0_first100.slcio 0
+```
+
+From one generator event, note the incoming electron direction, the parent/daughter chain for $t$, $\bar t$, $H$, and the two hadronic-$W$ daughters. From one reco event, note the run/event number, collection names and sizes, the six-jet collections, isolated-lepton collection, and any PID parameters visible for the jets. These notes establish intuition for what the later CSV columns actually mean; `dumpevent` itself is not a selection or physics-result tool.
+
+## 3.3 Step 3: run the local generator example and inspect its table
+
+Run the README generator smoke chain:
+
+```bash
+bash scripts/run_baseline.sh configs/analysis_ow_lr.yaml --max-events 500
+```
+
+This executes generator inspection, feature export, the first angular template, a small XGBoost training, an ML template, and a technical Fisher calculation. It is an integration test, not a physics result.
+
+The important Chapter 3 outputs are:
+
+| Output | Location | What to inspect |
+|---|---|---|
+| event feature table | `outputs/ow_lr/features/features_gen_higgs_rest_chunk0.csv` | header, first rows, event IDs, validity flags, signed weights, $O_W$ |
+| table metadata | `outputs/ow_lr/features/features_gen_higgs_rest_chunk0.meta.json` | sample, chunk, level, frame, `lab_axes`, row count, schema and weight reports |
+| angular bins | `outputs/ow_lr/angular/O_W/O_W_test_bins.csv` | bin edges, signed and absolute bin weights, entries |
+| angular metadata | `outputs/ow_lr/angular/O_W/O_W_test_bins.meta.json` | filled/invalid counts, out-of-range count, signed/absolute integrals |
+| first plot | `outputs/ow_lr/angular/O_W/O_W_test.png` | correct range, non-empty content, positive and negative signed bins |
+
+Useful inspection commands are
+
+```bash
+head -n 2 outputs/ow_lr/features/features_gen_higgs_rest_chunk0.csv
+python3 -m json.tool outputs/ow_lr/features/features_gen_higgs_rest_chunk0.meta.json
+python3 -m json.tool outputs/ow_lr/angular/O_W/O_W_test_bins.meta.json
+```
+
+**Pass condition:** `schema check: ok=True`; the metadata says `level=gen`, `frame=higgs_rest`, and its `basis` value starts with `lab_axes`; both interference signs are present; event IDs are unique; all valid $O_W$ values are in $[-\pi,\pi)$; `n_out_of_range=0`; and the plot is readable rather than empty or concentrated at a wrap boundary. The model and Fisher files only prove that the chain is connected. Do not quote their numbers because the run is limited to 500 events and uses the placeholder $\nu_0$.
+
+## 3.4 Step 4–6: kinfit smoke, one complete chunk, then HTCondor
+
+### Step 4 — run a 50-event kinfit smoke in a separate directory
+
+First read [KINFIT_JET_ASSIGNMENT.md](KINFIT_JET_ASSIGNMENT.md), `scripts/run_kinfit_assignment.sh`, and `scripts/validate_kinfit_root.py`. Then run
+
+```bash
+bash scripts/run_kinfit_assignment.sh \
+  --config configs/analysis_ow_lr.yaml \
+  --chunk 0 \
+  --max-events 50 \
+  --out-dir outputs/ow_lr/kinfit_smoke
+
+python3 -m json.tool \
+  outputs/ow_lr/kinfit_smoke/kinfit_tthcpv_reco_elpr_chunk0.validation.json
+```
+
+This separate output directory prevents a partial 50-event ROOT file from occupying the canonical full-chunk filename. It is only a processor smoke test and is not read by the standard reco exporter.
+
+**Pass condition:** the validation JSON has `ok: true`, a non-zero `entries` count, a non-zero `selected_entries` count, and an empty `missing_branches` list. Inside `final_selection_report`, require `modes = ["logchi2_plus_flavor"]`, `flavor_weights = [0.3]`, and `max_abs_score_residual <= 1e-5`. Marlin exit 134/139 is acceptable only when this content validation passes; otherwise inspect the kinfit `.log` and, for Condor jobs, the corresponding `err/` file.
+
+### Step 5 — run one complete chunk through HTCondor
+
+Do not run a 12,500-event kinfit job on the login node. Submit chunk 0 as the first complete batch job:
+
+```bash
+cd condor/example
+python3 make_arguments.py \
+  --config ../../configs/analysis_ow_lr.yaml \
+  --chunks 0
+mkdir -p log out err
+condor_submit submit_kinfit.sub
+condor_q
+condor_history -limit 5
+cd ../..
+```
+
+After completion, inspect:
+
+```text
+outputs/ow_lr/kinfit/kinfit_tthcpv_reco_elpr_chunk0.root
+outputs/ow_lr/kinfit/kinfit_tthcpv_reco_elpr_chunk0.validation.json
+outputs/ow_lr/kinfit/kinfit_tthcpv_reco_elpr_chunk0.log
+outputs/ow_lr/kinfit/kinfit_tthcpv_reco_elpr_chunk0.xml
+```
+
+The same validation conditions as Step 4 must pass. Also compare ROOT `entries`, `selected_entries`, and the input event count so reconstruction losses are explicit.
+
+Now replace the generator smoke table with the complete chunk-0 table, export the full reco baseline for that chunk, and build one $O_W$ example at each level:
+
+```bash
+python3 scripts/export_features.py \
+  --config configs/analysis_ow_lr.yaml --level gen --chunk 0
+python3 scripts/build_angular_observable.py \
+  --config configs/analysis_ow_lr.yaml \
+  --features outputs/ow_lr/features/features_gen_higgs_rest_chunk0.csv \
+  --split all
+cp outputs/ow_lr/angular/O_W/O_W_all.png \
+   outputs/ow_lr/angular/O_W/O_W_gen_chunk0_all.png
+cp outputs/ow_lr/angular/O_W/O_W_all_bins.csv \
+   outputs/ow_lr/angular/O_W/O_W_gen_chunk0_all_bins.csv
+cp outputs/ow_lr/angular/O_W/O_W_all_bins.meta.json \
+   outputs/ow_lr/angular/O_W/O_W_gen_chunk0_all_bins.meta.json
+
+python3 scripts/export_features.py \
+  --config configs/analysis_ow_lr.yaml --level reco --chunk 0
+python3 scripts/build_angular_observable.py \
+  --config configs/analysis_ow_lr.yaml \
+  --features outputs/ow_lr/features/features_reco_higgs_rest_chunk0.csv \
+  --split all
+cp outputs/ow_lr/angular/O_W/O_W_all.png \
+   outputs/ow_lr/angular/O_W/O_W_reco_chunk0_all.png
+cp outputs/ow_lr/angular/O_W/O_W_all_bins.csv \
+   outputs/ow_lr/angular/O_W/O_W_reco_chunk0_all_bins.csv
+cp outputs/ow_lr/angular/O_W/O_W_all_bins.meta.json \
+   outputs/ow_lr/angular/O_W/O_W_reco_chunk0_all_bins.meta.json
+```
+
+The copies are intentional: the current angular builder uses the same default filename for gen and reco, so the level-labelled copies preserve both examples. Check the associated metadata rather than identifying a plot only by its appearance.
+
+**Pass condition:** both feature tables have `schema_report.ok=true`; the reco metadata points to the expected kinfit ROOT and SLCIO; `n_event_number_mismatch=0`; the kinfit mode and score checks remain valid; both histograms have `n_out_of_range=0`; and the gen/reco event counts are recorded separately. Do not force identical event populations: §2.8 defines inclusive gen and full reco baseline populations.
+
+### Step 6 — only after chunk 0 passes, submit the remaining kinfit chunks
+
+For the standard 80-chunk LR production, chunk 0 is already complete, so submit 1–79:
+
+```bash
+cd condor/example
+python3 make_arguments.py \
+  --config ../../configs/analysis_ow_lr.yaml \
+  --chunks 1-79
+wc -l arguments.txt
+condor_submit submit_kinfit.sub
+condor_q
+cd ../..
+```
+
+The expected argument count is 79 when all registered chunks are present. Monitor held/failed jobs and validate every ROOT file; a collection of filenames is not evidence of a successful production. Repeat the one-chunk gate and remaining-chunk submission separately for `analysis_ow_rl.yaml`.
+
+## 3.5 Deliverable and Chapter 4 gate
+
+Before starting Chapter 4, show the supervisor all of the following:
+
+1. **One event-inspection note:** one generator event and one reco event, listing the input paths, run/event identifiers, main physics objects, relevant collection sizes, selected jet/PID information, and anything missing or surprising.
+2. **One validation table:** environment/data status; sidecar/alignment counts; positive/negative weight counts; kinfit ROOT entries and selected entries; final-selection mode, flavour weight, and score residual; gen/reco feature-row counts; invalid-object counts; $O_W$ filled/invalid/out-of-range counts; signed and absolute weight sums. Every row must say pass/fail and point to its JSON, log, or metadata evidence.
+3. **Two clearly labelled technical plots:** `O_W_gen_chunk0_all.png` and `O_W_reco_chunk0_all.png`, both using the same frame, `lab_axes` convention, binning, and chunk scope. They validate the pipeline and are not yet the full-sample retention result.
+4. **The underlying machine-readable products:** the gen and reco feature CSVs with `.meta.json`, the canonical chunk-0 kinfit ROOT with validation JSON/log/XML, and the preserved gen/reco angular bin CSVs with metadata. Large ROOT/CSV outputs stay under `outputs/` and are not committed to GitHub.
+5. **Batch evidence:** the first full HTCondor chunk passed end to end before the remaining chunks were submitted, and failed/held jobs have been accounted for rather than silently omitted.
+
+Use this minimum validation-table structure; add rows when something unusual is found:
+
+| Check | Observed value | Pass condition | Evidence |
+|---|---|---|---|
+| environment and registered data |  | no unexplained `FAIL/MISS/NOFI` | `check_environment.sh` output |
+| sidecar/STDHEP alignment |  | validation `ok`, both weight signs present | generator inspection output / feature metadata |
+| generator feature table |  | schema OK, unique IDs, expected frame/basis | gen `.meta.json` |
+| kinfit content |  | validator OK, selected entries $>0$ | `.validation.json` |
+| final-selection score |  | mode correct, weight 0.3, residual $\leq10^{-5}$ | `.validation.json` |
+| reco feature table |  | schema OK, event-number mismatches 0 | reco `.meta.json` |
+| gen and reco $O_W$ templates |  | invalids recorded, out-of-range 0 | angular `.meta.json` files |
+| HTCondor accounting |  | every requested chunk completed or has an explained failure | `condor_q`, `condor_history`, output inventory |
+
+Chapter 4 starts only when another person can follow these records from the configured input files to the two $O_W$ plots and understand every event loss. SM CP closure and physical Fisher numbers remain deferred until the supervisor-provided SM normalisation and templates are available.
 
 ---
 
@@ -870,6 +1127,14 @@ I_{\mathrm{ML}}^{\mathrm{reco}},
 ```
 
 plus $R_{\mathrm{reco}}$ and $G_{\text{ML/angle}}$ — **separately for pure LR and pure RL**.
+
+For the headline $R_{\mathrm{reco}}$, build $I_{\mathrm{gen}}$ from the
+inclusive generated population and $I_{\mathrm{reco}}$ from the full
+reconstructed baseline. Use the same LR/RL sample, chunk scope, luminosity,
+coupling convention, weight normalisation, observable definition, and bin
+edges, but do not intersect event IDs (§2.8). The optional common-event
+$R_{\mathrm{migration}}$ may be added as a diagnostic, clearly labelled and
+kept separate from the total-retention result.
 
 ## 4.6 Deliverable
 

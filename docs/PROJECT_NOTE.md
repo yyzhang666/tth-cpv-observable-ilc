@@ -13,7 +13,8 @@ polarisation mixture.
 
 ## Required Result Path
 
-1. Build a trustworthy common event table and first `O_W` distribution.
+1. Complete the guided event inspection and one-chunk gen/reco validation,
+   producing the first labelled `O_W` distributions.
 2. Complete the full `O_W` angular-vs-ML baseline at gen and reco level.
 3. Reuse that machinery for `O_b`, `O_lnu`, and `O_top`.
 4. Add the supervisor-provided event-selection MVA and backgrounds.
@@ -30,7 +31,7 @@ is acceptable.
 |---|---|---|
 | 1 | Know the physics question, starting conditions, deliverables, and non-goals. Negative results are valid. | [README.md](../README.md), [KNOWN_ISSUES.md](../KNOWN_ISSUES.md) |
 | 2 | Learn the concepts: signed interference weights, CP-odd angles, frames, ML observables, Fisher information, and polarisation. | `src/ilc_tth_cpv/weights.py`, `angles.py`, `frames.py`, `fisher.py`, `polarization.py` |
-| 3 | Build the common baseline first: event IDs, weight checks, gen/reco matching, shared frames/angles, deterministic splits, first `O_W` plot. | [DATA_SCHEMA.md](DATA_SCHEMA.md), `scripts/export_features.py`, `scripts/build_angular_observable.py` |
+| 3 | Follow the first-run workflow: inspect real events, validate a generator table, smoke-test kinfit, complete one HTCondor chunk, export reco features, and preserve labelled gen/reco `O_W` examples before scaling out. | [DATA_SCHEMA.md](DATA_SCHEMA.md), `scripts/inspect_generator_event.py`, `scripts/inspect_reco_event.py`, `scripts/run_kinfit_assignment.sh`, `condor/README.md` |
 | 4 | Main milestone: full `O_W` angular-vs-ML comparison at gen and reco level, including frame and model checks. | `configs/analysis_ow_lr.yaml`, `configs/analysis_ow_rl.yaml`, `scripts/run_baseline.sh`, `scripts/train_cpv_model.py` |
 | 5 | Fast secondary baselines by reuse, not reinvention: `O_b`, `O_lnu`, `O_top`. | same feature/export/train/histogram tools as Chapter 4 |
 | 6 | Integrate the delivered event-selection MVA and backgrounds; measure selection-induced CP-information loss. | [MVA_INTERFACE.md](MVA_INTERFACE.md), [BACKGROUND_INTERFACE.md](BACKGROUND_INTERFACE.md), `scripts/join_selection_mva.py` |

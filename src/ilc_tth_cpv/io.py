@@ -168,10 +168,10 @@ def validate_table(rows: List[dict], required_objects: Optional[List[str]] = Non
 
 
 def match_event_ids(gen_rows: List[dict], reco_rows: List[dict]) -> dict:
-    """Gen/reco event matching report (project note §2.8).
+    """Gen/reco event matching report for the optional migration diagnostic.
 
-    Returns the common id set and the unmatched counts; retention ratios must
-    be computed on the common pool only.
+    Returns the common id set and unmatched counts. The common pool is used for
+    R_migration, not for the primary inclusive-gen/full-reco total retention.
     """
     gen_ids = {row["event_id"] for row in gen_rows}
     reco_ids = {row["event_id"] for row in reco_rows}

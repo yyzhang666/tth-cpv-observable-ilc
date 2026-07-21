@@ -59,8 +59,17 @@ python3 scripts/inspect_reco_event.py --config configs/analysis_ow_lr.yaml --max
 bash scripts/run_baseline.sh configs/analysis_ow_lr.yaml --max-events 500
 
 # kinfit + jet assignment smoke test on one chunk
-bash scripts/run_kinfit_assignment.sh --config configs/analysis_ow_lr.yaml --chunk 0 --max-events 50
+bash scripts/run_kinfit_assignment.sh \
+  --config configs/analysis_ow_lr.yaml \
+  --chunk 0 \
+  --max-events 50 \
+  --out-dir outputs/ow_lr/kinfit_smoke
 ```
+
+The 50-event kinfit output is deliberately isolated from the canonical
+full-chunk directory. The standard reco feature exporter reads only a validated
+full-chunk ROOT; follow PROJECT_NOTE_FULL.md Chapter 3 for the one-chunk
+HTCondor gate and reco export.
 
 ## Inspect event files directly
 
@@ -170,6 +179,7 @@ outputs/     all products (gitignored)
 - verify the default model profile (`python3 scripts/check_model_profile.py`);
 - smoke-test ONE condor job end-to-end before submitting 80;
 - check every trained model for overtraining (train vs validation curves);
-- check gen/reco event matching closure (sidecar alignment per chunk);
+- check sidecar/event alignment and record gen-only, reco-only, and overlapping
+  event counts (do not intersect IDs for the total-retention result);
 - check normalization of every histogram output;
 - check the deterministic train/validation/test split for overlap.

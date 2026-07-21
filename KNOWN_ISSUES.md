@@ -74,3 +74,10 @@ here; every resolution needs supervisor sign-off and a dated note.
     masses, scores). The transformed encodings discussed in the project note
     §2.5 are explicitly NOT used at this stage (supervisor decision
     2026-07-20); revisiting them requires a config-level change request.
+16. **Near-beam Ma-frame conditioning.** For the Ma production-plane basis,
+    `frames.make_frame` rejects an exactly or numerically collinear system when
+    the beam-transverse x vector has norm at most `1e-12`. Stability just above
+    that threshold is not yet covered by an automated toy test. This does not
+    affect the current fixed-`lab_axes` baseline, but any Ma-style result must
+    report frame failures and test the system-to-beam-angle dependence; see
+    PROJECT_NOTE_FULL.md §2.4 and PHYSICS_CONVENTIONS.md §5b.
