@@ -120,7 +120,7 @@ f_0=\frac{d\sigma_{\mathrm{SM}}}{dx},
 ```math
 f_1=\frac{d\sigma_{\mathrm{int}}}{dx}
 =
-2\operatorname{Re}\left(\mathcal{M}_{\mathrm{SM}}^{\ast}\mathcal{M}_{\mathrm{CPV}}\right)d\Phi,
+2\mathrm{Re}\left(\mathcal{M}_{\mathrm{SM}}^{\ast}\mathcal{M}_{\mathrm{CPV}}\right)d\Phi,
 ```
 
 and
@@ -148,7 +148,7 @@ using training weights proportional to $|f_1|$. Final physics templates must use
 ```math
 w_{\mathrm{int}}
 =
-\operatorname{sign}(f_1)|w_{\mathrm{int}}|.
+\mathrm{sign}(f_1)|w_{\mathrm{int}}|.
 ```
 
 Training weights and physics-template weights must remain separate. Class balancing may be used in training but never in final yield templates.
@@ -160,7 +160,7 @@ Define a signed azimuthal difference
 ```math
 \Delta\phi(a,b)
 =
-\operatorname{wrap}(\phi_a-\phi_b)
+\mathrm{wrap}(\phi_a-\phi_b)
 \in(-\pi,\pi].
 ```
 
@@ -213,7 +213,7 @@ A production-plane basis for a system $X$ may be defined as
 Then
 
 ```math
-\phi_i=\operatorname{atan2}(\vec p_i\cdot\hat y,\vec p_i\cdot\hat x).
+\phi_i=\mathrm{atan2}(\vec p_i\cdot\hat y,\vec p_i\cdot\hat x).
 ```
 
 The approved convention must be implemented once in a shared frame library.
@@ -332,7 +332,7 @@ t(x)=
 the ideal local score. If only $z=g(x)$ is retained, the best possible observable in that feature space is
 
 ```math
-t_z(z)=\mathbb E[t(x)\mid z].
+t_z(z)=\mathrm{E}[t(x)\mid z].
 ```
 
 Different feature groups are therefore different projections of the same CP-interference information. For a single coupling, they do not normally correspond to different CP phases.
@@ -425,7 +425,7 @@ the likelihood is
 
 ```math
 \mathcal{L}(c)=
-\prod_i \operatorname{Pois}(n_i\mid\nu_i(c)).
+\prod_i \mathrm{Pois}(n_i\mid\nu_i(c)).
 ```
 
 At $c=0$,
