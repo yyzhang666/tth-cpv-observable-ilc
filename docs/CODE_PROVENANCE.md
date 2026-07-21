@@ -21,7 +21,7 @@ Legend for "mode": `copied` (verbatim), `wrapped` (thin wrapper),
 | `src/ilc_tth_cpv/weights.py::read_sidecar`, `parse_skipped_events_from_log` | same script | ported |
 | hadronic-W analyzer PDG sets in `src/ilc_tth_cpv/objects.py` | theory-study script `compute_tthcpv_ma2018_hadronic_w_observables.py` | ported |
 | signed/abs/entries histogram triple in `src/ilc_tth_cpv/histograms.py` | theory-study script `summarize_tthcpv_phi_sensitivity.py` | ported |
-| `docs/PROJECT_NOTE_FULL.md` | supervisor's project note | copied |
+| `docs/PROJECT_NOTE_FULL.md` | student-facing project guide, rewritten from the supervisor's project note | adapted |
 
 Why authoritative: these scripts produced the validated generator observable
 theory-study report on the 12500-event validation sample and are the official

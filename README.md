@@ -16,10 +16,9 @@ angular observables and ML-learned observables
 generator-to-reconstruction information loss
 ```
 
-The full scientific programme: [docs/PROJECT_NOTE.md](docs/PROJECT_NOTE.md)
-(summary + chapter map) and
-[docs/PROJECT_NOTE_FULL.md](docs/PROJECT_NOTE_FULL.md) (the supervisor's
-complete project note, included in this repository).
+The full scientific programme: [docs/PROJECT_NOTE_FULL.md](docs/PROJECT_NOTE_FULL.md)
+(student-facing full project guide) and
+[docs/PROJECT_NOTE.md](docs/PROJECT_NOTE.md) (short chapter map).
 
 ## Current project status
 

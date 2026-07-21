@@ -1,53 +1,58 @@
 # PROJECT_NOTE
 
-The authoritative project description is included in this repository:
-[PROJECT_NOTE_FULL.md](PROJECT_NOTE_FULL.md) (supervisor's project note,
-copied verbatim; the supervisor's working copy is the master version).
+Start with [PROJECT_NOTE_FULL.md](PROJECT_NOTE_FULL.md). It is now the
+student-facing full project guide and the main scientific roadmap for this
+repository. This file is only a short chapter map.
 
-This file only summarises the structure so the repository is self-navigable.
+## One-Sentence Programme
 
-## Programme (summary)
+Build and validate the first gen/reco angular-vs-ML CP-observable baseline for
+semileptonic `e+e- -> ttH`, then measure what information is lost through
+reconstruction, selection, backgrounds, observable fusion, and the physical LCF
+polarisation mixture.
 
-- Channel: semileptonic `e+e- -> ttH`, `H -> bb`, sqrt(s) = 550 GeV.
-- Coupling: `L = -(m_t/v) H tbar (kappa_t + i kappa~_t gamma5) t`; local linear
-  parameter `c` with `dsigma/dx = f0 + c f1 (+ c^2 f2 optional)`.
-- Required scope (note ch. 1.4):
-  1. complete gen/reco angular–ML baseline for `O_W`;
-  2. integrate the supervisor's event-selection MVA; first S and S+B result;
-  3. quick baselines for `O_b`, `O_lnu`, `O_top`;
-  4. fusion of `O_W` with one secondary observable;
-  5. physical LCF polarisation combination;
-  6. minimal supervisor-approved generator->SMEFT conversion.
-- Optional extensions (at most one; ch. 10): hadronic-tau category, W-pairing
-  optimisation, quadratic EFT term, wider fusion.
-- Scope-control: negative results are valid results (ch. 1.6).
+## Required Result Path
 
-## Where reconstruction-level objects come from
+1. Build a trustworthy common event table and first `O_W` distribution.
+2. Complete the full `O_W` angular-vs-ML baseline at gen and reco level.
+3. Reuse that machinery for `O_b`, `O_lnu`, and `O_top`.
+4. Add the supervisor-provided event-selection MVA and backgrounds.
+5. Fuse `O_W` with one secondary observable.
+6. Convert pure `LR/RL` samples to the physical LCF polarisation scenario.
+7. Add the minimal supervisor-approved generator-to-SMEFT conversion.
 
-Reconstructed events go through the **kinfit + jet assignment stage** before
-any observable is built: see
-[KINFIT_JET_ASSIGNMENT.md](KINFIT_JET_ASSIGNMENT.md). Students use the
-selected candidate of that stage (jet slots `W1, W2, b_had, b_lep, H_b1,
-H_b2` plus the fitted lepton/neutrino), not raw jets.
+Optional extensions live in Chapter 10 of the full guide; opening none of them
+is acceptable.
 
-## Chapter map of the note
+## Chapter Prompts
 
-| Note chapter | Topic | Repo entry point |
+| Chapter | What the student should understand or do | Repo entry point |
 |---|---|---|
-| 2.2 | signed interference weights | `src/ilc_tth_cpv/weights.py` |
-| 2.3 | angular observables | `src/ilc_tth_cpv/angles.py` |
-| 2.4 | reference frames | `src/ilc_tth_cpv/frames.py` |
-| 2.5–2.6 | ML inputs / ML observables | `src/ilc_tth_cpv/features.py`, `scripts/train_cpv_model.py` |
-| 2.8 | gen/reco matching | `docs/DATA_SCHEMA.md`, `tests/test_event_matching.py` |
-| 2.9 | selection MVA & backgrounds | `docs/MVA_INTERFACE.md`, `docs/BACKGROUND_INTERFACE.md` |
-| 2.10–2.12 | Fisher, limits, retention | `src/ilc_tth_cpv/fisher.py`, `scripts/evaluate_fisher.py` |
-| 2.13 | polarisation | `src/ilc_tth_cpv/polarization.py`, `configs/lcf_polarization.yaml` |
-| 3 | common baseline layer | `src/ilc_tth_cpv/` |
-| 4 | O_W baseline | `configs/analysis_ow_lr.yaml`, `scripts/run_baseline.sh` |
-| — | jet assignment + kinfit | `docs/KINFIT_JET_ASSIGNMENT.md`, `steering/`, `scripts/run_kinfit_assignment.sh` |
-| — | batch processing | `condor/README.md` |
+| 1 | Know the physics question, starting conditions, deliverables, and non-goals. Negative results are valid. | [README.md](../README.md), [KNOWN_ISSUES.md](../KNOWN_ISSUES.md) |
+| 2 | Learn the concepts: signed interference weights, CP-odd angles, frames, ML observables, Fisher information, and polarisation. | `src/ilc_tth_cpv/weights.py`, `angles.py`, `frames.py`, `fisher.py`, `polarization.py` |
+| 3 | Build the common baseline first: event IDs, weight checks, gen/reco matching, shared frames/angles, deterministic splits, first `O_W` plot. | [DATA_SCHEMA.md](DATA_SCHEMA.md), `scripts/export_features.py`, `scripts/build_angular_observable.py` |
+| 4 | Main milestone: full `O_W` angular-vs-ML comparison at gen and reco level, including frame and model checks. | `configs/analysis_ow_lr.yaml`, `configs/analysis_ow_rl.yaml`, `scripts/run_baseline.sh`, `scripts/train_cpv_model.py` |
+| 5 | Fast secondary baselines by reuse, not reinvention: `O_b`, `O_lnu`, `O_top`. | same feature/export/train/histogram tools as Chapter 4 |
+| 6 | Integrate the delivered event-selection MVA and backgrounds; measure selection-induced CP-information loss. | [MVA_INTERFACE.md](MVA_INTERFACE.md), [BACKGROUND_INTERFACE.md](BACKGROUND_INTERFACE.md), `scripts/join_selection_mva.py` |
+| 7 | Compare fusion strategies for `O_W + X`: early fusion, late fusion, or a 2D likelihood. | `scripts/build_ml_observable.py`, `scripts/evaluate_fisher.py` |
+| 8 | Convert pure `LR/RL` results into the physical LCF running scenario without using polarisation weights as ML features. | `configs/lcf_polarization.yaml`, `scripts/apply_polarization_weights.py` |
+| 9 | Apply only the supervisor-approved one-parameter generator-to-SMEFT conversion. | full guide Chapter 9 |
+| 10 | Optional extensions, opened only after required results are frozen. | full guide Chapter 10 |
+| 11 | Final checklist: scientific outputs, technical outputs, summary table/figure, quote-readiness. | full guide Chapter 11 and Appendix A |
+| 12 | Suggested reading and bookkeeping templates. | full guide Chapter 12 and Appendices |
 
-Note: the project note (§2.5) discusses transformed ML inputs such as
-`log(E/E0), cos theta, sin phi, cos phi`. The current supervisor decision is
-to start from **raw variables** (`E, theta, phi`, masses, scores) without any
-transformation; see docs/DATA_SCHEMA.md and KNOWN_ISSUES.
+## Reconstruction Rule
+
+Reco-level observables use the production kinfit selected candidate, not raw
+jets and not offline re-ranking:
+[KINFIT_JET_ASSIGNMENT.md](KINFIT_JET_ASSIGNMENT.md),
+`steering/tth_semilep_kinfit.xml`, and
+`scripts/run_kinfit_assignment.sh`.
+
+## Current Feature Policy
+
+The guide explains transformed ML inputs such as `log(E/E0)`, `cos(theta)`,
+`sin(phi)`, and `cos(phi)` as useful concepts. The current frozen project
+decision is to start from **raw variables** (`E`, `theta`, `phi`, masses, and
+scores) as exported; see [DATA_SCHEMA.md](DATA_SCHEMA.md) and
+[../KNOWN_ISSUES.md](../KNOWN_ISSUES.md).
