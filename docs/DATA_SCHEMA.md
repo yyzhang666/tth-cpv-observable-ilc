@@ -68,14 +68,22 @@ From the `TTHSemiLepKinFit` selected candidate (docs/KINFIT_JET_ASSIGNMENT.md):
 accepted  fit_success  fit_status  fitchi2  ndof  fitprob
 final_selection_mode  flavor_weight
 final_selection_score  final_fit_score  final_flavor_score
-base_combo_id  sld_neutrino_subsolution_id
-m_W_fit  m_top_fit  m_H_fit
+best_combo_id
+idx_W1  idx_W2  idx_bhad  idx_blep  idx_H1  idx_H2
+mW_had_prefit  mt_had_prefit  mt_lep_prefit  mH_prefit
+mW_had_postfit mt_had_postfit mt_lep_postfit mH_postfit
 ```
 
 The canonical selected candidate minimizes
 `final_selection_score = log(1 + fit_chi2) + 0.3*signed_flavor_NLL` after
 preferring successful fits. Physics selections require `accepted = 1` and
 `fit_success = 1`.
+
+Reco feature export reads selected indices/status/score from this ROOT tree and
+the selected jet four-vectors from the matching `complete_reco_kinfit_ready`
+SLCIO event. If the kinfit ROOT for the requested config/chunk is missing,
+`export_features.py --level reco` stops with an explicit error asking the user
+to run `scripts/run_kinfit_assignment.sh` first.
 
 ## Missing values
 

@@ -49,10 +49,11 @@ here; every resolution needs supervisor sign-off and a dated note.
    finalization after writing a valid ROOT output. The wrapper accepts these
    exit codes only when the output is non-empty and
    `scripts/validate_kinfit_root.py` confirms the expected tree/branches.
-10. **Kinfit tree reader.** The reco-level feature exporter
-    (`export_features.py --level reco`) intentionally stops until the
-    student implements the `TTHSemiLepKinFit` tree reader against the frozen
-    schema (docs/DATA_SCHEMA.md "Kinfit stage columns").
+10. **Reco feature neutrino p4.** `export_features.py --level reco` reads the
+    selected `TTHSemiLepKinFit` best tree plus the matching SLCIO input. The
+    best tree does not store the fitted neutrino four-vector, so reco neutrino
+    columns are `NaN` and the leptonic-top composite is visible-only until the
+    processor persists that p4.
 
 ## Interface placeholders
 
