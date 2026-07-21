@@ -66,22 +66,30 @@ The complete-reco LCIO parameters are not authoritative cross-section
 provenance. A checked LR file and a checked RL file both carry
 `crossSection=296.0`, `beamPol1=-1`, and `beamPol2=+1`; the RL metadata are
 therefore demonstrably generic, and 296.0 is inconsistent with the accepted LR
-BASES result. STDHEP inspection/conversion exposes event IDs and unit event
-weights but no usable production cross section.
+BASES result. The standard `stdhepjob_new` conversion exposes event IDs and
+unit event weights but does not copy a cross section into LCIO run parameters;
+direct extraction of the raw STDHEP/HEPRUP run record remains a valid audit.
 
-For an unweighted SM sample, the eventual per-event yield factor is
+For an unweighted SM sample, the exported per-event cross-section weight is
 
 ```math
-w_{\mathrm{SM}}=
-\frac{\sigma_{\mathrm{SM}}\mathcal{L}}{N_{\mathrm{written}}}.
+w_{\mathrm{SM}}^{\mathrm{base}}=
+\frac{\sigma_{\mathrm{SM}}}{N_{\mathrm{written}}}.
 ```
 
-That factor supplies the overall normalisation, while exporting the SM event
-kinematics into the same observable bins supplies the denominator shape. The
-repository still needs SM feature export and a frozen RL cross section before
-it can build the physical `weight_sm`/`nu0` templates. `--nu0-from-abs` tests
-only pipeline plumbing. ttZ is the first background (interface:
-`docs/BACKGROUND_INTERFACE.md`).
+Luminosity and later polarization factors multiply this base weight when the
+yield template is evaluated. `export_features.py --component sm` now exports
+SM generator/reco kinematics and the angular/ML builders evaluate the same
+observable/model on them. LR therefore provides a physical binned `nu0`. RL
+exports `weight_sm_shape=1/N_written` but keeps `weight_sm=NaN` until its cross
+section is frozen. The Fisher script requires a real SM template and has no
+`|f1|` fallback.
+
+Each chunk is an independent full-cross-section MC estimate. A one-chunk
+template uses `sigma/N_written_chunk`; multiple chunk templates must be
+averaged, not summed. Equivalently, concatenate all chunks only after changing
+the event weight to `sigma/N_written_total`. ttZ is the first background
+(interface: `docs/BACKGROUND_INTERFACE.md`).
 
 ## Kinfit + jet assignment stage
 

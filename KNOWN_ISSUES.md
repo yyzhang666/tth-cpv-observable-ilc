@@ -6,19 +6,16 @@ validation is documented in `docs/SAMPLE_PROVENANCE.md`.
 
 ## Physics-template blockers
 
-1. **The SM denominator template is not wired into this repository.** The
-   unweighted-event normalisation is `weight_sm = sigma_SM * luminosity /
-   N_written`, but a binned Fisher denominator also needs the SM events exported
-   in the same observable bins. The written totals are now audited as 920400
-   (LR) and 921200 (RL), and the accepted LR BASES integration gives
-   `sigma_SM(LR) = 2.96055 +/- 0.00581374 fb`. No matching accepted SM RL BASES
-   integration was found, so the RL cross section is not frozen. The LCIO
+1. **Pure-RL SM absolute normalisation is not frozen.** SM generator/reco
+   feature export and binned `nu0` templates are implemented for both
+   helicities. LR has the audited `sigma_SM=2.96055 +/- 0.00581374 fb` and is
+   used directly by the Quick Start Fisher chain. RL kinematics and the
+   unit-area shape weight remain usable, but `weight_sm` is deliberately `NaN`
+   until a matching accepted SM eR.pL BASES cross section is supplied. The LCIO
    parameters cannot fill this gap: both LR and RL complete-reco files report
    the same generic `crossSection=296.0`, `beamPol1=-1`, `beamPol2=+1`, including
-   the RL files. `export_features.py` also does not yet export the SM samples,
-   so it writes `weight_sm = NaN`. Therefore `evaluate_fisher.py
-   --nu0-from-abs` remains a plumbing-only stand-in for `nu0`, not an SM
-   prediction or physics Fisher result. See `docs/SAMPLE_PROVENANCE.md`.
+   the RL files. `evaluate_fisher.py` requires a real SM template and has no
+   absolute-interference fallback. See `docs/SAMPLE_PROVENANCE.md`.
 
 ## Kinfit / jet assignment stage
 

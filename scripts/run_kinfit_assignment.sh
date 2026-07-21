@@ -8,6 +8,7 @@
 # Usage:
 #   bash scripts/run_kinfit_assignment.sh --config configs/analysis_ow_lr.yaml --chunk 0 --max-events 50   # smoke
 #   bash scripts/run_kinfit_assignment.sh --config configs/analysis_ow_lr.yaml --chunk 0                   # full chunk
+#   bash scripts/run_kinfit_assignment.sh --config configs/analysis_ow_lr.yaml --component sm --chunk 0
 #   bash scripts/run_kinfit_assignment.sh --slcio /path/to/file.slcio --tag mytest --max-events 50
 #
 # For all 80 chunks use HTCondor: condor/README.md.
@@ -23,6 +24,7 @@ SLCIO=""
 TAG=""
 MAX_EVENTS=0
 OUT_DIR=""
+COMPONENT="interference"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -32,6 +34,7 @@ while [[ $# -gt 0 ]]; do
     --tag)        TAG="$2"; shift 2 ;;
     --max-events) MAX_EVENTS="$2"; shift 2 ;;
     --out-dir)    OUT_DIR="$2"; shift 2 ;;
+    --component)  COMPONENT="$2"; shift 2 ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -41,21 +44,27 @@ if ! command -v Marlin >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ "$COMPONENT" != "interference" && "$COMPONENT" != "sm" ]]; then
+  echo "--component must be interference or sm" >&2
+  exit 1
+fi
+
 # ---- resolve input ----------------------------------------------------------
 if [[ -n "$SLCIO" ]]; then
   [[ -n "$TAG" ]] || { echo "--slcio requires --tag" >&2; exit 1; }
   OUT_BASE="${OUT_DIR:-outputs/adhoc/kinfit}"
 else
   [[ -n "$CONFIG" && -n "$CHUNK" ]] || { echo "Provide --config + --chunk, or --slcio + --tag" >&2; exit 1; }
-  eval "$(python3 - "$CONFIG" "$CHUNK" <<'PY'
+  eval "$(python3 - "$CONFIG" "$CHUNK" "$COMPONENT" <<'PY'
 import glob, sys
 sys.path.insert(0, "src")
 from ilc_tth_cpv.io import load_analysis_config, load_yaml, repo_root
 
 cfg = load_analysis_config(sys.argv[1])
 chunk = sys.argv[2]
+component = sys.argv[3]
 manifest = load_yaml(repo_root() / cfg["samples"]["manifest"])
-sample_key = cfg["samples"]["reco_sample"]
+sample_key = cfg["samples"]["sm_reco_sample" if component == "sm" else "reco_sample"]
 sample = manifest["signals"][sample_key]
 # the '*' in file_pattern is the chunk id slot
 pattern = sample["file_pattern"].replace("*", chunk)

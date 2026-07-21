@@ -3,6 +3,7 @@
 
 Usage:
     python3 make_arguments.py --config ../../configs/analysis_ow_lr.yaml
+    python3 make_arguments.py --config ../../configs/analysis_ow_lr.yaml --component sm
     python3 make_arguments.py --config ... --chunks 0-9        # subset
 """
 
@@ -37,13 +38,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True)
     parser.add_argument("--chunks", default=None, help="e.g. 0-9 or 0,5,7 (default: all found)")
+    parser.add_argument("--component", choices=("interference", "sm"),
+                        default="interference")
     parser.add_argument("--out", default="arguments.txt")
     args = parser.parse_args()
 
     config_path = Path(args.config).resolve()
     cfg = load_analysis_config(config_path)
     manifest = load_yaml(repo_root() / cfg["samples"]["manifest"])
-    sample = manifest["signals"][cfg["samples"]["reco_sample"]]
+    sample_config_key = (
+        "sm_reco_sample" if args.component == "sm" else "reco_sample"
+    )
+    sample = manifest["signals"][cfg["samples"][sample_config_key]]
 
     # discover chunk ids from the files on disk
     pattern = str(Path(sample["path"]) / sample["file_pattern"])
@@ -61,7 +67,7 @@ def main() -> int:
         raise SystemExit(f"No chunks found matching {pattern}")
 
     config_rel = config_path.relative_to(repo_root())
-    lines = [f"{config_rel}, {chunk}" for chunk in selected]
+    lines = [f"{config_rel}, {chunk}, {args.component}" for chunk in selected]
     Path(args.out).write_text("\n".join(lines) + "\n")
     print(f"wrote {args.out}: {len(lines)} jobs "
           f"(chunks {selected[0]}..{selected[-1]} of {len(chunks)} available)")

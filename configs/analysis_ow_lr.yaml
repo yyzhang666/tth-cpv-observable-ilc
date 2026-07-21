@@ -15,6 +15,8 @@ samples:
   manifest: configs/samples.yaml
   gen_sample: tthcpv_gen_elpr        # 80 chunks x 12500 events, sidecar per chunk
   reco_sample: tthcpv_reco_elpr      # kinfit-ready complete reco (same chunks)
+  sm_gen_sample: tth_sm_gen_elpr
+  sm_reco_sample: tth_sm_reco_elpr
 
 # jet assignment + kinematic fit stage (docs/KINFIT_JET_ASSIGNMENT.md).
 # All reco-level observables use the logchi2_plus_flavor_x0p3 selected candidate.
@@ -67,7 +69,7 @@ model:
 weights:
   training_weight: weight_training              # base |w_int|; class balance is trainer-only
   template_weight: weight_interference_signed   # NEVER class-balanced
-  sm_template_weight: weight_sm                 # SM event export/RL normalization not yet wired
+  sm_template_weight: weight_sm                 # sigma_SM / N_written_chunk (fb/event)
 
 selection:
   enabled: false

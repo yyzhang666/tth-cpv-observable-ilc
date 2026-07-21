@@ -29,6 +29,8 @@ def main() -> int:
     parser.add_argument("--observable", default=None, help="default: config observable_family")
     parser.add_argument("--split", default="all", choices=("all", "train", "validation", "test"))
     parser.add_argument("--weight-column", default="weight_template")
+    parser.add_argument("--output-tag", default="",
+                        help="optional filename tag, e.g. sm")
     args = parser.parse_args()
 
     cfg = load_analysis_config(Path(args.config))
@@ -54,6 +56,12 @@ def main() -> int:
         values.append(value)
         weights_used.append(weight)
 
+    if not values:
+        raise SystemExit(
+            f"No finite {observable}/{args.weight_column} entries. "
+            "For SM physical templates, check cross_section_fb in samples.yaml."
+        )
+
     wrap_report = check_phi_wrapping(values)
     if not wrap_report["ok"]:
         raise SystemExit(f"phi wrapping check failed: {wrap_report['problems']}")
@@ -66,13 +74,16 @@ def main() -> int:
 
     out_dir = repo_root() / cfg["outputs"]["base_dir"] / "angular" / observable
     out_dir.mkdir(parents=True, exist_ok=True)
+    tag = f"_{args.output_tag}" if args.output_tag else ""
+    stem = f"{observable}_{args.split}{tag}"
     bin_rows = hist.as_rows(frame=frame, observable=observable)
-    write_table(out_dir / f"{observable}_{args.split}_bins.csv", bin_rows, metadata={
+    write_table(out_dir / f"{stem}_bins.csv", bin_rows, metadata={
         "config": cfg["analysis"]["name"],
         "observable": observable,
         "frame": frame,
         "split": args.split,
         "weight_column": args.weight_column,
+        "output_tag": args.output_tag,
         "n_events_filled": len(values),
         "n_invalid": n_invalid,
         "n_out_of_range": hist.n_out_of_range,
@@ -81,9 +92,10 @@ def main() -> int:
         "weight_report": {k: v for k, v in weight_report.items() if k != "problems"},
         "created": datetime.datetime.now().isoformat(),
     })
-    print(f"bins   -> {out_dir / f'{observable}_{args.split}_bins.csv'}")
+    print(f"bins   -> {out_dir / f'{stem}_bins.csv'}")
+    weight_unit = "shape fraction" if args.weight_column == "weight_sm_shape" else "fb"
     print(f"filled={len(values)} invalid={n_invalid} "
-          f"signed_integral={hist.integral_signed():+.6g} fb "
+          f"signed_integral={hist.integral_signed():+.6g} {weight_unit} "
           f"z_signed={weight_report['z_signed']:+.2f}")
 
     try:
@@ -91,7 +103,7 @@ def main() -> int:
 
         png = plot_signed_histogram(
             hist,
-            out_dir / f"{observable}_{args.split}.png",
+            out_dir / f"{stem}.png",
             title=f"{observable} [{frame}] split={args.split}",
             xlabel=f"{observable} [rad]",
         )

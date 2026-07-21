@@ -4,16 +4,16 @@
 I = sum_i nu1_i^2 / nu0_i  (absolute yield), optional shape-only variant,
 optional parameter-independent background. Warns on invalid bins.
 
-The SM production exists, and its written-event totals plus LR cross section
-are audited, but SM feature export and the pure-RL cross section are not wired
-into a normalised binned template yet (KNOWN_ISSUES: SM denominator template).
-Until then use --nu0-from-abs only as a technical pipeline placeholder; it is
-NOT a physics result.
+The denominator must be a binned SM template evaluated with the same
+observable/model, binning, event scope, and luminosity scaling as the
+interference template. An absolute-interference substitute is intentionally
+not supported.
 
 Usage:
     python3 scripts/evaluate_fisher.py \
         --template outputs/ow_lr/angular/O_W/O_W_test_bins.csv \
-        --nu0-from-abs --luminosity-scale 1.0
+        --sm-template outputs/ow_lr/angular/O_W/O_W_test_sm_bins.csv \
+        --luminosity-scale 8000
 """
 
 from __future__ import annotations
@@ -29,16 +29,22 @@ from ilc_tth_cpv.fisher import fisher_information  # noqa: E402
 from ilc_tth_cpv.io import read_table  # noqa: E402
 
 
+def read_template_metadata(path: Path) -> dict:
+    meta_path = Path(str(path).rsplit(".", 1)[0] + ".meta.json")
+    if not meta_path.exists():
+        raise SystemExit(f"Missing template metadata: {meta_path}")
+    with meta_path.open() as stream:
+        return json.load(stream)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--template", required=True,
                         help="bin CSV from build_angular_observable/build_ml_observable")
-    parser.add_argument("--sm-template", default=None,
+    parser.add_argument("--sm-template", required=True,
                         help="bin CSV providing nu0 (SM yields)")
     parser.add_argument("--background-template", default=None,
                         help="bin CSV providing background yields b_i")
-    parser.add_argument("--nu0-from-abs", action="store_true",
-                        help="TECHNICAL PLACEHOLDER: use abs_weight as nu0")
     parser.add_argument("--luminosity-scale", type=float, default=1.0,
                         help="scale factor applied to all yields (e.g. lumi * a_r)")
     parser.add_argument("--shape-only", action="store_true")
@@ -48,17 +54,21 @@ def main() -> int:
     rows = read_table(Path(args.template))
     nu1 = [float(row["signed_weight_fb"]) * args.luminosity_scale for row in rows]
 
-    if args.sm_template:
-        sm_rows = read_table(Path(args.sm_template))
-        if len(sm_rows) != len(rows):
-            raise SystemExit("SM template binning mismatch")
-        nu0 = [float(row["signed_weight_fb"]) * args.luminosity_scale for row in sm_rows]
-        nu0_source = args.sm_template
-    elif args.nu0_from_abs:
-        nu0 = [float(row["abs_weight_fb"]) * args.luminosity_scale for row in rows]
-        nu0_source = "ABS-WEIGHT PLACEHOLDER (not a physics result)"
-    else:
-        raise SystemExit("Provide --sm-template or (technical only) --nu0-from-abs")
+    sm_template_path = Path(args.sm_template)
+    sm_metadata = read_template_metadata(sm_template_path)
+    if sm_metadata.get("weight_column") != "weight_sm":
+        raise SystemExit(
+            "SM Fisher denominator must be built with weight_column=weight_sm; "
+            f"got {sm_metadata.get('weight_column')!r} in {args.sm_template}"
+        )
+    sm_rows = read_table(sm_template_path)
+    if len(sm_rows) != len(rows):
+        raise SystemExit("SM template binning mismatch")
+    nu0 = [
+        float(row["signed_weight_fb"]) * args.luminosity_scale
+        for row in sm_rows
+    ]
+    nu0_source = args.sm_template
 
     background = None
     if args.background_template:

@@ -121,9 +121,10 @@ them as separate conventions. There is exactly ONE implementation of both:
   `|event_weight_signed|`; `local_signed_fraction = signed/abs` per bin.
 - Plots in the theory study are line-only, no fill, no error bars, PNG;
   reproductions must use the same style for comparability.
-- SM histograms (once the SM samples exist): unit weight
-  `xsec * lumi / n_generated` per event; unit-area normalisation only for
-  shape display, absolute yield for Fisher.
+- SM histograms use `weight_sm = xsec/n_written_chunk` in fb per event, then
+  receive luminosity and polarization factors at yield evaluation. When a
+  cross section is unavailable, `weight_sm_shape=1/n_written_chunk` supports
+  shape inspection but not an absolute Fisher result.
 - Fisher uses absolute yields: `nu_0 = SM (+bg)`, `nu_1 = signed interference`.
 - Stored templates keep raw bin contents; bin edges live in the metadata
   (bin-width division happens only at plot time when needed).
@@ -156,8 +157,8 @@ post-scaling.
   normalises the optimizer weights. This is optimizer bookkeeping, not
   polarisation or yield weighting.
 - Interference templates use the signed `weight_template` (initially
-  `weight_interference_signed`; later multiplied by polarisation and
-  luminosity). Future SM templates use `weight_sm`.
+  `weight_interference_signed`); SM templates use `weight_sm`. Both receive
+  polarisation and luminosity factors later.
 - Training-time rescaling is never written into the physics-template column
   (DATA_SCHEMA.md).
 
@@ -218,3 +219,5 @@ kinfit + jet assignment stage (docs/KINFIT_JET_ASSIGNMENT.md):
 - 2026-07-22: froze the conditional Weaver q/qbar orientation within the
   kinfit-selected W pair; persisted the fitted neutrino in the best tree and
   enabled charge-ordered reco `O_lnu`.
+- 2026-07-22: wired SM generator/reco feature export and real binned LR `nu0`;
+  removed the absolute-interference Fisher fallback.

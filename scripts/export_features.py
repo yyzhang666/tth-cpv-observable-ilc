@@ -13,6 +13,8 @@ matching complete_reco_kinfit_ready SLCIO chunk for jet four-vectors.
 Usage:
     python3 scripts/export_features.py --config configs/analysis_ow_lr.yaml --level gen --chunk 0
     python3 scripts/export_features.py --config configs/analysis_ow_lr.yaml --level reco --chunk 0
+    python3 scripts/export_features.py --config configs/analysis_ow_lr.yaml --level gen --component sm --chunk 0
+    python3 scripts/export_features.py --config configs/analysis_ow_lr.yaml --level reco --component sm --chunk 0
     python3 scripts/export_features.py --config ... --level gen --chunk 0 --max-events 500
 """
 
@@ -28,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from ilc_tth_cpv import angles, flavor, frames, weights  # noqa: E402
+from ilc_tth_cpv import angles, flavor, frames, normalization, weights  # noqa: E402
 from ilc_tth_cpv.features import deterministic_split  # noqa: E402
 from ilc_tth_cpv.io import (  # noqa: E402
     load_analysis_config,
@@ -134,13 +136,71 @@ def fitted_neutrino_p4(fit_row: dict):
     return values if all(math.isfinite(value) for value in values) else None
 
 
+def event_weight_fields(
+    component: str,
+    interference_weight: float = NAN,
+    sm_weights: dict | None = None,
+) -> dict:
+    if component == "interference":
+        signed = float(interference_weight)
+        return {
+            "weight_sm": NAN,
+            "weight_sm_shape": NAN,
+            "weight_interference_signed": signed,
+            "weight_interference_abs": abs(signed),
+            "weight_quadratic": NAN,
+            "weight_training": weights.training_weight(signed),
+            "weight_polarization": NAN,
+            "weight_luminosity": NAN,
+            "weight_template": signed,
+            "label": 1 if signed > 0.0 else -1,
+        }
+    if sm_weights is None:
+        raise ValueError("SM component requires sm_weights")
+    physical = float(sm_weights["physical_weight_fb"])
+    return {
+        "weight_sm": physical,
+        "weight_sm_shape": float(sm_weights["shape_weight"]),
+        "weight_interference_signed": NAN,
+        "weight_interference_abs": NAN,
+        "weight_quadratic": NAN,
+        "weight_training": NAN,
+        "weight_polarization": NAN,
+        "weight_luminosity": NAN,
+        "weight_template": physical,
+        "label": 0,
+    }
+
+
 def safe_theta(cos_theta: float) -> float:
     return math.acos(max(-1.0, min(1.0, float(cos_theta))))
 
 
-def resolve_reco_chunk(cfg: dict, chunk_id: str) -> dict:
+def configured_sample_key(cfg: dict, level: str, component: str) -> str:
+    prefix = "sm_" if component == "sm" else ""
+    key = f"{prefix}{level}_sample"
+    if key not in cfg["samples"]:
+        raise KeyError(f"Analysis config has no samples.{key}")
+    return cfg["samples"][key]
+
+
+def resolve_sm_gen_chunk(sample: dict, chunk_id: str) -> dict:
+    pattern = sample["file_pattern"].replace("*", str(chunk_id))
+    matches = sorted(glob.glob(str(Path(sample["path"]) / pattern)))
+    if not matches:
+        raise FileNotFoundError(
+            f"No SM generator STDHEP for chunk {chunk_id}: "
+            f"{sample['path']}/{pattern}"
+        )
+    return {
+        "chunk": str(chunk_id),
+        "stdhep": Path(matches[0]),
+    }
+
+
+def resolve_reco_chunk(cfg: dict, chunk_id: str, component: str) -> dict:
     manifest = load_yaml(repo_root() / cfg["samples"]["manifest"])
-    sample_key = cfg["samples"]["reco_sample"]
+    sample_key = configured_sample_key(cfg, "reco", component)
     sample = manifest["signals"][sample_key]
     pattern = sample["file_pattern"].replace("*", str(chunk_id))
     matches = sorted(glob.glob(str(Path(sample["path"]) / pattern)))
@@ -332,18 +392,33 @@ def fill_object_features(record: dict, object_p4: dict, rest_p4) -> dict:
     return phi_by_object
 
 
-def export_gen(cfg: dict, chunk_id: str, max_events: int) -> Path:
+def export_gen(
+    cfg: dict,
+    chunk_id: str,
+    max_events: int,
+    component: str,
+) -> Path:
     manifest = load_yaml(repo_root() / cfg["samples"]["manifest"])
-    sample_key = cfg["samples"]["gen_sample"]
+    sample_key = configured_sample_key(cfg, "gen", component)
     sample = manifest["signals"][sample_key]
-    chunk = resolve_gen_chunk(sample, chunk_id)
-
-    sidecar = weights.read_sidecar(chunk["sidecar"])
-    skipped = weights.parse_skipped_events_from_log(chunk.get("physsim_log"))
-    aligned = weights.align_sidecar_to_stdhep(sidecar, skipped)
-    weight_report = weights.validate_signed_weights(aligned)
-    if not weight_report["ok"]:
-        raise SystemExit(f"Sidecar validation failed: {weight_report['problems']}")
+    if component == "interference":
+        chunk = resolve_gen_chunk(sample, chunk_id)
+        sidecar = weights.read_sidecar(chunk["sidecar"])
+        skipped = weights.parse_skipped_events_from_log(chunk.get("physsim_log"))
+        event_records = weights.align_sidecar_to_stdhep(sidecar, skipped)
+        weight_report = weights.validate_signed_weights(event_records)
+        if not weight_report["ok"]:
+            raise SystemExit(
+                f"Sidecar validation failed: {weight_report['problems']}"
+            )
+        sm_weights = None
+    else:
+        chunk = resolve_sm_gen_chunk(sample, chunk_id)
+        sidecar = []
+        skipped = []
+        event_records = range(1, int(sample["n_events_per_chunk"]) + 1)
+        weight_report = None
+        sm_weights = normalization.sm_chunk_weights(sample)
 
     frame_name = cfg["observable"]["default_frame"]
     split_cfg = cfg["split"]
@@ -354,13 +429,14 @@ def export_gen(cfg: dict, chunk_id: str, max_events: int) -> Path:
     reader = open_stdhep(chunk["stdhep"])
     rows = []
     n_read = 0
-    for row_meta in aligned:
+    for event_record in event_records:
         if max_events and n_read >= max_events:
             break
         col = reader.readEvent()
         if col is None:
             break
         n_read += 1
+        row_meta = event_record if component == "interference" else None
         mc_list = [col.getElementAt(k) for k in range(col.getNumberOfElements())]
         truth = identify_semileptonic_truth(mc_list)
 
@@ -373,26 +449,24 @@ def export_gen(cfg: dict, chunk_id: str, max_events: int) -> Path:
             four_momentum(truth.higgs),
         )
 
-        event_id = id_offset + int(row_meta["event"])
-        w_signed = float(row_meta["event_weight_signed"])
+        event_number = int(row_meta["event"]) if row_meta else int(event_record)
+        event_id = id_offset + event_number
         record = {
             "event_id": event_id,
             "sample_name": sample_key,
             "chunk": chunk["chunk"],
-            "process": "ttH_CPVint",
+            "process": "ttH_CPVint" if component == "interference" else "ttH_SM",
             "level": "gen",
             "helicity": cfg["analysis"]["helicity"],
             "split": deterministic_split(event_id, int(split_cfg["seed"]), fractions),
-            "weight_sm": NAN,
-            "weight_interference_signed": w_signed,
-            "weight_interference_abs": abs(w_signed),
-            "weight_quadratic": NAN,
-            "weight_training": weights.training_weight(w_signed),
-            "weight_polarization": NAN,
-            "weight_luminosity": NAN,
-            "weight_template": w_signed,
-            "label": 1 if w_signed > 0 else -1,
         }
+        record.update(event_weight_fields(
+            component,
+            interference_weight=(
+                float(row_meta["event_weight_signed"]) if row_meta else NAN
+            ),
+            sm_weights=sm_weights,
+        ))
 
         phi_by_object = {}
         for name in OBJECTS:
@@ -433,10 +507,14 @@ def export_gen(cfg: dict, chunk_id: str, max_events: int) -> Path:
 
     report = validate_table(rows)
     out_dir = repo_root() / cfg["outputs"]["base_dir"] / "features"
-    out_path = out_dir / f"features_gen_{frame_name}_chunk{chunk['chunk']}.csv"
+    component_prefix = "sm_" if component == "sm" else ""
+    out_path = out_dir / (
+        f"features_{component_prefix}gen_{frame_name}_chunk{chunk['chunk']}.csv"
+    )
     write_table(out_path, rows, metadata={
         "config": cfg["analysis"]["name"],
         "sample": sample_key,
+        "component": component,
         "chunk": chunk["chunk"],
         "level": "gen",
         "frame": frame_name,
@@ -447,7 +525,12 @@ def export_gen(cfg: dict, chunk_id: str, max_events: int) -> Path:
         "n_skipped": len(skipped),
         "n_exported": len(rows),
         "max_events": max_events,
-        "weight_report": {k: v for k, v in weight_report.items() if k != "problems"},
+        "weight_report": (
+            {k: v for k, v in weight_report.items() if k != "problems"}
+            if weight_report else None
+        ),
+        "sm_normalization": sm_weights,
+        "chunk_combination": "average independent chunk templates; do not sum full-cross-section chunk estimates",
         "schema_report": report,
         "created": datetime.datetime.now().isoformat(),
     })
@@ -458,9 +541,14 @@ def export_gen(cfg: dict, chunk_id: str, max_events: int) -> Path:
     return out_path
 
 
-def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
+def export_reco(
+    cfg: dict,
+    chunk_id: str,
+    max_events: int,
+    component: str,
+) -> Path:
     manifest = load_yaml(repo_root() / cfg["samples"]["manifest"])
-    reco = resolve_reco_chunk(cfg, chunk_id)
+    reco = resolve_reco_chunk(cfg, chunk_id, component)
     sample_key = reco["sample_key"]
     root_path = kinfit_root_path(cfg, sample_key, reco["chunk"])
 
@@ -471,14 +559,27 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
             + (f" within max_events={max_events}" if max_events else "")
         )
 
-    gen_sample = manifest["signals"][cfg["samples"]["gen_sample"]]
-    gen_chunk = resolve_gen_chunk(gen_sample, reco["chunk"])
-    sidecar = weights.read_sidecar(gen_chunk["sidecar"])
-    skipped = weights.parse_skipped_events_from_log(gen_chunk.get("physsim_log"))
-    aligned = weights.align_sidecar_to_stdhep(sidecar, skipped)
-    weight_report = weights.validate_signed_weights(aligned)
-    if not weight_report["ok"]:
-        raise SystemExit(f"Sidecar validation failed: {weight_report['problems']}")
+    if component == "interference":
+        gen_sample = manifest["signals"][configured_sample_key(
+            cfg, "gen", component
+        )]
+        gen_chunk = resolve_gen_chunk(gen_sample, reco["chunk"])
+        sidecar = weights.read_sidecar(gen_chunk["sidecar"])
+        skipped = weights.parse_skipped_events_from_log(gen_chunk.get("physsim_log"))
+        aligned = weights.align_sidecar_to_stdhep(sidecar, skipped)
+        weight_report = weights.validate_signed_weights(aligned)
+        if not weight_report["ok"]:
+            raise SystemExit(
+                f"Sidecar validation failed: {weight_report['problems']}"
+            )
+        sm_weights = None
+    else:
+        gen_chunk = None
+        sidecar = []
+        skipped = []
+        aligned = None
+        weight_report = None
+        sm_weights = normalization.sm_chunk_weights(reco["sample"])
 
     frame_name = cfg["observable"]["default_frame"]
     split_cfg = cfg["split"]
@@ -492,7 +593,9 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
     orientation_counts = Counter()
     for fit_row in kinfit_rows:
         event_index = int(fit_row["event_index"])
-        if event_index < 0 or event_index >= len(aligned):
+        if aligned is not None and (
+            event_index < 0 or event_index >= len(aligned)
+        ):
             raise SystemExit(
                 f"Kinfit event_index {event_index} is outside aligned sidecar "
                 f"length {len(aligned)}"
@@ -500,28 +603,27 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
         snapshot = snapshots[event_index]
         if int(fit_row["event_number"]) != int(snapshot["event_number"]):
             n_event_number_mismatch += 1
-        row_meta = aligned[event_index]
-        w_signed = float(row_meta["event_weight_signed"])
-        event_id = id_offset + int(row_meta["event"])
+        row_meta = aligned[event_index] if aligned is not None else None
+        event_id = id_offset + (
+            int(row_meta["event"]) if row_meta else event_index + 1
+        )
 
         record = {
             "event_id": event_id,
             "sample_name": sample_key,
             "chunk": reco["chunk"],
-            "process": "ttH_CPVint",
+            "process": "ttH_CPVint" if component == "interference" else "ttH_SM",
             "level": "reco",
             "helicity": cfg["analysis"]["helicity"],
             "split": deterministic_split(event_id, int(split_cfg["seed"]), fractions),
-            "weight_sm": NAN,
-            "weight_interference_signed": w_signed,
-            "weight_interference_abs": abs(w_signed),
-            "weight_quadratic": NAN,
-            "weight_training": weights.training_weight(w_signed),
-            "weight_polarization": NAN,
-            "weight_luminosity": NAN,
-            "weight_template": w_signed,
-            "label": 1 if w_signed > 0 else -1,
         }
+        record.update(event_weight_fields(
+            component,
+            interference_weight=(
+                float(row_meta["event_weight_signed"]) if row_meta else NAN
+            ),
+            sm_weights=sm_weights,
+        ))
 
         for key, value in fit_row.items():
             record[key] = value
@@ -624,10 +726,14 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
 
     report = validate_table(rows, required_objects=list(OBJECTS))
     out_dir = repo_root() / cfg["outputs"]["base_dir"] / "features"
-    out_path = out_dir / f"features_reco_{frame_name}_chunk{reco['chunk']}.csv"
+    component_prefix = "sm_" if component == "sm" else ""
+    out_path = out_dir / (
+        f"features_{component_prefix}reco_{frame_name}_chunk{reco['chunk']}.csv"
+    )
     write_table(out_path, rows, metadata={
         "config": cfg["analysis"]["name"],
         "sample": sample_key,
+        "component": component,
         "chunk": reco["chunk"],
         "level": "reco",
         "frame": frame_name,
@@ -643,16 +749,26 @@ def export_reco(cfg: dict, chunk_id: str, max_events: int) -> Path:
         "feature_policy": "raw variables only (E, theta, phi, mass)",
         "kinfit_root": root_path,
         "reco_slcio": reco["slcio"],
-        "gen_sidecar": gen_chunk["sidecar"],
+        "gen_sidecar": gen_chunk["sidecar"] if gen_chunk else None,
         "n_sidecar": len(sidecar),
         "n_skipped": len(skipped),
         "n_exported": len(rows),
         "max_events": max_events,
-        "event_index_alignment": "TTHSemiLepKinFit event_index is the input SLCIO record index; sidecar uses accepted-event-order matching",
+        "event_index_alignment": (
+            "TTHSemiLepKinFit event_index is the input SLCIO record index; "
+            "sidecar uses accepted-event-order matching"
+            if component == "interference"
+            else "TTHSemiLepKinFit event_index is the SM input SLCIO record index"
+        ),
         "n_event_number_mismatch": n_event_number_mismatch,
         "neutrino_note": "neutrino uses nu_fit_{E,px,py,pz} from the selected best-tree fit; O_lnu is charge ordered",
         "kinfit_report": kinfit_report,
-        "weight_report": {k: v for k, v in weight_report.items() if k != "problems"},
+        "weight_report": (
+            {k: v for k, v in weight_report.items() if k != "problems"}
+            if weight_report else None
+        ),
+        "sm_normalization": sm_weights,
+        "chunk_combination": "average independent chunk templates; do not sum full-cross-section chunk estimates",
         "schema_report": report,
         "created": datetime.datetime.now().isoformat(),
     })
@@ -669,6 +785,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True)
     parser.add_argument("--level", choices=("gen", "reco"), required=True)
+    parser.add_argument("--component", choices=("interference", "sm"),
+                        default="interference")
     parser.add_argument("--chunk", default="0", help="production chunk id (default 0)")
     parser.add_argument("--max-events", type=int, default=0,
                         help="debug early stop; 0 = all (debug output is not a physics result)")
@@ -676,9 +794,9 @@ def main() -> int:
 
     cfg = load_analysis_config(Path(args.config))
     if args.level == "gen":
-        export_gen(cfg, args.chunk, args.max_events)
+        export_gen(cfg, args.chunk, args.max_events, args.component)
         return 0
-    export_reco(cfg, args.chunk, args.max_events)
+    export_reco(cfg, args.chunk, args.max_events, args.component)
     return 0
 
 

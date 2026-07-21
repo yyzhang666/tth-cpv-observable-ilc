@@ -5,7 +5,7 @@
 # and point 'queue ... from' at it.
 
 executable      = job_wrapper.sh
-arguments       = $(config) $(chunk)
+arguments       = $(config) $(chunk) $(component)
 
 universe        = vanilla
 Requirements    = OpSys == "LINUX" && Arch == "X86_64"
@@ -23,4 +23,4 @@ log             = log/$(Cluster).$(Process).log
 output          = out/$(Cluster).$(Process).out
 error           = err/$(Cluster).$(Process).err
 
-queue config,chunk from arguments.txt
+queue config,chunk,component from arguments.txt

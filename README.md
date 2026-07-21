@@ -30,6 +30,9 @@ The full scientific programme: [docs/PROJECT_NOTE_FULL.md](docs/PROJECT_NOTE_FUL
   ([configs/samples.yaml](configs/samples.yaml)). Generator physics and
   production validation are complete; see
   [docs/SAMPLE_PROVENANCE.md](docs/SAMPLE_PROVENANCE.md).
+- **SM denominator samples are produced and wired** at generator and reco
+  level. The LR baseline has an audited absolute cross section; RL shape export
+  works, while its absolute yield remains blocked on a matching RL BASES result.
 - **Jet assignment + kinematic fit** is a standard, frozen pipeline stage
   ([docs/KINFIT_JET_ASSIGNMENT.md](docs/KINFIT_JET_ASSIGNMENT.md));
   production final selection uses `FinalSelectionMode=logchi2_plus_flavor`
@@ -78,7 +81,8 @@ python3 scripts/inspect_generator_event.py --config configs/analysis_ow_lr.yaml 
 # look at a reconstructed event
 python3 scripts/inspect_reco_event.py --config configs/analysis_ow_lr.yaml --max-events 1
 
-# generator-level baseline chain on a few hundred events (NOT a physics result)
+# generator-level CPV + real-SM-nu0 chain on a few hundred events
+# (integration smoke only; the limited event scope is NOT a physics result)
 bash scripts/run_baseline.sh configs/analysis_ow_lr.yaml --max-events 500
 
 # kinfit + jet assignment smoke test on one chunk
@@ -136,7 +140,8 @@ For reconstructed analysis inputs, inspect the `complete_reco_kinfit_ready`
 ## The pipeline
 
 ```
-generator stdhep + sidecar        (produced; per chunk)
+generator stdhep + sidecar        (CPV interference; produced per chunk)
+SM generator stdhep               (produced; supplies the binned nu0)
         |
 SGV -> complete_reco_kinfit_ready (produced; per chunk)
         |

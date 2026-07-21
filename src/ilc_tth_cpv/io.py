@@ -25,6 +25,7 @@ REQUIRED_EVENT_COLUMNS = (
 
 WEIGHT_COLUMNS = (
     "weight_sm",
+    "weight_sm_shape",
     "weight_interference_signed",
     "weight_interference_abs",
     "weight_quadratic",

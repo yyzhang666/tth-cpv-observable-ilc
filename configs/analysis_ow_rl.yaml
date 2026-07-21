@@ -13,6 +13,8 @@ samples:
   manifest: configs/samples.yaml
   gen_sample: tthcpv_gen_erpl
   reco_sample: tthcpv_reco_erpl
+  sm_gen_sample: tth_sm_gen_erpl
+  sm_reco_sample: tth_sm_reco_erpl
 
 kinfit:
   steering: steering/tth_semilep_kinfit.xml
@@ -59,7 +61,7 @@ model:
 weights:
   training_weight: weight_training
   template_weight: weight_interference_signed
-  sm_template_weight: weight_sm                 # SM event export/RL normalization not yet wired
+  sm_template_weight: weight_sm                 # NaN until authoritative RL sigma_SM is supplied
 
 selection:
   enabled: false

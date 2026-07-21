@@ -25,6 +25,17 @@ condor_q                      # watch
 condor_history -limit 5       # after completion
 ```
 
+The default component is the CPV-interference reco sample. To produce the SM
+denominator with the identical kinfit selection, generate a separate argument
+file and submit it separately:
+
+```bash
+python3 make_arguments.py \
+  --config ../../configs/analysis_ow_lr.yaml \
+  --component sm
+condor_submit submit_kinfit.sub
+```
+
 ## Non-negotiable rules (learned the hard way)
 
 1. **One job = one chunk = one job-local work directory.** Marlin writes

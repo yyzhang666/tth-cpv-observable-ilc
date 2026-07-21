@@ -22,6 +22,7 @@ def make_row(event_id, level="gen", split=None):
         "helicity": "LR",
         "split": split or deterministic_split(event_id, SEED, FRACTIONS),
         "weight_sm": "nan",
+        "weight_sm_shape": "nan",
         "weight_interference_signed": "0.1",
         "weight_interference_abs": "0.1",
         "weight_quadratic": "nan",

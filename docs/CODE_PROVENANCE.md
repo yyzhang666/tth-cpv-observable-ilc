@@ -50,6 +50,7 @@ selection were unchanged.
 | `src/ilc_tth_cpv/slcio.py` reader pattern | supervisor's MVA-inputs LCIO helper module | ported |
 | `src/ilc_tth_cpv/flavor.py::orient_w_pair` | frozen supervisor rule using Weaver signed light-flavour probabilities within the selected W pair | new, tested |
 | sample weight rule `xsec*lumi/n_gen` | same module | ported |
+| `src/ilc_tth_cpv/normalization.py::sm_chunk_weights` | standard unweighted-MC `sigma/N_written` normalization, with separate unit-area shape weight | new, tested |
 
 ## ML observable
 

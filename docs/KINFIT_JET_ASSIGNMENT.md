@@ -94,6 +94,10 @@ bash scripts/run_kinfit_assignment.sh \
 bash scripts/run_kinfit_assignment.sh \
     --config configs/analysis_ow_lr.yaml --chunk 0
 
+# the matching SM denominator uses the identical processor/selection
+bash scripts/run_kinfit_assignment.sh \
+    --config configs/analysis_ow_lr.yaml --component sm --chunk 0
+
 # all 80 chunks: use HTCondor, see condor/README.md
 ```
 
@@ -105,6 +109,11 @@ Output per chunk (under `outputs/<analysis>/kinfit/`):
 - `kinfit_<sample>_<chunk>.log` — Marlin log.
 - `kinfit_<sample>_<chunk>.validation.json` — ROOT content validation
   produced by `scripts/validate_kinfit_root.py`.
+
+CPV and SM outputs coexist because their filenames contain different sample
+keys (`tthcpv_reco_*` versus `tth_sm_reco_*`). Use `--component sm` in both
+the runner and the Condor argument generator; this changes only the input
+sample, never the fit configuration.
 
 ## Which events count
 

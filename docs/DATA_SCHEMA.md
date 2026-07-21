@@ -20,16 +20,23 @@ validate against this schema (`src/ilc_tth_cpv/io.py::validate_table`).
 All weight columns exist in every table; unavailable ones carry `NaN` and a
 note in the metadata, so missing weights stay visible.
 
+`export_features.py --component interference` writes the CPV derivative table;
+`--component sm` writes a separate SM denominator table. One production chunk
+is a full-cross-section MC estimate. Average multiple per-chunk templates, or
+renormalize concatenated rows to the total written-event count; never sum
+full-cross-section chunk estimates.
+
 | column | description |
 |---|---|
-| `weight_sm` | SM yield weight `xsec*lumi/n_written`; currently `NaN` because SM events are not yet exported into this table and the pure-RL cross section is not frozen |
+| `weight_sm` | SM base cross-section weight `xsec/n_written_chunk` in fb; finite for LR SM rows and deliberately `NaN` for RL until its cross section is frozen |
+| `weight_sm_shape` | unit-area SM shape weight `1/n_written_chunk`; available even when the absolute cross section is unknown |
 | `weight_interference_signed` | signed interference weight (fb-scaled), physics templates only |
 | `weight_interference_abs` | `abs(weight_interference_signed)` |
 | `weight_quadratic` | optional `c^2` term weight (Optional extension 3) |
 | `weight_training` | non-negative base optimizer weight; any class balancing is applied only inside the trainer and is not written back here |
 | `weight_polarization` | `a_r` or `b_r` factor for a running configuration |
 | `weight_luminosity` | luminosity scale of the running configuration |
-| `weight_template` | signed interference template weight; later includes polarisation and luminosity factors |
+| `weight_template` | active component's base template weight: signed interference weight on CPV rows or `weight_sm` on normalized SM rows; later includes polarisation and luminosity factors |
 
 ## Object kinematics
 

@@ -34,6 +34,9 @@ def main() -> int:
     parser.add_argument("--model", required=True)
     parser.add_argument("--split", default="test", choices=("validation", "test"))
     parser.add_argument("--n-bins", type=int, default=20)
+    parser.add_argument("--weight-column", default="weight_template")
+    parser.add_argument("--output-tag", default="",
+                        help="optional filename tag, e.g. sm")
     parser.add_argument("--logit", action="store_true", help="also compute log(P+/P-)")
     args = parser.parse_args()
 
@@ -92,7 +95,9 @@ def main() -> int:
     for row, p in zip(kept, proba):
         p_plus, p_minus = float(p[plus_idx]), float(p[minus_idx])
         score = p_plus - p_minus
-        w_template = float(row["weight_template"])
+        w_template = float(row[args.weight_column])
+        if not math.isfinite(w_template):
+            continue
         hist.fill(score, w_template)
         out = {
             "event_id": row["event_id"],
@@ -101,7 +106,8 @@ def main() -> int:
             "p_plus": p_plus,
             "p_minus": p_minus,
             "score": score,
-            "weight_template": w_template,
+            "weight_column": args.weight_column,
+            "template_weight": w_template,
         }
         if args.logit:
             out["logit"] = math.log(p_plus / p_minus) if p_minus > 0 else float("inf")
@@ -109,7 +115,13 @@ def main() -> int:
 
     out_dir = repo_root() / cfg["outputs"]["base_dir"] / "ml_observable"
     out_dir.mkdir(parents=True, exist_ok=True)
-    write_table(out_dir / f"scores_{args.split}.csv", score_rows, metadata={
+    if not score_rows:
+        raise SystemExit(
+            f"No finite {args.weight_column} values for split {args.split}. "
+            "For SM physical templates, check cross_section_fb in samples.yaml."
+        )
+    tag = f"_{args.output_tag}" if args.output_tag else ""
+    write_table(out_dir / f"scores_{args.split}{tag}.csv", score_rows, metadata={
         "config": cfg["analysis"]["name"],
         "model": str(args.model),
         "model_metadata": model_meta,
@@ -117,13 +129,27 @@ def main() -> int:
         "n_evaluated": len(kept),
         "n_dropped_invalid": len(eval_rows) - len(kept),
         "score_definition": "P(+) - P(-)",
+        "weight_column": args.weight_column,
+        "output_tag": args.output_tag,
         "created": datetime.datetime.now().isoformat(),
     })
-    write_table(out_dir / f"template_{args.split}_bins.csv",
-                hist.as_rows(frame="score", observable="O_ML"))
-    print(f"scores   -> {out_dir / f'scores_{args.split}.csv'} ({len(kept)} events)")
-    print(f"template -> {out_dir / f'template_{args.split}_bins.csv'}")
-    print(f"signed integral = {hist.integral_signed():+.6g} fb")
+    write_table(
+        out_dir / f"template_{args.split}{tag}_bins.csv",
+        hist.as_rows(frame="score", observable="O_ML"),
+        metadata={
+            "config": cfg["analysis"]["name"],
+            "model": str(args.model),
+            "split": args.split,
+            "weight_column": args.weight_column,
+            "output_tag": args.output_tag,
+            "n_events_filled": len(score_rows),
+            "created": datetime.datetime.now().isoformat(),
+        },
+    )
+    print(f"scores   -> {out_dir / f'scores_{args.split}{tag}.csv'} ({len(score_rows)} events)")
+    print(f"template -> {out_dir / f'template_{args.split}{tag}_bins.csv'}")
+    weight_unit = "shape fraction" if args.weight_column == "weight_sm_shape" else "fb"
+    print(f"signed integral = {hist.integral_signed():+.6g} {weight_unit}")
     return 0
 
 
