@@ -269,9 +269,8 @@ The CPV sidecar supplies the signed interference weight used for $f_1$.
 Separate SM generator/reco tables supply $f_0$ and are evaluated with the same
 angle or trained model. For one independent SM chunk, the base physical weight
 is $\sigma_{\mathrm{SM}}/N_{\mathrm{written,chunk}}$; luminosity and
-polarisation are applied when yields are built. The LR cross section is
-audited. RL keeps a usable shape weight but no absolute weight until its cross
-section is frozen. The relevant columns are:
+polarisation are applied when yields are built. The polarization-matched LR
+and RL cross sections are both audited. The relevant columns are:
 
 | Column | Current meaning | Where it is used |
 |---|---|---|
@@ -1276,9 +1275,8 @@ cd ../..
 Each argument file should contain 79 jobs. Monitor held/failed jobs and
 validate every ROOT file; a collection of filenames is not evidence of a
 successful production. Repeat the one-chunk gate and remaining-chunk
-submission separately for `analysis_ow_rl.yaml`. RL SM feature/shape export is
-valid, but do not run an absolute RL Fisher result until its cross section is
-frozen.
+submission separately for `analysis_ow_rl.yaml`. The registered RL SM
+cross section is physical, so the same absolute Fisher checks apply there.
 
 ## 3.5 Deliverable and Chapter 4 gate
 
@@ -1310,9 +1308,8 @@ Use this minimum validation-table structure; add rows when something unusual is 
 
 Chapter 4 starts only when another person can follow these records from the
 configured CPV and SM inputs to all four $O_W$ templates and the LR Fisher JSON
-and understand every event loss. SM CP closure is now part of the LR workflow.
-Only the absolute RL result remains deferred until its BASES cross section is
-frozen.
+and understand every event loss. Repeat the same closure for RL using its
+polarization-matched SM denominator before combining running scenarios.
 
 ---
 

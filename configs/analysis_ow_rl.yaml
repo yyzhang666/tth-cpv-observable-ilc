@@ -61,7 +61,7 @@ model:
 weights:
   training_weight: weight_training
   template_weight: weight_interference_signed
-  sm_template_weight: weight_sm                 # NaN until authoritative RL sigma_SM is supplied
+  sm_template_weight: weight_sm                 # sigma_SM / N_written_chunk (fb/event)
 
 selection:
   enabled: false

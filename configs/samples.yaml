@@ -132,11 +132,14 @@ signals:
     n_files: 80
     n_events: 921200
     n_events_per_chunk: 11515
+    cross_section_fb: 1.15889265033
+    cross_section_error_fb: 0.00201435866801
+    cross_section_source: /data/dust/user/zhangyuy/analysis/physsim/run/canonical_sm_tth_eRpL/bases.root
     generator: "Physsim TTHSpring + JSFHadronizer"
     status: [available, readable, method-development-ready]
     notes: >
-      SM f0 kinematics/shape source. Physical yield normalization remains NaN
-      until an authoritative pure-RL cross section is supplied.
+      Physical RL SM f0 source. The polarization-matched TTHBases object was
+      audited directly: Roots=550, PolElectron=+1, PolPositron=-1.
 
   tth_sm_reco_elpr:
     process: "e+e- -> ttH, SM, kinfit-ready complete reco"
@@ -165,13 +168,15 @@ signals:
     n_files: 80
     n_events: 921200
     n_events_per_chunk: 11515
+    cross_section_fb: 1.15889265033
+    cross_section_error_fb: 0.00201435866801
+    cross_section_source: /data/dust/user/zhangyuy/analysis/physsim/run/canonical_sm_tth_eRpL/bases.root
     status: [available, reconstructed, method-development-ready]
     notes: >
-      SM yield-template source. Counts are audited, but no matching accepted
-      pure-RL BASES integration/cross section was found. The LCIO parameters
-      repeat the LR-looking crossSection=296.0 and beam polarisation labels and
-      are not valid normalisation provenance. Shape export works; absolute
-      weight_sm remains NaN until a valid RL cross section is supplied.
+      Physical RL SM yield-template source. The matching canonical TTHBases
+      object supplies the normalization. The LCIO parameters repeat the
+      LR-looking crossSection=296.0 and beam polarisation labels and are not
+      valid normalization provenance.
 
   # ---- historical validation sample (superseded by the production above) ----
   tthcpv_absint_val_12500:

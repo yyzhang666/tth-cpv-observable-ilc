@@ -28,7 +28,7 @@ full-cross-section chunk estimates.
 
 | column | description |
 |---|---|
-| `weight_sm` | SM base cross-section weight `xsec/n_written_chunk` in fb; finite for LR SM rows and deliberately `NaN` for RL until its cross section is frozen |
+| `weight_sm` | SM base cross-section weight `xsec/n_written_chunk` in fb; finite for the registered LR and RL SM samples |
 | `weight_sm_shape` | unit-area SM shape weight `1/n_written_chunk`; available even when the absolute cross section is unknown |
 | `weight_interference_signed` | signed interference weight (fb-scaled), physics templates only |
 | `weight_interference_abs` | `abs(weight_interference_signed)` |

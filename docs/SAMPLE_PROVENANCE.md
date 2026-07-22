@@ -58,17 +58,27 @@ Total Cross section = 2.96055 +/- 0.00581374 fb
 PolElectron=-1, PolPositron=+1, Ecm=550 GeV
 ```
 
-No matching accepted SM eR.pL BASES integration was found. This matters
-because the production guardrail requires a polarization-matched BASES
-template/integration before an eR.pL production is normalised.
+The eR.pL production used
+`physsim/run/canonical_sm_tth_eRpL/bases.root`. Its stored `TTHBases` object was
+read directly with `GetEstimate()` and `GetError()` and reports
+
+```text
+Total Cross section = 1.15889265033 +/- 0.00201435866801 fb
+PolElectron=+1, PolPositron=-1, Ecm=550 GeV
+```
+
+The production argument file and chunk metadata point to that same canonical
+template for chunks 0--79. The audited `bases.root` SHA256 is
+`f37c85afdf479c0442b5e399ec1969966bcae2f355f0fec2841682de99a8c4b4`.
 
 The complete-reco LCIO parameters are not authoritative cross-section
 provenance. A checked LR file and a checked RL file both carry
 `crossSection=296.0`, `beamPol1=-1`, and `beamPol2=+1`; the RL metadata are
 therefore demonstrably generic, and 296.0 is inconsistent with the accepted LR
 BASES result. The standard `stdhepjob_new` conversion exposes event IDs and
-unit event weights but does not copy a cross section into LCIO run parameters;
-direct extraction of the raw STDHEP/HEPRUP run record remains a valid audit.
+unit event weights but does not copy a cross section into LCIO run parameters.
+Use the polarization-matched BASES log or stored `TTHBases` object as the
+normalization authority.
 
 For an unweighted SM sample, the exported per-event cross-section weight is
 
@@ -80,10 +90,10 @@ w_{\mathrm{SM}}^{\mathrm{base}}=
 Luminosity and later polarization factors multiply this base weight when the
 yield template is evaluated. `export_features.py --component sm` now exports
 SM generator/reco kinematics and the angular/ML builders evaluate the same
-observable/model on them. LR therefore provides a physical binned `nu0`. RL
-exports `weight_sm_shape=1/N_written` but keeps `weight_sm=NaN` until its cross
-section is frozen. The Fisher script requires a real SM template and has no
-`|f1|` fallback.
+observable/model on them. Both LR and RL therefore provide a physical binned
+`nu0`; `weight_sm_shape=1/N_written` remains available for unit-area diagnostic
+plots only. The Fisher script requires a real SM template and has no `|f1|`
+fallback.
 
 Each chunk is an independent full-cross-section MC estimate. A one-chunk
 template uses `sigma/N_written_chunk`; multiple chunk templates must be

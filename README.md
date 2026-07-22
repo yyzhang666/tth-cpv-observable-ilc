@@ -31,8 +31,8 @@ The full scientific programme: [docs/PROJECT_NOTE_FULL.md](docs/PROJECT_NOTE_FUL
   production validation are complete; see
   [docs/SAMPLE_PROVENANCE.md](docs/SAMPLE_PROVENANCE.md).
 - **SM denominator samples are produced and wired** at generator and reco
-  level. The LR baseline has an audited absolute cross section; RL shape export
-  works, while its absolute yield remains blocked on a matching RL BASES result.
+  level. Both LR and RL have polarization-matched, audited `TTHBases`
+  cross sections and support physical binned `nu0` templates.
 - **Jet assignment + kinematic fit** is a standard, frozen pipeline stage
   ([docs/KINFIT_JET_ASSIGNMENT.md](docs/KINFIT_JET_ASSIGNMENT.md));
   production final selection uses `FinalSelectionMode=logchi2_plus_flavor`
