@@ -1623,16 +1623,41 @@ for three observables: $O_W$ (angle), $M_W$ (ML), and one fused observable. This
 
 # Chapter 12 — Suggested reading
 
-1. Project $t\bar{t} H$ generator-level CP-observable theory report.
-2. Ma et al. on frame-dependent $e^+e^-\to t\bar{t} H$ CP observables.
-3. CLIC $t\bar{t} H$ CP reconstruction study.
-4. Qu et al., Particle Transformer.
-5. ILC charge-aware ParticleTransformer material.
-6. arXiv:2401.02474 — optimal-observable ideas and detector-level ML.
-7. A Linear Collider Vision for the Future of Particle Physics, arXiv:2503.19983.
-8. Project ZH CPV WORKLOG.
-9. Current hadronic tau ParticleTransformer report.
-10. DESY Summer Student 2026 supervisor guidelines.
+## Useful github repository related to the ILC software chain
+
+1. ILCsoft, the integrated software system we used for data management and reconstruction https://github.com/ilcsoft
+2. ILDAna, the repositories of the analysis work depends on the ILC software chian(maybe ours will be in it later) https://github.com/ILDAnaSoft
+3. The ZHH repository under ILDAna, developing by Bryan and Julie, where I copy from, comprehensive introduction of the dependencies and workflow https://github.com/ILDAnaSoft/ZHH
+4. The fancy introduction on the ilcsoft chain https://github.com/ILDAnaSoft/ILDDoc/blob/master/tutorial/gaede_ilcsoft_tutorial.md
+5. Key4hep official site, you can find talk slides and tutorials: https://key4hep.github.io/key4hep-doc/main/talks-and-presentations/README.html
+
+Our project starts from the stage where all these tools inside has been runned, so they are not necessary to view for you, but you can
+
+```
+cat /data/dust/user/zhangyuy/analysis/tth/ZHH/setup.sh
+```
+
+and check where it actually source from.
+
+## Highly-related papers
+
+Most papers here are more like a theoretical ones. They study things from the Feynman diagram calculations, we check them on the dectector level. Don't need to read and understand all the details in them, just make sure the "observables" comes into the code match their ideas.
+
+1. Where our angular observalbe inspired from? Ma et al. on frame-dependent $e^+e^-\to t\bar{t} H$ CP observables. arXiv:1809.07127
+2. The previous studies on the ML observables: arXiv:2112.05052(LHC), arXiv:2511.08359(Future Collider)
+3. tth signal/background measurement at ILC environment(old!): arXiv:1104.5132(500GeV), arXiv:1409.7157(1TeV)
+4. Chapter 4.9 of this CLIC study, more modern experimental view https://inspirehep.net/files/99819d10bf92156c8ea84dd0c7527549
+
+## Background enhanced papers
+
+Something on the ILC/LCF, general future collider physics case, recent development of the algorithms and research motivation
+
+1. A Linear Collider Vision for the Future of Particle Physics, arXiv:2503.19983.
+2. ILC charge-aware ParticleTransformer https://arxiv.org/abs/2410.11322
+3. ZHH studies by Bryan and Julie, showing their work on the reconstructions depending on the ILC softwares https://arxiv.org/pdf/2509.14148
+4. Fancy theoretical story on why we need CPV in Higgs sector, for "Electroweak Baryongensis" , first chapter of arXiv:2508.09989
+
+I also uploaded two of my talk slides here, which has enough graphic introduction to be understood.
 
 ---
 
