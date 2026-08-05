@@ -1,6 +1,10 @@
 # local machine paths (never commit paths.local.yaml)
 configs/paths.local.yaml
 
+# machine-specific symlinks to shared kinfit trees
+# (create with scripts/link_kinfit_inputs.sh)
+data/
+
 # outputs and models
 outputs/*
 !outputs/README.md

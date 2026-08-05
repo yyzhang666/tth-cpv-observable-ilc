@@ -60,6 +60,7 @@ wjet_quark  wjet_antiquark   light quark / antiquark from the hadronic W
 top_b       antitop_bbar     top-side and antitop-side b jets
 lepton      neutrino         isolated lepton and neutrino estimator
 top         antitop  higgs   composite systems
+down_type_daughter           charge-ordered down-type analyZer jet (W-daughter selected by hadronic_w_pdg per WPLUS/WMINUS_DOWNTYPE_ANALYZER)
 ```
 
 Generator-level pairs follow the particle-antiparticle ordering in
@@ -122,6 +123,18 @@ SLCIO event. If the kinfit ROOT for the requested config/chunk is missing,
 `export_features.py --level reco` stops with an explicit error asking the user
 to run `scripts/run_kinfit_assignment.sh` first.
 
+### Down-type analyzer columns (reco level)
+
+Built from `flavor.semileptonic_down_type_order(lepton_charge)`, applied to
+the already-oriented W pair from the section above.
+
+| column | description |
+| --- | --- |
+| `idx_W_down_candidate` | index of the down-type analyzer candidate (`wq_index` or `wqbar_index`, by lepton charge) |
+| `down_candidate_source` | fixed string `qqbar_orientation_plus_lepton_charge`|
+| `hadronic_W_charge` | electric charge (+1 or -1) of the hadronically-decaying W (+1, -1 or NAN if lepton_charge is invalid)|
+| `lepton_flavor` | `electron` or `muon`|
+
 ## Missing values
 
 - Missing kinematics: `NaN` + `<obj>_valid = 0`, keeping missing objects
@@ -133,10 +146,22 @@ to run `scripts/run_kinfit_assignment.sh` first.
 
 | column | description |
 |---|---|
-| `O_W`, `O_b`, `O_lnu`, `O_top` | signed angular observables in the table's frame |
+| `O_W`, `O_b`, `O_lnu`, `O_top`, `O_lD`| signed angular observables in the table's frame |
 | `mva_score`, `pass_nominal_mva` | joined from the selection MVA (MVA_INTERFACE.md) |
 | `part_*` | Weaver/ParT scores from `RefinedJets6` (PID algorithm `weaver`) |
 | `y45`, `y56`, `y67` | ymerge from `RefinedJets6` (PID algorithm `yth`) — the flavour collection is the single source for these |
+
+## Truth topology columns (gen level)
+Written by `identify_semileptonic_truth()` (`objects.py`) and `export_gen()` (`export_features.py`).
+An event passes only if it is a strict e/mu semileptonic ttH event with
+H -> b bbar (`truth_topology = "invalid"`).
+
+| column | description |
+| --- | --- |
+| `truth_topology` | `semileptonic_e`, `semileptonic_mu`, or `invalid` |
+| `hadronic_w_pdg` | `24` or `-24` for the hadronically decaying W; `None` if no valid hadronic W found |
+| `lepton_pdg` | PDG code of the charged lepton from the leptonic W (`e` or `mu`) |
+| `lepton_flavor` | `electron`, `muon`, or `other` if not e/mu |
 
 ## File-level metadata
 

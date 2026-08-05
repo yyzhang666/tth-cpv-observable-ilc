@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import pytest
 
-from ilc_tth_cpv.flavor import orient_w_pair
+from ilc_tth_cpv.flavor import orient_w_pair, semileptonic_down_type_order
 
 
 def scores(q, qbar, b=0.0):
@@ -66,3 +66,19 @@ def test_orient_tie_is_deterministic_and_labelled():
 def test_orient_rejects_missing_light_scores():
     with pytest.raises(ValueError, match="missing Weaver"):
         orient_w_pair({"mc_u": 0.5}, scores(0.1, 0.4))
+
+
+def test_positive_lepton_returns():
+    """a positive-lepton event must return delta_phi(lepton, wjet_quark)"""
+
+    assert semileptonic_down_type_order(1.0) == ("lepton", "wjet_quark")
+
+def test_negative_lepton_returns():
+    """a negative-lepton event must return delta_phi(wjet_antiquark, lepton)"""
+    assert semileptonic_down_type_order(-1.0) == ("wjet_antiquark", "lepton")
+
+def test_invalid_lepton_charge():
+    """missing, zero, or non-finite lepton charge produces an invalid O_lD rather than selecting a default ordering"""
+    assert semileptonic_down_type_order(0.0) is None
+    assert semileptonic_down_type_order(float("nan")) is None
+    assert semileptonic_down_type_order(None) is None 

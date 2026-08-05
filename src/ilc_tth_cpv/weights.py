@@ -31,7 +31,13 @@ SIDECAR_COLUMNS = (
 
 
 def read_sidecar(path: Path) -> list:
-    """Read the matrix-element sidecar with a strict event-order check."""
+    """
+    Read the matrix-element sidecar with a strict event-order check.
+    
+    output:
+    list of dictionaries, where each dictionary contains the parsed, 
+    type-casted matrix-element data for a single simulated event.
+    """
     with Path(path).open(newline="") as stream:
         rows = list(csv.DictReader(stream))
     out = []

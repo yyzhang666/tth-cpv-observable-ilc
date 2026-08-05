@@ -41,13 +41,14 @@ def repo_root() -> Path:
 
 
 def load_yaml(path: Path) -> dict:
+    """Loads and parses a YAML configuration file into a Python dictionary."""
     try:
         import yaml
     except ImportError as exc:  # pragma: no cover
         raise RuntimeError(
             "pyyaml is required to read configs: pip install pyyaml "
             "(see env/requirements.txt)"
-        ) from exc
+            ) from exc
     with Path(path).open() as stream:
         return yaml.safe_load(stream)
 

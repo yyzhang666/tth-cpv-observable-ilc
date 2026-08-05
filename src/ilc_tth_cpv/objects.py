@@ -163,6 +163,7 @@ def choose_w_daughter(w, allowed_pdgs: set):
 def classify_higgs_decay(mc_list: list) -> str:
     """Classify the physical Higgs decay mode."""
     higgs = find_hard_particle(mc_list, 25)
+
     if higgs is None:
         return "H->none"
 
@@ -171,6 +172,7 @@ def classify_higgs_decay(mc_list: list) -> str:
         for child in physical_children(higgs)
         if pdg(child) is not None
     ]
+
     abs_child_pdgs = [abs(value) for value in child_pdgs]
 
     # Physsim STDHEP may encode a two-body decay as
@@ -217,7 +219,7 @@ def classify_w_decay(w) -> str:
         n_quarks >= 2
         and not has_any_charged_lepton
         and not has_any_neutrino
-    ):
+        ):
         return "hadronic"
 
     w_pdg = pdg(w)
@@ -268,10 +270,9 @@ def classify_ttbar_decay(mc_list: list) -> str:
     if w_plus_mode == "hadronic" and w_minus_mode == "hadronic":
         return "hadronic"
 
-    if (
-        w_plus_mode.startswith("leptonic_")
+    if (w_plus_mode.startswith("leptonic_")
         and w_minus_mode.startswith("leptonic_")
-    ):
+        ):
         return "dileptonic"
 
     if modes == {"hadronic", "leptonic_emu"}:
@@ -299,6 +300,13 @@ class SemileptonicTruth:
     lepton: object = None
     neutrino: object = None
 
+    # New topology and analyser information
+    truth_topology: str = "invalid"
+    hadronic_w_pdg: int | None = None
+    lepton_pdg: int | None = None
+    lepton_flavour: str | None = None
+    down_type_daughter: object = None
+
 
 def identify_semileptonic_truth(mc_list: list) -> SemileptonicTruth:
     """Identify H, t, tbar, b, bbar, W daughters, lepton, neutrino.
@@ -317,15 +325,68 @@ def identify_semileptonic_truth(mc_list: list) -> SemileptonicTruth:
     truth.w_plus = choose_physical_child(truth.top, 24)
     truth.w_minus = choose_physical_child(truth.antitop, -24)
 
+    # number of hadronic W decays and number of direct electron/muon W decays
+    n_hadronic_w = 0
+    n_leptonic_w = 0
+
     for w in (truth.w_plus, truth.w_minus):
         if w is None:
             continue
+            
         finals = w_direct_final_daughters(w)
         final_pdgs = {pdg(child) for child in finals}
+
+        # Hadronic Decay (if final_pdgs contain light quarks pdgs)
         if final_pdgs & LIGHT_PDGS:
-            truth.wjet_quark = choose_w_daughter(w, LIGHT_QUARKS)
-            truth.wjet_antiquark = choose_w_daughter(w, LIGHT_ANTIQUARKS)
+            n_hadronic_w += 1
+            truth.wjet_quark = choose_w_daughter(w, LIGHT_QUARKS)      
+            truth.wjet_antiquark = choose_w_daughter(w, LIGHT_ANTIQUARKS) 
+            truth.hadronic_w_pdg = pdg(w)
+
+            # Check W+- Decay
+            if truth.hadronic_w_pdg == 24:
+                # W+ -> U Dbar
+                if truth.wjet_antiquark and pdg(truth.wjet_antiquark) in WPLUS_DOWNTYPE_ANALYZER:
+                    truth.down_type_daughter = truth.wjet_antiquark
+            elif truth.hadronic_w_pdg == -24:
+                # W- -> D Ubar
+                if truth.wjet_quark and pdg(truth.wjet_quark) in WMINUS_DOWNTYPE_ANALYZER:
+                    truth.down_type_daughter = truth.wjet_quark
+            
+        # Leptonic Decay
         elif final_pdgs & CHARGED_LEPTONS:
+            n_leptonic_w += 1
             truth.lepton = choose_w_daughter(w, CHARGED_LEPTONS)
             truth.neutrino = choose_w_daughter(w, NEUTRINOS)
+
+            if truth.lepton is None:
+                continue
+            
+            truth.lepton_pdg = pdg(truth.lepton)
+
+            # Store lepton flavour info
+            if abs(truth.lepton_pdg) == 11:
+                truth.lepton_flavour = "e"
+            elif abs(truth.lepton_pdg) == 13:
+                truth.lepton_flavour = "mu"
+
+    h_daughters = physical_children(truth.higgs) if truth.higgs else []
+    h_bb = (classify_higgs_decay(mc_list) == "H->bb")
+
+
+    # Confirm the decay is semileptonic
+    is_semileptonic = (
+        h_bb
+        and n_hadronic_w == 1                     # Exactly one hadronic W
+        and n_leptonic_w == 1                     # Exactly one leptonic W
+        and truth.lepton_flavour in ("e", "mu")   # lepton is e or mu
+        and truth.wjet_quark is not None          # W -> q
+        and truth.wjet_antiquark is not None      # w -> q-
+    )
+
+    if is_semileptonic:
+        truth.truth_topology = "semileptonic_e" if truth.lepton_flavour == "e" else "semileptonic_mu"
+    else:
+        truth.truth_topology = "invalid"
+
     return truth

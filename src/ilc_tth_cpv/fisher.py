@@ -17,16 +17,19 @@ def per_bin_fisher(
     nu0: Sequence[float],
     nu1: Sequence[float],
     min_nu0: float = 0.0,
-) -> List[dict]:
-    """Per-bin Fisher terms with invalid-bin flags.
+    ) -> List[dict]:
+    """Calculate Fisher Info per bin with invalid-bin flags.
 
     A bin is invalid if nu0 <= min_nu0 (empty or unphysical SM+bg yield) —
     such bins contribute 0 and are reported, never silently dropped.
     """
     if len(nu0) != len(nu1):
         raise ValueError("nu0 and nu1 must have the same length")
+
     rows = []
     for i, (n0, n1) in enumerate(zip(nu0, nu1)):
+
+        # Check if any nu0 and nu1 sequence contains any invalid values
         invalid = None
         if n0 < 0.0:
             invalid = "negative nu0"
@@ -34,7 +37,10 @@ def per_bin_fisher(
             invalid = "empty nu0"
         elif n0 + min(0.0, n1) < 0.0:
             invalid = "linear template can go negative"
+
+        # Calculate I value if both nu0 and nu1 are valid
         term = (n1 * n1 / n0) if invalid is None else 0.0
+
         rows.append(
             {
                 "bin_index": i,
@@ -53,30 +59,39 @@ def fisher_information(
     background: Optional[Sequence[float]] = None,
     shape_only: bool = False,
     min_nu0: float = 0.0,
-) -> dict:
+    ) -> dict:
     """Total Fisher information and Gaussian interval estimates.
 
     background, if given, is added to nu0 (signal-plus-background mode).
     """
+    # Add background to nu0 if there's any background
     if background is not None:
         if len(background) != len(nu0):
             raise ValueError("background length mismatch")
         nu0 = [a + b for a, b in zip(nu0, background)]
+
     rows = per_bin_fisher(nu0, nu1, min_nu0=min_nu0)
+
+    # Calculate the sum of fisher-per-bin 
     total = sum(row["fisher"] for row in rows)
+
     result = {
         "per_bin": rows,
         "fisher_absolute": total,
         "n_invalid_bins": sum(1 for row in rows if row["invalid"]),
     }
+
+    # Shape-only Fisher (I_shape)
     if shape_only:
         sum0 = sum(row["nu0"] for row in rows if row["invalid"] is None)
         sum1 = sum(row["nu1"] for row in rows if row["invalid"] is None)
         shape = total - (sum1 * sum1 / sum0 if sum0 > 0.0 else 0.0)
         result["fisher_shape_only"] = shape
+
     used = result.get("fisher_shape_only") if shape_only else total
     result["fisher_used"] = used
     result.update(intervals(used))
+    
     return result
 
 

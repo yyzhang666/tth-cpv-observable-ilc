@@ -6,8 +6,7 @@
 # Sources the analysis-side ZHH environment (ILCSoft, LCIO, Marlin, ROOT,
 # pyLCIO) and adds this repo's src/ to PYTHONPATH.
 
-_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
+_REPO_ROOT="/data/dust/user/ozakinan/analysis/tth-cpv-observable-ilc/"
 # --- ZHH / ILCSoft stack (provides pyLCIO, Marlin, ROOT) --------------------
 ZHH_SETUP_DEFAULT="/data/dust/user/zhangyuy/analysis/tth/ZHH/setup.sh"
 ZHH_SETUP="${ZHH_SETUP:-$ZHH_SETUP_DEFAULT}"

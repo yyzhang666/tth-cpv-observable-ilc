@@ -14,7 +14,7 @@ CHUNK="$2"
 COMPONENT="${3:-interference}"
 
 # repo root: condor/example/ -> repo
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REPO_ROOT="/data/dust/user/ozakinan/analysis/tth-cpv-observable-ilc/"
 cd "$REPO_ROOT"
 
 echo "[job] host=$(hostname) date=$(date -Is)"
@@ -22,7 +22,7 @@ echo "[job] repo=$REPO_ROOT config=$CONFIG chunk=$CHUNK component=$COMPONENT"
 
 # environment (ILCSoft/ZHH stack + PYTHONPATH)
 set +u
-source env/setup.sh
+source /data/dust/user/ozakinan/analysis/tth-cpv-observable-ilc/env/setup.sh
 set -u
 
 bash scripts/run_kinfit_assignment.sh \

@@ -21,6 +21,14 @@ from ilc_tth_cpv.histograms import SignedHistogram  # noqa: E402
 from ilc_tth_cpv.io import load_analysis_config, read_table, repo_root, write_table  # noqa: E402
 from ilc_tth_cpv.validation import check_phi_wrapping, check_signed_weight_sums  # noqa: E402
 
+def filter_rows(rows: list, split: str = "all", lepton_flavor: str = "all") -> list:
+    """Helps to filter dataset based on two optinal criteria:
+       data split (train, val, test) and lepton flavor (e, mu)"""
+    if split != "all":
+        rows = [row for row in rows if row["split"] == split]
+    if lepton_flavor != "all":
+        rows = [row for row in rows if row["lepton_flavor"] == lepton_flavor]
+    return rows
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -28,6 +36,7 @@ def main() -> int:
     parser.add_argument("--features", required=True)
     parser.add_argument("--observable", default=None, help="default: config observable_family")
     parser.add_argument("--split", default="all", choices=("all", "train", "validation", "test"))
+    parser.add_argument("--lepton-flavor", default="all", choices=("all", "electron", "muon"))
     parser.add_argument("--weight-column", default="weight_template")
     parser.add_argument("--output-tag", default="",
                         help="optional filename tag, e.g. sm")
@@ -39,8 +48,7 @@ def main() -> int:
     frame = cfg["observable"]["default_frame"]
 
     rows = read_table(Path(args.features))
-    if args.split != "all":
-        rows = [row for row in rows if row["split"] == args.split]
+    rows = filter_rows(rows, split=args.split, lepton_flavor=args.lepton_flavor)
 
     values, weights_used, n_invalid = [], [], 0
     for row in rows:
