@@ -60,7 +60,7 @@ def orient_w_pair(
     L12 = prob_q_jet1 * prob_qbar_jet2
     L21 = prob_q_jet2 * prob_qbar_jet1
 
-    delta_L = L12 - L21
+    delta_L = math.log(L12)-math.log(L21)
     L_ratio = L12 / L21
     margin = abs(L_ratio - 1.0)
 

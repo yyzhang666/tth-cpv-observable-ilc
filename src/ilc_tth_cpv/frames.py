@@ -21,6 +21,7 @@ Frame names used across configs:
     lab         -> no boost
     higgs_rest  -> theory-study "higgs-rest" / "Rh"
     ttbar_rest  -> theory-study "ttbar-rest" / "Rpsi"
+2026.8.7 add ttbar_rest by 
 """
 
 from __future__ import annotations
@@ -37,8 +38,8 @@ P4 = Tuple[float, float, float, float]  # (E, px, py, pz)
 EPS = 1.0e-12
 BASIS_TOL = 1.0e-9
 
-FRAME_NAMES = ("lab", "higgs_rest", "ttbar_rest")
-
+FRAME_NAMES = ("lab", "higgs_rest", "ttbar_rest","ttbar_rest_by_recoil_higgs")
+DEFAULT_SQRT_S_GEV = 550.0
 
 # ---------------------------------------------------------------- vector math
 
@@ -156,7 +157,62 @@ class BasisQuality:
 
 
 # ------------------------------------------------ Convention A: lab-axes phi
+def ttbar_recoil_p4_from_higgs(
+    higgs_p4: Optional[P4],
+    sqrt_s_gev: float = DEFAULT_SQRT_S_GEV,
+) -> Optional[P4]:
+    """Reconstruct the ttbar system from the recoil against the Higgs.
 
+    In the e+e- centre-of-mass frame,
+
+        p_initial = (sqrt(s), 0, 0, 0),
+
+    so that
+
+        p_ttbar^recoil = p_initial - p_H
+                        = (sqrt(s) - E_H,
+                           -px_H, -py_H, -pz_H).
+
+    At reconstruction level, ``higgs_p4`` is the four-momentum obtained from
+    the selected H -> bb jet pair.  Therefore this frame does not depend on
+    the reconstructed top or antitop decay products.
+
+    Returns None if the reconstructed recoil four-vector is unphysical.
+    """
+    if higgs_p4 is None:
+        return None
+
+    sqrt_s = float(sqrt_s_gev)
+    if not math.isfinite(sqrt_s) or sqrt_s <= 0.0:
+        return None
+
+    if not all(math.isfinite(value) for value in higgs_p4):
+        return None
+
+    e_h, px_h, py_h, pz_h = higgs_p4
+
+    recoil_p4: P4 = (
+        sqrt_s - e_h,
+        -px_h,
+        -py_h,
+        -pz_h,
+    )
+
+    recoil_energy = recoil_p4[0]
+    if recoil_energy <= 0.0:
+        return None
+
+    recoil_p2 = dot(spatial(recoil_p4), spatial(recoil_p4))
+    recoil_m2 = recoil_energy * recoil_energy - recoil_p2
+
+    # A massive ttbar system must be timelike.  Reconstructed events can
+    # occasionally become unphysical because of detector resolution; do not
+    # manufacture a boost in that case.
+    if recoil_m2 <= EPS:
+        return None
+
+    return recoil_p4
+    
 def rest_p4_for_frame(
     frame: str,
     top_p4: Optional[P4],
@@ -175,6 +231,10 @@ def rest_p4_for_frame(
         if top_p4 is None or antitop_p4 is None:
             return None
         return add_p4(top_p4, antitop_p4)
+
+    if frame == "ttbar_rest_by_recoil_higgs":
+        return ttbar_recoil_p4_from_higgs(higgs_p4)
+        
     raise ValueError(f"Unknown frame: {frame}")
 
 

@@ -31,7 +31,8 @@ def plot_signed_histogram(
     xlabel: str = "",
     ylabel: str = "signed weight [fb]",
     show_abs: bool = True,
-) -> Path:
+    ) -> Path:
+
     """Theory-study style step plot of signed (and optional |w|) contents."""
     plt = import_plotting()
     out_path = Path(out_path)
@@ -63,7 +64,8 @@ def plot_scan(
     out_path: Path,
     title: str = "",
     level_lines: Optional[list] = None,
-) -> Path:
+    ) -> Path:
+
     plt = import_plotting()
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
