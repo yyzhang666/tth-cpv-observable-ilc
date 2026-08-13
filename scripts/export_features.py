@@ -91,13 +91,13 @@ RECO_KINFIT_BRANCHES = (
 )
 
 RECO_KINFIT_OPTIONAL_BRANCHES = (
-    "top_n",
+    #"top_n",
     "best_preselect_score",
     "preselect_score_W",
     "preselect_score_top",
     "preselect_score_H",
-    "n_constraints",
-    "n_unmeasured",
+    #"n_constraints",
+    #"n_unmeasured",
     "constraint_mode",
     "mW_had_prefit",
     "mt_had_prefit",
@@ -145,7 +145,8 @@ def event_weight_fields(
     component: str,
     interference_weight: float = NAN,
     sm_weights: dict | None = None,
-) -> dict:
+    ) -> dict:
+
     if component == "interference":
         signed = float(interference_weight)
         return {
@@ -160,9 +161,12 @@ def event_weight_fields(
             "weight_template": signed,
             "label": 1 if signed > 0.0 else -1,
         }
+
     if sm_weights is None:
         raise ValueError("SM component requires sm_weights")
+
     physical = float(sm_weights["physical_weight_fb"])
+
     return {
         "weight_sm": physical,
         "weight_sm_shape": float(sm_weights["shape_weight"]),
@@ -193,6 +197,7 @@ def configured_sample_key(cfg: dict, level: str, component: str) -> str:
     key = f"{prefix}{level}_sample"
     if key not in cfg["samples"]:
         raise KeyError(f"Analysis config has no samples.{key}")
+
     return cfg["samples"][key]
 
 
@@ -204,6 +209,7 @@ def resolve_sm_gen_chunk(sample: dict, chunk_id: str) -> dict:
             f"No SM generator STDHEP for chunk {chunk_id}: "
             f"{sample['path']}/{pattern}"
         )
+
     return {
         "chunk": str(chunk_id),
         "stdhep": Path(matches[0]),
@@ -220,6 +226,7 @@ def resolve_reco_chunk(cfg: dict, chunk_id: str, component: str) -> dict:
         raise FileNotFoundError(
             f"No reco SLCIO for chunk {chunk_id}: {sample['path']}/{pattern}"
         )
+
     return {
         "chunk": str(chunk_id),
         "sample_key": sample_key,
@@ -229,12 +236,41 @@ def resolve_reco_chunk(cfg: dict, chunk_id: str, component: str) -> dict:
 
 
 def kinfit_root_path(cfg: dict, sample_key: str, chunk_id: str) -> Path:
-    return (
-        repo_root()
-        / cfg["outputs"]["base_dir"]
-        / "kinfit"
-        / f"kinfit_{sample_key}_chunk{chunk_id}.root"
-    )
+ """Resolve the canonical kinfit ROOT file.
+
+ Prefer the repo-local shared-data link created by
+ scripts/link_kinfit_inputs.sh. Fall back to the historical analysis-output
+ directory so locally produced kinfit files remain usable.
+ """
+ kinfit_sample_key = sample_key.replace("tth_sm", "tthsm")
+ filename = f"kinfit_{kinfit_sample_key}_chunk{chunk_id}.root"
+
+ family = cfg.get("kinfit", {}).get("input_family", "physsim")
+
+ shared_path = (
+     repo_root()
+     / "data"
+     / "kinfit"
+     / family
+     / filename
+ )
+
+ legacy_path = (
+     repo_root()
+     / cfg["outputs"]["base_dir"]
+     / "kinfit"
+     / filename
+ )
+
+ if shared_path.exists():
+     return shared_path
+
+ if legacy_path.exists():
+     return legacy_path
+
+ # Return the preferred path so the downstream error message tells the
+ # student exactly where the missing link should have been created.
+ return shared_path
 
 
 def first_isolated_lepton(evt):
@@ -259,15 +295,18 @@ def read_reco_snapshots(slcio_path: Path, needed_indices: set[int]) -> dict:
     snapshots = {}
     if not needed_indices:
         return snapshots
+
     highest = max(needed_indices)
     for idx, evt in enumerate(iter_slcio_events([slcio_path])):
         if idx > highest and len(snapshots) == len(needed_indices):
             break
         if idx not in needed_indices:
             continue
+            
         jets = get_collection(evt, "OutputErrorFlowJets6")
         if jets is None:
             raise RuntimeError(f"Missing OutputErrorFlowJets6 in event index {idx}")
+
         jet_p4s = [
             four_momentum(jets.getElementAt(k))
             for k in range(jets.getNumberOfElements())
@@ -300,8 +339,10 @@ def read_reco_snapshots(slcio_path: Path, needed_indices: set[int]) -> dict:
             "truth_higgs_mode": truth_higgs_mode,
             "truth_ttbar_mode": truth_ttbar_mode,
         }
+
         if len(snapshots) == len(needed_indices):
             break
+
     missing = sorted(needed_indices - set(snapshots))
     if missing:
         raise RuntimeError(
@@ -596,18 +637,20 @@ def export_gen(
 
         # pair ordering: particle - antiparticle (PHYSICS_CONVENTIONS §4)
         record["O_W"]   = dphi("wjet_quark", "wjet_antiquark")
-        record["O_b"]   = dphi("top_b", "antitop_bbar")
-        record["O_top"] = dphi("top", "antitop")
+        #record["O_b"]   = dphi("top_b", "antitop_bbar")
+        #record["O_top"] = dphi("top", "antitop")
 
         # O_lnu is CP-ordered: W-: phi(l-) - phi(anti-nu); W+: phi(nu) - phi(l+)
         lepton_pdg = pdg(truth.lepton)
         record["lepton_pdg"] = int(lepton_pdg) if lepton_pdg is not None else 0
 
+        """
         if lepton_pdg is not None and lepton_pdg > 0:      # l- from W-
             record["O_lnu"] = dphi("lepton", "neutrino")
         else:                                              # l+ from W+
             record["O_lnu"] = dphi("neutrino", "lepton")
-        
+        """
+
         # O_lD
         lepton_charge_gen = -1.0 if (lepton_pdg is not None and lepton_pdg > 0) else 1.0
         analyzer_order = flavor.semileptonic_down_type_order(lepton_charge_gen)
@@ -829,25 +872,99 @@ def export_reco(
         lepton = snapshot["lepton"]
         neutrino = fitted_neutrino_p4(fit_row)
 
+        # Lepton Kinematics (Pre-Fit SLCIO)
+        if lepton is not None:
+            lepton_E, lepton_px, lepton_py, lepton_pz = lepton
+            record.update({
+                "lepton_px": lepton_px,
+                "lepton_py": lepton_py,
+                "lepton_pz": lepton_pz,
+                "lepton_pt": math.hypot(lepton_px, lepton_py),
+            })
+        else:
+            record.update({
+                "lepton_px": NAN, "lepton_py": NAN, "lepton_pz": NAN, "lepton_pt": NAN
+            })
+
+        # Neutrino Kinematics (Post-Fit KinFit ROOT)
+        if neutrino is not None:
+            nu_E, nu_px, nu_py, nu_pz = neutrino
+            nu_p = math.sqrt(nu_px**2 + nu_py**2 + nu_pz**2)
+            record.update({
+                "nu_fit_pt": math.hypot(nu_px, nu_py),
+                "nu_fit_theta": safe_theta(nu_pz / nu_p) if nu_p > 0 else NAN,
+                "nu_fit_phi": math.atan2(nu_py, nu_px),
+            })
+        else:
+            record.update({
+                "nu_fit_pt": NAN, "nu_fit_theta": NAN, "nu_fit_phi": NAN
+            })
+
+        # Find and define lepton charge (Q_l)
+        lepton_charge = float(fit_row.get("lepton_charge", NAN))
+        record["lepton_charge"] = lepton_charge
+
+        # Hadronic / Leptonic t decay
+        hadronic_t_daughters = add_p4s(wq, wqbar, bhad)
+        leptonic_t_daughters = add_p4s(lepton, neutrino, blep)
+
+        if lepton_charge < 0.0:
+            top_daughters     = hadronic_t_daughters
+            antitop_daughters = leptonic_t_daughters
+            top_b_jet         = bhad
+            antitop_bbar_jet  = blep
+            down_type_jet     = wqbar
+        elif lepton_charge > 0.0:
+            top_daughters     = leptonic_t_daughters
+            antitop_daughters = hadronic_t_daughters
+            top_b_jet         = blep
+            antitop_bbar_jet  = bhad
+            down_type_jet     = wq
+        else:
+            top_daughters     = None
+            antitop_daughters = None
+            top_b_jet         = None
+            antitop_bbar_jet  = None
+            down_type_jet     = None
+
         # The W pair is oriented from signed Weaver light-flavor scores. The
         # had/lep top sides remain a separate charge-ordering exercise.
         object_p4 = {
             "wjet_quark": wq,
             "wjet_antiquark": wqbar,
-            "top_b": bhad,
-            "antitop_bbar": blep,
+            "down_type_daughter": down_type_jet,
+            "top_b": top_b_jet,
+            "antitop_bbar": antitop_bbar_jet,
             "lepton": lepton,
             "neutrino": neutrino,
-            "top": add_p4s(wq, wqbar, bhad),
-            "antitop": add_p4s(lepton, neutrino, blep),
+            "top": top_daughters,
+            "antitop": antitop_daughters,
             "higgs": add_p4s(h1, h2),
         }
+
+        # Calculate m_ttbar
+        top_p4 = object_p4.get("top")
+        antitop_p4 = object_p4.get("antitop")
+
+        if top_p4 is not None and antitop_p4 is not None:
+            ttbar_p4 = frames.add_p4(top_p4, antitop_p4)
+            record["m_ttbar"] = frames.invariant_mass(ttbar_p4)
+        else:
+            record["m_ttbar"] = NAN
+
+        # Map postfit KinFit ROOT masses to standard alias names
+        record["m_W_had"]   = float(fit_row.get("mW_had_postfit", NAN))
+        record["m_top_had"] = float(fit_row.get("mt_had_postfit", NAN))
+        record["m_top_lep"] = float(fit_row.get("mt_lep_postfit", NAN))
+        record["m_H"]       = float(fit_row.get("mH_postfit", NAN))
+
         rest_p4 = frames.rest_p4_for_frame(
             frame_name,
             object_p4["top"],
             object_p4["antitop"],
             object_p4["higgs"],
         )
+
         phi_by_object = fill_object_features(record, object_p4, rest_p4)
 
         def dphi(a: str, b: str) -> float:
@@ -856,18 +973,18 @@ def export_reco(
             return NAN
 
         record["O_W"] = dphi("wjet_quark", "wjet_antiquark")
-        record["O_b"] = dphi("top_b", "antitop_bbar")
-        record["O_top"] = dphi("top", "antitop")
+        #record["O_b"] = dphi("top_b", "antitop_bbar")
+        #record["O_top"] = dphi("top", "antitop")
 
-        lepton_charge = float(fit_row.get("lepton_charge", NAN))
-        record["lepton_charge"] = lepton_charge
-
+        """ REMOVED O_lnu
+        # Assign O_lnu based on the lepton charge
         if lepton_charge < 0.0:
             record["O_lnu"] = dphi("lepton", "neutrino")
         elif lepton_charge > 0.0:
             record["O_lnu"] = dphi("neutrino", "lepton")
         else:
             record["O_lnu"] = NAN
+        """
 
         # Get analyzer
         ordered_names = flavor.semileptonic_down_type_order(lepton_charge)
@@ -890,6 +1007,16 @@ def export_reco(
             hadronic_W_charge = NAN
             idx_W_down_candidate = -1
 
+        if idx_W_down_candidate == w1_index:
+            record["down_type_slot"] = 1
+        elif idx_W_down_candidate == w2_index:
+            record["down_type_slot"] = 2
+        else:
+            record["down_type_slot"] = 0
+
+        record["L12"] = orientation["L12"]
+        record["L21"] = orientation["L21"]
+
         lepton_flavor = fit_row.get("lepton_flavor", "other")
 
         record["idx_W_down_candidate"] = idx_W_down_candidate
@@ -898,8 +1025,8 @@ def export_reco(
         record["lepton_flavor"] = snapshot.get("lepton_flavor", "other")
 
         yth = snapshot["yth"]
-        for key in ("y45", "y56", "y67"):
-            record[key] = float(yth.get(key, NAN))
+        #for key in ("y45", "y56", "y67"):
+        #    record[key] = float(yth.get(key, NAN))
 
         for key in WEAVER_SUMMARY_KEYS:
             values = [float(row[key]) for row in weaver if key in row]

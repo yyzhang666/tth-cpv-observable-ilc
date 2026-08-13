@@ -1,0 +1,1 @@
+/var/lib/condor/util/job_wrapper.sh[238]: exec: /data/dust/user/ozakinan/analysis/tth-cpv-observable-ilc/condor/export_feature/job_wrapper.sh: cannot execute [Permission denied]

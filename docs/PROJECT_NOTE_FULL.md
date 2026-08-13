@@ -2729,22 +2729,18 @@ available.
 ### 4.5.5 Additional plots
 
 You are welcome to plot any further comparison that helps explain the
-observation.
+observation. The scripts should normally read the feature CSVs or binned angular
+CSVs. They should not reopen the original STDHEP or SLCIO files unless the required
+diagnostic quantity was not exported.
 
-Choose the comparisons that are most useful rather than producing every
-possible plot.
+Necessary for us to deliver to others:
 
-Possible examples are:
+* reco/gen SM/CPV vs each other, muon/electron separately:
+    * For the same observable, for curves on the same observable axis or comparing two by two(depends on how you feel about the layout);
+    * $O_{jj}$ and $O_{\ell D}$ can also be compared on the same plot. 
+* Supervisor: Compare the ratio of |w| and signed-weighted histogram between gen/reco, evaluate how many w-daughter is mis-ordered.
 
-* reco SM template and reco signed CPV-interference template on the same
-  observable axis;
-
-* gen SM template and gen signed CPV-interference template on the same
-  observable axis;
-
-* $O_{jj}$ and $O_{\ell D}$ at generator level;
-
-* $O_{jj}$ and $O_{\ell D}$ at reconstruction level;
+Some examples you might try for your own interest:
 
 * per-bin Fisher contribution
 
@@ -2770,18 +2766,15 @@ Possible examples are:
 * correct and incorrect down-type-candidate categories on truth-labelled
   diagnostic events.
 
-Comparison scripts should normally read the feature CSVs or binned angular
-CSVs.
 
-They should not reopen the original STDHEP or SLCIO files unless the required
-diagnostic quantity was not exported.
 
 ---
 
 ## 4.6 Think about the reconstructed down-type jet
 
 No additional reconstruction optimisation is compulsory in the first Chapter
-4 result.
+4 result. **Any further improvements of the angular observable beyond the student's 
+limited time will be done by the supervisor.**
 
 After producing the baseline comparison, explain which reconstruction stages
 can affect the final down-type analyser:
@@ -2811,12 +2804,11 @@ In particular, the signed flavour information is much weaker for several
 $u,d,s$ and antiquark categories than for the relatively favourable charm
 categories.
 
-With additional time, choose **one** of the following studies according to
-your interest.
+Several optional studies can be done from following ideas and further idea can be accessed from the /docs/W-DAUGHTER-ODERING.md
 
-It is not necessary to complete all three.
+### Option A — Based on the HIGH CONFIDENCE SUBSET
 
-### Option A — better-identified flavour subset
+**Better-identified flavour subset**
 
 Test whether a restricted, better-identified event subset retains more
 reconstruction-level Fisher information.
@@ -2848,9 +2840,34 @@ Do not judge the method from flavour accuracy alone.
 A tighter category may have better purity but lower total Fisher information
 because many events have been removed.
 
+**Confidence Categories**
+
+Do not immediately discard every ambiguous event.
+
+Divide the events into a small number of non-overlapping orientation-confidence
+categories, for example:
+
+```text
+high confidence
+low confidence
+```
+
+Calculate the Fisher information in each category and combine the independent
+category results.
+
+Compare this with:
+
+```text
+one inclusive category
+one hard confidence cut
+```
+
+A hard cut is justified only if it improves the final combined Fisher
+information, not only the orientation accuracy.
+
 ### Option B — direct up-type/down-type pair assignment
 
-Instead of first reducing all light flavours to a single quark-versus-antiquark
+It turns out the up/down-type quark identification accuracy of the ParT At ILC is higher than the quark/antiquark. (Check out the flavor_accuracy_confusion_matrix.png) So, instead of first reducing all light flavours to a single quark-versus-antiquark
 score, define
 
 ```math
@@ -2924,30 +2941,6 @@ W+ -> U + anti-D
 
 rather than treating the two jets as independent charge classifications.
 
-### Option C — confidence categories
-
-Do not immediately discard every ambiguous event.
-
-Divide the events into a small number of non-overlapping orientation-confidence
-categories, for example:
-
-```text
-high confidence
-low confidence
-```
-
-Calculate the Fisher information in each category and combine the independent
-category results.
-
-Compare this with:
-
-```text
-one inclusive category
-one hard confidence cut
-```
-
-A hard cut is justified only if it improves the final combined Fisher
-information, not only the orientation accuracy.
 
 ---
 
@@ -2991,13 +2984,47 @@ diagnostics?
 ```
 
 ---
+## 4.8 Other optional angular observable
 
-## 4.8 Next week — angular–ML comparison
+Check out after we complete chapter 5, if there's time and any neccessity.
+
+**Start only after the $O_W$ framework is stable and the above top-side
+checkpoint has passed.** Reuse the frozen default frame and model
+configuration — the point is a *quick, uniform* survey, not three new projects.
+
+* $O_b=\Delta\phi(b_t,b_{\bar{t}})$
+
+Ordering from signed ParT $b/\bar{b}$ scores + top-side assignment + lepton-charge consistency.
+
+* $O_{\ell\nu}$
+
+The generator definition is the charge-dependent CP ordering in §2.3. Reco
+uses the selected fit's persisted `nu_fit_{E,px,py,pz}` and the isolated-lepton
+charge. Do not silently substitute a different missing-momentum estimator.
+
+* $O_{\mathrm{top}}$
+
+The definition is $\Delta\phi(t,\bar t)$. At reco level, use the isolated
+lepton charge to identify which reconstructed side is top and which is
+antitop, and include the fitted neutrino in the leptonic-side composite.
+
+**Interesting comparison (identical recipe for each) and Deliverable**
+
+Gen/reco angle; one fixed BDT; Fisher at gen and reco; retention $R_{\mathrm{reco}}$; and the **correlation with $s_W$** — a strong branch that is highly correlated with $s_W$ adds little in fusion; a moderately strong but complementary one may add more.
+
+A compact table identifying the strongest and the most *complementary* secondary observable → this selects $X$ for Chapter 7.
+
+
+---
+
+
+# Chapter 5 — ML-learned CP observable in the $O_{\ell D}$ branch
 
 **Status: in development.**
 
-The angle-versus-ML comparison will be added next week, after the following
-parts have been frozen:
+After Chapter 4 establishing the better reconstructed angular observable $O_{\ell D}$ 
+using the charged lepton and the selected down-type jet, the following parts have been 
+frozen:
 
 ```text
 strict semileptonic truth topology
@@ -3008,55 +3035,181 @@ SM and signed CPV-interference templates
 generator-to-reconstruction Fisher comparison
 ```
 
-Do not start the ML comparison before the angular baseline is validated.
+Chapter 5 replaces this one-dimensional angular compression with a learned
+observable constructed from reconstruction-level inputs **IN HIGGS REST FRAME**.
 
-The future ML comparison should use the same physical objects as the
-corresponding angular observable:
+The supervised ML target is
 
-```text
-O_jj branch:
-    two selected W jets
-    information used to select and orient the pair
+$$
+y=\mathrm{sign}(w_{\mathrm{int}})\in\{-1,+1\}.
+$$
 
-O_lD branch:
-    isolated charged lepton
-    selected down-type-jet candidate
-    information used to select that candidate
-```
+with $|w_{\mathrm{int}}|$ used as the non-negative training weight. The final
+learned CP observable is
 
-Branch fusion is not part of the present Chapter 4 scope.
+$$
+O_{\mathrm{ML}}(x)=P(+\mid x)-P(-\mid x),
+$$
 
----
+which is evaluated on the CPV-interference and SM samples and compared through
+Fisher information,
 
-# Chapter 5 — Secondary-observable baselines (fast, by reuse)
+$$
+I=\sum_i\frac{\nu_{1,i}^2}{\nu_{0,i}}.
+$$
 
-**Start only after the $O_W$ framework is stable and the Chapter 4 top-side
-checkpoint has passed.** Reuse the frozen default frame and model
-configuration — the point is a *quick, uniform* survey, not three new projects.
+The purpose of this chapter is to determine how much CP information is retained by 
+different reconstruction-level feature representations and hopefully to maximize it. 
+Loss, AUC, and overtraining checks are model diagnostics, while Fisher information 
+is the final physics metric.
 
-## 5.1 $O_b=\Delta\phi(b_t,b_{\bar{t}})$
+We will start from a naive baseline with the least lepton, selected-down-type jets
+kinematics by XGBoost(BDT) with further add-ons with auxiliary variables, permutation 
+and likelihood-weighted, CatBoost, more jets and neutrino involvement...
 
-Ordering from signed ParT $b/\bar{b}$ scores + top-side assignment + lepton-charge consistency.
+Sections 5.1–5.4 form the two-week main study; the extensions in Section 5.5
+are performed as time permits.
 
-## 5.2 $O_{\ell\nu}$
+## 5.1 Data preparation
 
-The generator definition is the charge-dependent CP ordering in §2.3. Reco
-uses the selected fit's persisted `nu_fit_{E,px,py,pz}` and the isolated-lepton
-charge. Do not silently substitute a different missing-momentum estimator.
+We will use one validated superset feature table for each physical sample and select
+the inputs of each model through named YAML feature sets. Auxiliary inputs are
+restricted to two groups: W-daughter assignment or ordering quantities,
+including the kinematic-fit final-selection score, and reconstructed
+invariant-mass combinations.
 
-## 5.3 $O_{\mathrm{top}}$
+Prepare and validate the complete LR CPV-interference and SM all-chunk datasets
+in the Higgs rest frame, correct the reconstructed top and antitop charge
+ordering and down-type-object mapping, export the event weights, interference
+sign, lepton, fitted neutrino, both W daughters, top-decay $b/\bar b$ objects,
+assignment information, final-selection score, and invariant-mass variables,
+and provide the HTCondor export and chunk-normalisation workflow.
 
-The definition is $\Delta\phi(t,\bar t)$. At reco level, use the isolated
-lepton charge to identify which reconstructed side is top and which is
-antitop, and include the fitted neutrino in the leptonic-side composite.
+**Update the export_features.py and test it with one chunk**
 
-## 5.4 Required comparison (identical recipe for each)
+1. Check the reconstructed top/anti-top slot in export_features.py and fix it
+2. Delete :
+    * O_b, O_top, O_lnu (They just output from old template, but didn't be ordered carefully, and not in using)
+    * y45,y56,y67(used in MVA for S/B)
+    * Other information for kinfit, not useful,such as: top_n,n_constraint,n_unmeasured...But you can keep them if you don't want to work more.
+3. Check what is already in the output "row" **at reconstruction level** in the export_feature, what haven't added
+   based on the following list:
+   * Event Infomration: event_id, chunk,split, weight(signed,abs,training),cp_sign(label)
+   * Lepton information:lepton_px/py/pz/E/p_t/theta/phi/mass
+   * W_daughter information:W1_E/theta/phi/mass,W2_E/theta/phi/mass(Existing name as wjet_quark/antiquark is fine),
+     down_type_slot（1 means W1 is down-type, 2 means W2),
+     down_assignment_likelihood(L12 and L21),margin
+   * Neutrino information: nu_fit_px/py/pz/E/pt/theta/phi
+   * b/bbar from top: b_had_E/theta/phi/mass, b_lep_E/theta/phi/mass
+   * Auxiliary variables:
+       * Invariant mass: m_W_had,m_top_had,m_top_lep,m_ttbar,m_H (some in the kinfit root（postfit）, m_ttbar need to calculate by the two tops)
+         Hint: The invariant mass function is in frames.py, you can calculate it by
+         ```
+         ttbar_p4 = frames.add_p4(top_p4, antitop_p4)
+          m_ttbar = frames.invariant_mass(ttbar_p4)
+         ```
+      * Flavor tagging/assginment/KinFit score:fitchi2,final_selection_score,final_fit_score, final flavor score
+   * Hepful for debugging:idx_W1,idx_W2,idx_W_quark,idx_W_antiquark
+  
+    If haven't output, check what is included in the Kinfit Root first, then if it in the reco slcio collection, or calculate them by yourself.
+   Note and record which one comes from the "post-fit" in KinFit, and which one comes from the "prefit" or Reconstruction slcio directly. Keep the current data source, prior to use post fit one, except strong conflict with previous convention. Make sure any edit will not affect your current angular pipeline.
+   
+4. Try with the current chunk 0 data, make sure in the output csv, all features above included. Look at the csv, confirm: all number finite, mass are positive... 
+   
 
-Gen/reco angle; one fixed BDT; Fisher at gen and reco; retention $R_{\mathrm{reco}}$; and the **correlation with $s_W$** — a strong branch that is highly correlated with $s_W$ adds little in fusion; a moderately strong but complementary one may add more.
+**Link all chunks root file with the corresponding  resolve_root_path()**
 
-## 5.5 Deliverable
+1. Run /scripts/link_kinfit_inputs.sh and check the eLpR of the tth-sm, tth-cpv in the /data/kinfit/physsim
+2. Modify the kinfit_root_path() in export_feature.py by
+   ```
+   def kinfit_root_path(cfg: dict, sample_key: str, chunk_id: str) -> Path:
+    """Resolve the canonical kinfit ROOT file.
 
-A compact table identifying the strongest and the most *complementary* secondary observable → this selects $X$ for Chapter 7.
+    Prefer the repo-local shared-data link created by
+    scripts/link_kinfit_inputs.sh. Fall back to the historical analysis-output
+    directory so locally produced kinfit files remain usable.
+    """
+    filename = f"kinfit_{sample_key}_chunk{chunk_id}.root"
+
+    family = cfg.get("kinfit", {}).get("input_family", "physsim")
+
+    shared_path = (
+        repo_root()
+        / "data"
+        / "kinfit"
+        / family
+        / filename
+    )
+
+    legacy_path = (
+        repo_root()
+        / cfg["outputs"]["base_dir"]
+        / "kinfit"
+        / filename
+    )
+
+    if shared_path.exists():
+        return shared_path
+
+    if legacy_path.exists():
+        return legacy_path
+
+    # Return the preferred path so the downstream error message tells the
+    # student exactly where the missing link should have been created.
+    return shared_path
+   ```
+   Check if the current root path match those under /data
+   
+**Create the Supersets with the training weight**
+
+1. Copy and make a new config file called "analysis_ml_superdataset_lr.yaml", check the sample, frame, split, weights,outputs.base_dir:outputs/ml_superdataset.
+2. cd to the condor/export_feature, read and understand what each file work for, and run a smoke test:
+   ```
+   cd condor/export_feature
+   python3 make_arguments.py --config ../../configs/<new_ml_yaml>.yaml --chunks 0
+   condor_submit submit_export_features.sub
+   ```
+3. Run the whole condorworkflow to get all ML dataset for the tth-cpv and tth-sm eLpR.
+   Be aware of how many ill events(If any variables of some events get none output).
+4. Write a new script /scripts/merge_feature_chunks.py : Merge the 80 chunk-level CSV files produced by `export_features.py` into a single superdataset, without recomputing selections, splits, weights, or features; check that all chunks are present, the schemas are identical, and there are no duplicated events; keep `lepton_flavor` so electron and muon channels can be selected later at training time; report the total event count and the electron/muon train/validation/test and ± label counts; and write the merged dataset plus simple metadata under `outputs/ml_superdataset/features/`..
+
+## 5.2 BDT baseline comparison
+
+Starting from the reconstructed lepton and selected down-type jet, compare
+XGBoost and CatBoost using no auxiliary variables, W-assignment and ordering
+variables plus the kinematic-fit final-selection score, invariant-mass
+combinations, and the union of the two auxiliary groups, selecting the baseline
+with validation Fisher information together with the train–validation loss
+behaviour.
+
+## 5.3 W-daughter representation and assignment study
+
+Using the selected BDT setup, compare the current hard-selected down-type jet
+with representations that preserve both reconstructed W daughters and their
+two possible assignments, including assignment-likelihood and
+permutation-based approaches, while producing only one final
+$O_{\mathrm{ML}}$ value per physical event.
+
+## 5.4 Adding the fitted neutrino
+
+Add the fitted-neutrino kinematics to the selected $O_{\ell D}$-branch feature
+set and test whether the learned observable retains more Fisher information
+than the lepton-plus-down-type-jet baseline.
+
+## 5.5 Optional studies
+
+As time permits, repeat the selected setup with a neural network and revisit
+the W-daughter permutation problem, train using the two W jets alone to test
+whether ML can avoid or resolve the jet-ordering problem, enlarge the input to
+the complete reconstructed W products and top-decay $b/\bar b$ objects to test
+whether additional physical information helps or confuses the model, and study
+an SM-inclusive three-class model while retaining
+
+$$
+O_{\mathrm{ML}}=P(+)-P(-)
+$$
+
+as the final learned CP observable.
 
 ---
 
