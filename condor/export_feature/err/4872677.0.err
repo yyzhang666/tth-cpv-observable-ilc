@@ -1,0 +1,2 @@
+Missing kinfit ROOT: /data/dust/user/ozakinan/analysis/tth-cpv-observable-ilc/data/kinfit/physsim/kinfit_tthsm_reco_elpr_chunk0.root
+Run first: bash scripts/run_kinfit_assignment.sh --config <same config> --chunk <same chunk>

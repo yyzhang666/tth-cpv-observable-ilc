@@ -112,10 +112,12 @@ RECO_KINFIT_OPTIONAL_BRANCHES = (
 
 RECO_STRING_BRANCHES = {"constraint_mode", "final_selection_mode"}
 
+"""
 RECO_FIXED_SLOT_BRANCHES = {
-    "top_b": "idx_bhad",
-    "antitop_bbar": "idx_blep",
+    "top_b": "top_b_jet",
+    "antitop_bbar": "antitop_bbar_jet",
 }
+"""
 
 WEAVER_SUMMARY_KEYS = ("mc_b", "mc_bbar", "mc_c", "mc_cbar")
 
@@ -872,9 +874,14 @@ def export_reco(
         lepton = snapshot["lepton"]
         neutrino = fitted_neutrino_p4(fit_row)
 
-        # Lepton Kinematics (Pre-Fit SLCIO)
-        if lepton is not None:
-            lepton_E, lepton_px, lepton_py, lepton_pz = lepton
+        # Lepton Kinematics (boosted to higgs_rest frame)
+        if lepton is not None and rest_p4 is not None:
+            boosted_lepton = frames.boost_to_rest(lepton, rest_p4)
+        else:
+            boosted_lepton = None
+
+        if boosted_lepton is not None:
+            lepton_E, lepton_px, lepton_py, lepton_pz = boosted_lepton
             record.update({
                 "lepton_px": lepton_px,
                 "lepton_py": lepton_py,
@@ -883,7 +890,10 @@ def export_reco(
             })
         else:
             record.update({
-                "lepton_px": NAN, "lepton_py": NAN, "lepton_pz": NAN, "lepton_pt": NAN
+                "lepton_px": NAN, 
+                "lepton_py": NAN, 
+                "lepton_pz": NAN,
+                "lepton_pt": NAN,
             })
 
         # Neutrino Kinematics (Post-Fit KinFit ROOT)
@@ -1035,8 +1045,17 @@ def export_reco(
             "wjet_quark": wq_index,
             "wjet_antiquark": wqbar_index,
         }
-        for slot_name, branch in RECO_FIXED_SLOT_BRANCHES.items():
-            oriented_slots[slot_name] = int(fit_row[branch])
+
+        idx_bhad = int(fit_row["idx_bhad"])
+        idx_blep = int(fit_row["idx_blep"])
+
+        if lepton_charge > 0.0:      # l+ -> leptonic top is t -> top_b = blep
+            oriented_slots["top_b"] = idx_blep
+            oriented_slots["antitop_bbar"] = idx_bhad
+        elif lepton_charge < 0.0:    # l- -> leptonic top is tbar -> top_b = bhad
+            oriented_slots["top_b"] = idx_bhad
+            oriented_slots["antitop_bbar"] = idx_blep
+
         for slot_name, idx in oriented_slots.items():
             scores = weaver[idx] if 0 <= idx < len(weaver) else {}
             for key in WEAVER_SUMMARY_KEYS:
@@ -1059,7 +1078,7 @@ def export_reco(
         "frame": frame_name,
         "basis": "lab_axes (boost only, phi vs fixed lab axes)",
         "pair_ordering": "O_W uses conditional Weaver q/qbar orientation inside the selected pair; b/top had-lep slots are not yet charge ordered",
-        "top_side_orientation": "O_b and O_top are hadronic-minus-leptonic diagnostics until the Chapter 4 lepton-charge mapping is implemented",
+        "top_side_orientation": "O_b and O_top orientation implemented via lepton-charge mapping",
         "w_orientation": {
             "p_quark": "mc_u+mc_d+mc_s+mc_c",
             "p_antiquark": "mc_ubar+mc_dbar+mc_sbar+mc_cbar",

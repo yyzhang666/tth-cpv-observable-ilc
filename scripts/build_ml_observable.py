@@ -9,8 +9,8 @@ signed physics weights.
 Usage:
     python3 scripts/build_ml_observable.py \
         --config configs/analysis_ow_lr.yaml \
-        --features outputs/ow_lr/features/features_gen_higgs_rest_chunk0.csv \
-        --model outputs/ow_lr/model/cpv_xgboost.json
+        --features outputs/ml_superdataset/features/reco_cpv/features_gen_higgs_rest_chunk0.csv \
+        --model outputs/ml_superdataset/model/lD/electron/cpv_xgboost.json
 """
 
 from __future__ import annotations
@@ -34,6 +34,7 @@ def main() -> int:
     parser.add_argument("--model", required=True)
     parser.add_argument("--split", default="test", choices=("validation", "test"))
     parser.add_argument("--n-bins", type=int, default=20)
+    parser.add_argument("--lepton-flavor", default="all", choices=("all", "electron", "muon"))
     parser.add_argument("--weight-column", default="weight_template")
     parser.add_argument("--output-tag", default="",
                         help="optional filename tag, e.g. sm")
@@ -42,12 +43,15 @@ def main() -> int:
 
     cfg = load_analysis_config(Path(args.config))
     meta_path = Path(args.model).parent / "model_metadata.json"
+
     with meta_path.open() as stream:
         model_meta = json.load(stream)
+
     feature_cols = model_meta["feature_list"]
     classes = [int(c) for c in model_meta["class_order_model"]]
     model_type = model_meta.get("model_type", "xgboost")
 
+    # Identify the ML model type (XGBoost/caboost)
     if model_type == "xgboost":
         from xgboost import XGBClassifier
 
@@ -62,9 +66,10 @@ def main() -> int:
         raise SystemExit(f"Unknown model_type {model_type!r} in metadata")
 
     rows = read_table(Path(args.features))
-    eval_rows = [row for row in rows if row["split"] == args.split]
+    eval_rows = filter_rows(rows, split=args.split, lepton_flavor=args.lepton_flavor) 
+
     if not eval_rows:
-        raise SystemExit(f"No events in split {args.split}")
+        raise SystemExit(f"No events in split {args.split} and lepton_flavor='{args.lepton_flavor}")
 
     x, kept = [], []
     for row in eval_rows:

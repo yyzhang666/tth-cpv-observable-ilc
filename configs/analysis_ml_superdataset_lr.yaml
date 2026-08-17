@@ -1,13 +1,13 @@
 # =============================================================================
-# analysis_ml_superdataset_lr.yaml — O_W baseline, pure LR helicity.
+# analysis_ml_superdataset_lr.yaml — O_ML baseline, pure LR helicity.
 #
 # This file freezes everything a single baseline run needs. Do not edit
 # conventions here without updating docs/PHYSICS_CONVENTIONS.md.
 # =============================================================================
 
 analysis:
-  name: angular_lr_comparison
-  observable_family: O_W
+  name: ml_superdataset_lr
+  observable_family: O_ML
   helicity: LR
   level: [gen, reco]          # inclusive gen + full reco; matching is optional diagnostic
 
@@ -34,20 +34,66 @@ observable:
   # Theory-study primary convention (docs/PHYSICS_CONVENTIONS.md §3–§5):
   # pairs ordered particle - antiparticle, angles measured with the
   # lab-axes basis (boost only, phi = atan2(py, px) vs fixed lab axes).
-  definition: "O_lD = wrap(wjet_downtype - lepton)"
+  definition: "O_ML = P(+) - P(-)"
   object_a: wjet_downtype
   object_b: lepton
   basis: lab_axes                # production_plane is reserved for Ma2018 sign observables
   frames: [lab, higgs_rest, ttbar_rest]
   default_frame: higgs_rest      # strongest O_W frame in the theory study
-  n_bins: 36
-  range: [-3.141592653589793, 3.141592653589793]
+  n_bins: 20
+  range: [-1.0, 1.0]
 
 features:
-  # FROZEN: raw variables only — no log/sin/cos/other transformations.
-  scheme: minimal             # minimal | extended
-  minimal: [E, theta, phi]    # per object, evaluated in default_frame
-  extended_extra: [m_jj, part_pair_prob, part_orientation_prob, part_signed_probs]
+  default_set: lD
+
+  sets:
+    lD:
+      objects:
+        lepton:
+          - E
+          - pt
+          - theta
+          - phi
+
+        down_type_daughter:
+          - E
+          - theta
+          - phi
+          - mass
+
+      auxiliary: []
+
+    lD_auxiliary:
+      objects:
+        lepton:
+          - E
+          - pt
+          - theta
+          - phi
+
+        down_type_daughter:
+          - E
+          - theta
+          - phi
+          - mass
+
+      auxiliary:
+        - w_assignment_likelihood_selected
+        - final_selection_score
+        - m_W_had
+        - m_top_had
+        - m_top_lep
+        - m_H
+        - m_ttbar
+
+training:
+  lepton_flavors:
+    - electron
+    - muon
+
+  label_column: label
+  training_weight: weight_training
+  balance_classes: true
 
 split:
   # deterministic split from event_id hash; see src/ilc_tth_cpv/io.py
@@ -64,7 +110,6 @@ model:
     learning_rate: 0.1
     random_seed: 20260720
   class_order: [-1, 1]        # [interference<0, interference>0]; frozen
-  score: "P(+) - P(-)"        # frozen convention, stored in model metadata
 
 weights:
   training_weight: weight_training              # base |w_int|; class balance is trainer-only

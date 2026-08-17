@@ -115,7 +115,7 @@ signals:
     file_pattern: "E550-Test.Ptth.Gphyssim.eL.pR.I01234_0.*.stdhep"
     n_files: 80
     n_events: 920400
-    n_events_per_chunk: 11505
+    n_events_per_chunk: 12500
     cross_section_fb: 2.96055
     cross_section_error_fb: 0.00581374
     cross_section_source: /data/dust/user/zhangyuy/analysis/physsim/run/TTHStudy_first_run/bases.tth_example_vtx_patched_1000.out
@@ -131,7 +131,7 @@ signals:
     file_pattern: "E550-Test.Ptth.Gphyssim.eR.pL.I01234_0.*.stdhep"
     n_files: 80
     n_events: 921200
-    n_events_per_chunk: 11515
+    n_events_per_chunk: 12500
     cross_section_fb: 1.15889265033
     cross_section_error_fb: 0.00201435866801
     cross_section_source: /data/dust/user/zhangyuy/analysis/physsim/run/canonical_sm_tth_eRpL/bases.root
@@ -149,7 +149,7 @@ signals:
     file_pattern: "complete_reco_kinfit_ready_E550-Test.Ptth.Gphyssim.eL.pR.I01234_0.*_sgv.slcio"
     n_files: 80
     n_events: 920400
-    n_events_per_chunk: 11505
+    n_events_per_chunk: 12500
     cross_section_fb: 2.96055
     cross_section_error_fb: 0.00581374
     cross_section_source: /data/dust/user/zhangyuy/analysis/physsim/run/TTHStudy_first_run/bases.tth_example_vtx_patched_1000.out
@@ -167,7 +167,7 @@ signals:
     file_pattern: "complete_reco_kinfit_ready_E550-Test.Ptth.Gphyssim.eR.pL.I01234_0.*_sgv.slcio"
     n_files: 80
     n_events: 921200
-    n_events_per_chunk: 11515
+    n_events_per_chunk: 12500
     cross_section_fb: 1.15889265033
     cross_section_error_fb: 0.00201435866801
     cross_section_source: /data/dust/user/zhangyuy/analysis/physsim/run/canonical_sm_tth_eRpL/bases.root

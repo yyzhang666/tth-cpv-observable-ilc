@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/data/dust/user/ozakinan/analysis/tth-cpv-observable-ilc/scripts/export_features.py", line 1141, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/data/dust/user/ozakinan/analysis/tth-cpv-observable-ilc/scripts/export_features.py", line 1134, in main
+    export_gen(cfg, args.chunk, args.max_events, args.component)
+  File "/data/dust/user/ozakinan/analysis/tth-cpv-observable-ilc/scripts/export_features.py", line 532, in export_gen
+    for k in range(col.getNumberOfElements())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+ReferenceError: attempt to access a null-pointer

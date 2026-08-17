@@ -96,14 +96,21 @@ def boost_to_rest(p4: P4, rest_p4: P4) -> Optional[P4]:
     """
     energy, px, py, pz = p4
     rest_energy, bx_num, by_num, bz_num = rest_p4
+
     if rest_energy <= 0.0:
         return None
+
     beta = (bx_num / rest_energy, by_num / rest_energy, bz_num / rest_energy)
     beta2 = dot(beta, beta)
+
+    # rejects unphysial inputs 
     if beta2 >= 1.0:
         return None
+
     if beta2 <= EPS:
         return p4
+
+    # calculae the Lorentz Factor
     gamma = 1.0 / math.sqrt(1.0 - beta2)
     beta_dot_p = beta[0] * px + beta[1] * py + beta[2] * pz
     factor = ((gamma - 1.0) * beta_dot_p / beta2) - gamma * energy

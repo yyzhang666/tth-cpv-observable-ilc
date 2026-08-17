@@ -50,3 +50,7 @@ __pycache__/
 .vscode/
 .idea/
 .ipynb_checkpoints/
+
+# logs and errors
+*.err
+*.log
