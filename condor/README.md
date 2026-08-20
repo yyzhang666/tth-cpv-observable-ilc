@@ -79,3 +79,21 @@ Copy the three files, change only:
 - resource requests in the `.sub` file.
 
 Keep the wrapper executable (`chmod +x`).
+
+## Selection-MVA DAG
+
+The signal/background baseline uses `condor/mva/` and is prepared from the
+canonical weights catalog rather than a directory glob:
+
+```bash
+source env/setup.sh
+python3 scripts/mva/prepare_selection_mva_condor.py \
+  --run-id baseline-xgboost-v1
+condor_submit_dag outputs/mva/condor/baseline-xgboost-v1/workflow.dag
+```
+
+The DAG is `TRAIN -> APPLY0000...APPLYnnnn -> EVALUATE`.  Training is one
+8-CPU/32-GB job; the application nodes receive disjoint job-key lists of about
+20 source HDF5 files each.  Every wrapper sources `env/setup.sh`, uses explicit
+paths, writes only run-ID-specific outputs, and propagates failures through the
+DAG.  No wrapper mutates a shared configuration or a frozen input HDF5.

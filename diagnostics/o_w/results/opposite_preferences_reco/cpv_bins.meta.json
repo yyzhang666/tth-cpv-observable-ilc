@@ -1,0 +1,12 @@
+{
+  "status": "local_NAF_diagnostic",
+  "frame": "higgs_rest",
+  "observable": "O_W",
+  "method": "current Weaver q/qbar ordering, restricted independently in CPV and SM to w_orientation_status=opposite_preferences",
+  "weight_column": "weight_template",
+  "n_input_rows": 4655,
+  "n_events_filled": 2404,
+  "integral_signed_fb": 0.0016459747172023996,
+  "integral_abs_fb": 0.07609467731066472,
+  "table": "cpv_bins.csv"
+}

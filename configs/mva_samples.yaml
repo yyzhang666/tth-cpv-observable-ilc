@@ -1,0 +1,195 @@
+# =============================================================================
+# mva_samples.yaml
+#
+# Configuration for converting the formal KinFit production job plan into the
+# MVA input manifest.
+#
+# The job plan is authoritative for:
+#   - input SLCIO path
+#   - output directory
+#   - job identity
+#   - sample identity
+#   - polarization
+#   - logical shard and physical part
+#   - production branch
+#   - readable KinFit-input event count
+#
+# This configuration does not reinterpret production_branch, channel,
+# n_iso1_events, or recovery history.
+# =============================================================================
+
+meta:
+  schema_version: 1
+  analysis_name: tth_semilep_6j_selection_mva
+
+  official_job_plan: /afs/desy.de/user/z/zhangyuy/condorworkflow_kinfit_mva_inputs_20260731/parameters/job_plan.jsonl
+
+  output_manifest: outputs/mva/manifests/mva_input_manifest.csv
+
+  expected:
+    source_rows: 1150
+    included_rows: 1150
+    input_readable_events: 10208234
+
+# -----------------------------------------------------------------------------
+# Mapping from production polarization labels to compact analysis labels.
+#
+# LL/RR occur in the Whizard 4f2l sample and are retained in the manifest.
+# Whether they enter a particular training configuration is decided later,
+# not by the manifest builder.
+# -----------------------------------------------------------------------------
+
+polarizations:
+  eL.pR: LR
+  eR.pL: RL
+  eL.pL: LL
+  eR.pR: RR
+
+# -----------------------------------------------------------------------------
+# Exact sample_key values from job_plan.jsonl.
+#
+# class_label is the canonical downstream MVA label.
+# source class_label/process values are also retained separately in the CSV.
+# -----------------------------------------------------------------------------
+
+samples:
+
+  tth-sm:
+    class_label: ttH
+    event_category: 0
+    role: training
+    use_for_training: true
+    denominator_stage: all_channel_complete_reco
+
+    expected_jobs: 158
+    expected_input_readable_events: 1974649
+
+  tth-cpv:
+    class_label: ttH_CPV_control
+    event_category: -1
+    role: cp_validation
+    use_for_training: false
+    denominator_stage: all_channel_complete_reco
+
+    expected_jobs: 160
+    expected_input_readable_events: 1999840
+
+  ttz:
+    class_label: ttZ
+    event_category: 1
+    role: training
+    use_for_training: true
+    denominator_stage: all_channel_complete_reco
+
+    expected_jobs: 158
+    expected_input_readable_events: 1974702
+
+  ttbb:
+    class_label: ttbb
+    event_category: 2
+    role: training
+    use_for_training: true
+    denominator_stage: all_channel_complete_reco
+
+    expected_jobs: 145
+    expected_input_readable_events: 1812137
+
+  6q:
+    class_label: 6q
+    event_category: 3
+    role: training
+    use_for_training: true
+    denominator_stage: niso1_reco_skim
+
+    expected_jobs: 179
+    expected_input_readable_events: 17412
+
+  # job_plan uses sample_key/class_label "4f2l".
+  # The canonical downstream physics label follows the MVA plan: "4f+2l".
+  # The existing KinFit output directory is "4q2l", but output_dir from the
+  # job plan is used directly, so no directory-name inference is needed.
+  4f2l:
+    class_label: 4f+2l
+    event_category: 4
+    role: training
+    use_for_training: true
+    denominator_stage: niso1_reco_skim
+
+    expected_jobs: 350
+    expected_input_readable_events: 2429494
+
+# -----------------------------------------------------------------------------
+# Minimal checks.
+#
+# These checks only protect against wrong joins, duplicate physical inputs,
+# truncated/wrong job plans, or missing files.
+#
+# Optional source fields such as n_iso1_events, readable_events and
+# expected_readable_events are copied but never required.
+# -----------------------------------------------------------------------------
+
+checks:
+  allowed_job_plan_schema_versions:
+    - 1
+
+  required_source_fields:
+    - schema_version
+    - job_key
+    - tag
+    - sample_key
+    - class_label
+    - process
+    - source
+    - generator
+    - channel
+    - stage
+    - polarization
+    - logical_shard
+    - physical_part
+    - input_path
+    - output_dir
+    - expected_input_events
+    - input_readable_events
+    - include
+    - exclusion_reason
+    - partial
+    - production_branch
+    - truejet_available
+    - probe_status
+    - processor_lib
+    - processor_lib_sha256
+
+  require_unique_job_key: true
+  require_unique_input_path: true
+  require_unique_kinfit_root_path: true
+  require_unique_physical_identity: true
+
+  validate_input_count_consistency: true
+  validate_expected_totals: true
+
+  require_input_file: true
+  require_kinfit_root_file: true
+
+  # ROOT is the only file needed by the feature exporter.
+  # Enable this later for a full production-provenance audit.
+  require_companion_files: false
+
+# -----------------------------------------------------------------------------
+# Physical normalization is intentionally not inferred from reconstructed or
+# KinFit input counts.
+# -----------------------------------------------------------------------------
+
+normalization:
+  luminosity_scenarios: configs/mva_luminosity_scenarios.yaml
+  source_config: configs/mva_normalization_sources.yaml
+
+  physical_inventory:
+    outputs/mva/normalization/physical_normalization_inventory.json
+
+  rules:
+    denominator: generator_level
+    use_writer_events_for_standard_physsim: true
+    use_reconstructed_counts_as_denominator: false
+    use_exported_counts_as_denominator: false
+    preserve_inclusive_tth_normalization: true
+    separate_signed_interference: true

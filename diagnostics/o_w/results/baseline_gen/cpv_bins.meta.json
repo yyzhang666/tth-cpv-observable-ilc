@@ -1,0 +1,12 @@
+{
+  "status": "local_NAF_diagnostic",
+  "frame": "higgs_rest",
+  "observable": "O_W",
+  "method": "truth q/qbar ordering already present in exported gen features",
+  "weight_column": "weight_template",
+  "n_input_rows": 12500,
+  "n_events_filled": 11157,
+  "integral_signed_fb": 0.0019941616766105978,
+  "integral_abs_fb": 0.3531565369197912,
+  "table": "cpv_bins.csv"
+}

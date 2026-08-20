@@ -106,6 +106,7 @@ def main() -> int:
             out_dir / f"{stem}.png",
             title=f"{observable} [{frame}] split={args.split}",
             xlabel=f"{observable} [rad]",
+            show_abs=True,
         )
         print(f"plot   -> {png}")
     except Exception as exc:  # matplotlib may be absent in minimal envs

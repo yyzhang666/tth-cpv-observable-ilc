@@ -1,0 +1,13 @@
+universe = vanilla
+executable = $(repo_root)/condor/mva/run_evaluate.sh
+arguments = "$(repo_root)" "$(config)" "$(model)" "$(scores_dir)" "$(evaluation)"
+output = $(log_dir)/evaluate.out
+error = $(log_dir)/evaluate.err
+log = $(log_dir)/evaluate.condor.log
+request_cpus = 2
+request_memory = 8 GB
+request_disk = 2 GB
++RequestRuntime = 7200
+getenv = false
+should_transfer_files = NO
+queue

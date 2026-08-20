@@ -1,0 +1,17 @@
+schema_version: 1
+source:
+  document: LC Vision / LCF scenario, Table 3
+  version: arXiv:2503.19983v2, published 2025-03-25
+  url: https://cds.cern.ch/record/2928170/files/2503.19983.pdf
+  table: 3
+scenarios:
+  lcfvision_550gev_8ab:
+    description: LCF Vision 550 GeV scenario with 8 ab^-1 total integrated luminosity, |P(e-)| = 80% and |P(e+)| = 60%.
+    sqrt_s_gev: 550
+    total_luminosity_fb_inv: 8000
+    run_states:
+      "--": {electron_polarization: -0.8, positron_polarization: -0.6, fraction: 0.10}
+      "-+": {electron_polarization: -0.8, positron_polarization: 0.6, fraction: 0.40}
+      "+-": {electron_polarization: 0.8, positron_polarization: -0.6, fraction: 0.40}
+      "++": {electron_polarization: 0.8, positron_polarization: 0.6, fraction: 0.10}
+    expected_effective_pure_helicity_luminosity_fb_inv: {eL.pL: 1424, eL.pR: 2576, eR.pL: 2576, eR.pR: 1424}

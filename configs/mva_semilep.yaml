@@ -1,0 +1,229 @@
+# =============================================================================
+# mva_semilep.yaml
+#
+# Reconstructed semileptonic six-jet MVA configuration.
+# =============================================================================
+
+meta:
+  schema_version: 1
+  analysis_name: tth_semilep_6j_selection_mva
+
+inputs:
+  manifest: outputs/mva/manifests/mva_input_manifest.csv
+
+kinfit:
+  tree_name: TTHSemiLepKinFit
+
+  # These branches are required by the first feature-export implementation.
+  required_branches:
+    - run_number
+    - event_number
+    - event_index
+    - accepted
+    - fit_status
+    - fit_success
+
+    - best_combo_id
+    - idx_W1
+    - idx_W2
+    - idx_bhad
+    - idx_blep
+    - idx_H1
+    - idx_H2
+
+    - fitprob
+    - fitchi2
+    - chi2_over_ndof
+    - ndof
+
+    - final_selection_score
+    - final_fit_score
+    - final_flavor_score
+
+    - mW_had_postfit
+    - mt_had_postfit
+    - mt_lep_postfit
+    - mH_postfit
+
+    - nu_fit_px
+    - nu_fit_py
+    - nu_fit_pz
+    - nu_fit_E
+
+    - lepton_charge
+    - lepton_flavor
+
+  event_selection:
+    accepted: 1
+    fit_success: 1
+
+collections:
+  iso_electrons: ISOElectrons
+  iso_muons: ISOMuons
+  fit_jets: OutputErrorFlowJets6
+  flavor_jets: RefinedJets6
+  mc_particles: MCParticlesSkimmed
+
+selection:
+  isolated_lepton_multiplicity: 1
+  fit_jet_multiplicity: 6
+  flavor_jet_multiplicity: 6
+
+smoke_test:
+  sample_keys:
+    - tth-sm
+    - tth-cpv
+    - ttz
+    - ttbb
+    - 6q
+    - 4f2l
+
+  output_json: outputs/mva/smoke/join_smoke_report.json
+
+  # =============================================================================
+# Feature-export configuration
+# =============================================================================
+
+pid:
+  weaver:
+    algorithm: weaver
+
+    # Actual parameter names stored in the RefinedJets6 ParticleID.
+    fields:
+      pb:
+        - mc_b
+
+      pbbar:
+        - mc_bbar
+
+      pc:
+        - mc_c
+
+      pcbar:
+        - mc_cbar
+
+  yth:
+    algorithm: yth
+
+    fields:
+      y45:
+        - y45
+        - y_45
+        - Y45
+
+      y56:
+        - y56
+        - y_56
+        - Y56
+
+      y67:
+        - y67
+        - y_67
+        - Y67
+
+feature_schema:
+  version: mva-semilep-core-v1
+
+  # These columns must be finite for every exported event.
+  baseline_features:
+    - y45
+    - y56
+    - y67
+
+    - btag_1
+    - btag_2
+    - btag_3
+    - btag_4
+
+    - ctag_1
+    - ctag_2
+    - ctag_3
+    - ctag_4
+
+    - mH_postfit
+    - mW_had_postfit
+    - mt_had_postfit
+    - mt_lep_postfit
+
+    - fitchi2
+    - chi2_over_ndof
+    - fitprob
+
+    - final_selection_score
+    - final_fit_score
+    - final_flavor_score
+
+    - lepton_E
+    - lepton_theta
+    - lepton_pt
+    - lepton_charge
+
+  # Saved now, but initially treated as a separate ablation group.
+  angle_features:
+    - cos_theta_bb_assigned_prefit
+    - cos_theta_H_hadtop_assigned_prefit
+    - cos_theta_H_leptop_visible_assigned_prefit
+
+  angle_definition:
+    frame: lab
+
+    cos_theta_bb_assigned_prefit:
+      object_a: H1
+      object_b: H2
+
+    cos_theta_H_hadtop_assigned_prefit:
+      object_a: H1+H2
+      object_b: W1+W2+bhad
+
+    cos_theta_H_leptop_visible_assigned_prefit:
+      object_a: H1+H2
+      object_b: blep+isolated_lepton
+      fitted_neutrino_included: false
+
+export_test:
+  default_sample_key: tth-sm
+  default_max_events: 200
+
+  output_dir: outputs/mva/datasets/export_test
+  metadata_dir: outputs/mva/datasets/export_test
+
+# =============================================================================
+# Train / validation / test split
+# =============================================================================
+
+split:
+  # Canonical grouping key produced by build_mva_manifest.py.
+  # All physical parts belonging to the same logical production shard
+  # must remain in the same split.
+  grouping_field: split_group
+
+  fractions:
+    train: 0.70
+    validation: 0.15
+    test: 0.15
+
+  method: deterministic_hash
+  hash_algorithm: sha256
+  seed: mva-semilep-split-v1
+
+  production_summary: outputs/mva/datasets/export_test/production_summary.json
+  output_json: outputs/mva/splits/mva_semilep_split_assignment.json
+
+  # Validate the frozen HDF5 files while assigning the split.
+  audit_hdf5: true
+
+# =============================================================================
+# Physical normalization
+# =============================================================================
+
+normalization:
+  scenario_id: lcfvision_550gev_8ab
+
+  physical_inventory:
+    outputs/mva/normalization/physical_normalization_inventory.json
+
+  split_assignment:
+    outputs/mva/splits/mva_semilep_split_assignment.json
+
+  weights_catalog:
+    outputs/mva/weights/mva_semilep_physical_weights.json

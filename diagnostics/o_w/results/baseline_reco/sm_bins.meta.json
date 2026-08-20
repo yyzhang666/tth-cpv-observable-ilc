@@ -1,0 +1,12 @@
+{
+  "status": "local_NAF_diagnostic",
+  "frame": "higgs_rest",
+  "observable": "O_W",
+  "method": "current conditional Weaver q/qbar ordering",
+  "weight_column": "weight_sm",
+  "n_input_rows": 4286,
+  "n_events_filled": 4286,
+  "integral_signed_fb": 1.1029045893089575,
+  "integral_abs_fb": 1.1029045893089575,
+  "table": "sm_bins.csv"
+}

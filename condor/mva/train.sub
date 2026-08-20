@@ -1,0 +1,13 @@
+universe = vanilla
+executable = $(repo_root)/condor/mva/run_train.sh
+arguments = "$(repo_root)" "$(config)" "$(run_id)"
+output = $(log_dir)/train.out
+error = $(log_dir)/train.err
+log = $(log_dir)/train.condor.log
+request_cpus = 8
+request_memory = 32 GB
+request_disk = 10 GB
++RequestRuntime = 43200
+getenv = false
+should_transfer_files = NO
+queue
