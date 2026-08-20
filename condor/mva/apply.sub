@@ -1,0 +1,13 @@
+universe = vanilla
+executable = $(repo_root)/condor/mva/run_apply.sh
+arguments = "$(repo_root)" "$(config)" "$(model)" "$(scores_dir)" "$(job_list)" "$(batch_id)"
+output = $(log_dir)/apply-$(batch_id).out
+error = $(log_dir)/apply-$(batch_id).err
+log = $(log_dir)/apply-$(batch_id).condor.log
+request_cpus = 1
+request_memory = 2 GB
+request_disk = 2 GB
++RequestRuntime = 3600
+getenv = false
+should_transfer_files = NO
+queue

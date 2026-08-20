@@ -1,0 +1,111 @@
+schema_version: 1
+analysis_name: tth_semilep_selection_mva_baseline_v1
+scenario_id: lcfvision_550gev_8ab
+
+paths:
+  mva_config: configs/mva_semilep.yaml
+  manifest: outputs/mva/manifests/mva_input_manifest.csv
+  split_assignment: outputs/mva/splits/mva_semilep_split_assignment.json
+  physical_inventory: outputs/mva/normalization/physical_normalization_inventory.json
+  weights_catalog: outputs/mva/weights/mva_semilep_physical_weights.json
+
+features:
+  - y45
+  - y56
+  - y67
+  - btag_1
+  - btag_2
+  - btag_3
+  - btag_4
+  - ctag_1
+  - ctag_2
+  - ctag_3
+  - ctag_4
+  - mH_postfit
+  - mW_had_postfit
+  - mt_had_postfit
+  - mt_lep_postfit
+  - fitchi2
+  - chi2_over_ndof
+  - fitprob
+  - final_selection_score
+  - final_fit_score
+  - final_flavor_score
+  - lepton_E
+  - lepton_theta
+  - lepton_pt
+  - lepton_charge
+
+target:
+  signal: "sample_key == tth-sm and analysis_category == tth-hbb"
+  backgrounds:
+    - tth-nonbb
+    - ttz
+    - ttbb
+    - 6q
+    - 4f2l
+  excluded_from_fit:
+    - tth-cpv
+
+training_weight:
+  strategy: equal_binary_class_and_helicity
+  derive_from: train_only
+  physical_weight_used: false
+  expected_helicities:
+    signal: [eL.pR, eR.pL]
+    background: [eL.pL, eL.pR, eR.pL, eR.pR]
+
+model:
+  library: xgboost
+  required_version: 2.1.1
+  objective: binary:logistic
+  tree_method: hist
+  max_depth: 6
+  learning_rate: 0.05
+  num_boost_round: 1000
+  early_stopping_rounds: 50
+  min_child_weight: 1
+  reg_lambda: 1
+  subsample: 1.0
+  colsample_bytree: 1.0
+  max_bin: 256
+  eval_metric: logloss
+  seed: 20260820
+  nthread: 8
+
+output:
+  root: outputs/mva/training
+  run_id: baseline-xgboost-v1
+  overwrite: false
+  frozen_hdf5_modified: false
+
+evaluation:
+  threshold_grid_points: 1001
+  threshold_selection_split: validation
+  threshold_statistic: signal_over_sqrt_signal_plus_background
+  threshold_status: provisional_incomplete_validation_normalization_coverage
+  test_used_for_threshold_selection: false
+  cpv_signed_failure_code: CPV_EVENT_SIGN_JOIN_UNAVAILABLE
+
+smoke:
+  jobs_per_sample_polarization_split: 1
+  max_events_per_job: 2000
+  formal_use_allowed: false
+
+condor:
+  train:
+    request_cpus: 8
+    request_memory: 32GB
+    request_disk: 10GB
+    request_runtime_seconds: 43200
+  apply:
+    jobs_per_process: 20
+    request_cpus: 1
+    request_memory: 2GB
+    request_disk: 2GB
+    request_runtime_seconds: 3600
+  evaluate:
+    request_cpus: 2
+    request_memory: 8GB
+    request_disk: 2GB
+    request_runtime_seconds: 7200
