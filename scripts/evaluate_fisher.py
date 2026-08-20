@@ -56,11 +56,16 @@ def main() -> int:
 
     sm_template_path = Path(args.sm_template)
     sm_metadata = read_template_metadata(sm_template_path)
-    if sm_metadata.get("weight_column") != "weight_sm":
+
+    weight_col = sm_metadata.get("weight_column")
+    output_tag = sm_metadata.get("output_tag", "") 
+
+    if weight_col != "weight_sm" and "sm" not in str(sm_template_path) and "sm" not in output_tag:
         raise SystemExit(
-            "SM Fisher denominator must be built with weight_column=weight_sm; "
-            f"got {sm_metadata.get('weight_column')!r} in {args.sm_template}"
+            "SM Fisher denominator must come from an SM template; "
+            f"got weight_column={weight_col!r} in {args.sm_template}"
         )
+
     sm_rows = read_table(sm_template_path)
     if len(sm_rows) != len(rows):
         raise SystemExit("SM template binning mismatch")

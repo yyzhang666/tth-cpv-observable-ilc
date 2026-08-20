@@ -3250,45 +3250,71 @@ Input the features only from the reconstructed lepton and selected down-type jet
   * Train electron and muon separately and output as two model : model/lD/electron, model/lD/muon
 
 3. Look if the loss function converges, check the precision (hopefully higher than 0.5) Play around with the model parameters.
-4. Build the observable by the “scripts/build_ml_observable.py" (Same to the angular, first ,split the lepton channel).
-   * Make sure the physics weight for the whole dataset is same logic to the one you write for the angular observable
+   * Output the model evaluation quantities.
+   * Do the next step after get the reasonable precision.
+   * Update 170826: The model need information to **learn the order of the two objects**. We have two solution:
+     1. Add lepton charge to original(v1) dataset
+     2. Change the lepton/quark to "top, anti-top fermions" as v2 dataset
+4. Build the observable by the “scripts/build_ml_observable.py" (Same to the angular, first ,**split the lepton channel**).
+   * Make sure the physics weight for the whole dataset is same logic to the one you write for the angular observable. **Note the training weight may
+     not equal to the physics weight**.
    * Build the similiar pipeline as the angular observable from read models to the evaluate fisher
+   * **Note** Only run the next pipeline when the test AUC is larger than the 0.5
+5. Compare with the **CatBoost** (Check if the code in train_cpv_model.py for catboost works)
+   * Raw v1 ( without lepton charge): It shouldn't work but for a complete comparison.
+   * v1+lepton charge
+   * v2
 
 
 **Second Model: Adding  auxiliary variables**
 
-See the lD_auxiliary above.
+See the lD_auxiliary above. Try only the first two first. Then all auxiliary variables.
+If **The Taining Loss** is not converge, may need to wait me to make more data.
 
-**CatBoost**
+**Physics motivation: This section motivated by the fact that we have already known the angular O_lD works both gen and reco level , while O_jj works 
+almost only gen. So the ML must can learn physics from the reco O_lD when we choose the down-type jet by ourself, but can it combine more information and 
+exploit them for CPV, or just treat them as noise?**
 
 ## 5.3 W-daughter representation and assignment study
+**Physics motivation: See whether the model can learn the order of the w-daughter rather than we choose one by ourself and can it save the O_jj from reco level?**
 
-Using the selected BDT setup, compare the current hard-selected down-type jet
-with representations that preserve both reconstructed W daughters and their
-two possible assignments, including assignment-likelihood and
-permutation-based approaches, while producing only one final
-$O_{\mathrm{ML}}$ value per physical event.
+Compare the next two options on W
+1. **Priority for 9.1** Add the kinematics of the second W daughter jet into features ( First with higher likelihood, second with lower, no other auxiliary )
+   * Better using v1+lepton charge with Catboost, don't need to modify the export features.
+2. Optional: Different jet as down-type input once （ One events, two rows)
+   * With CatBoost v2, but each jet of the hadronic decay will be chosen as top/anti-side-top fermion filling the row once, weighted by the likelihood
 
 ## 5.4 Adding the fitted neutrino
-
+**Physics motivation: See if the potential different sign of the delta_lnu, delta_jj, delta_lD will confuse the model?**
+(I will provide some statistic comparison of the different angular observables)
+**Priority for 9.1**
 Add the fitted-neutrino kinematics to the selected $O_{\ell D}$-branch feature
 set and test whether the learned observable retains more Fisher information
 than the lepton-plus-down-type-jet baseline.
 
 ## 5.5 Optional studies
 
-As time permits, repeat the selected setup with a neural network and revisit
-the W-daughter permutation problem, train using the two W jets alone to test
-whether ML can avoid or resolve the jet-ordering problem, enlarge the input to
-the complete reconstructed W products and top-decay $b/\bar b$ objects to test
-whether additional physical information helps or confuses the model, and study
-an SM-inclusive three-class model while retaining
+As time permits, repeat the selected setup with the following options
 
-$$
-O_{\mathrm{ML}}=P(+)-P(-)
-$$
+* **Priority for 9.1** Enlarge the input with the complete reconstructed W products and top-decay $b/\bar b$ objects to test whether additional physical information helps or confuses the model.
+* Study an SM-inclusive three-class model
+* A neural network and revisit the W-daughter permutation problem, train using the two W jets alone to test whether NN can avoid or resolve the jet-ordering problem
 
-as the final learned CP observable.
+## Ideal Case for 9.1
+
+**Project summary**: Study the sensitivity of the CPV observables induced by the t-tbar spin correlation on reconstruction level in e-e+>tth process at 550GeV linear collider. Compare the Fisher from cpv/sm without other background, assuming the new physics coefficient is 1.
+
+**Plots**: 
+  * Angular observable distribution: O_jj, O_lD, reco vs gen, sm vs cpv at Higgs rest frame with 10 chunks
+  * Bar chart of the Fisher at different frame, showing the challenge of reconstruct the Higgs rest frame though it owns huge theoretical advantages.
+  * ML observable training information: Compare the ROC,importance of the v1+lepton charge/v2 XGBoost,CatBoost in 5.2
+  * Plain ML observable distribution(with only l,D feature input): sm vs cpv, ML vs angular O_lD
+  * Best ML observable distribution after 5.5 marked by **priority for 9.1** 
+  * Bar chart of the Fisher of all observables we studied.
+
+**Background introduction and equations**: Don't assume our colleagues has enough QFT knowledge...but they also don't like too much equations and numbers, only necessary. The main line of the story maybe how to reconstruct the identity of the "down-type" quark and the order of the fermions. Be clear what we present come from and what the goal/physics question we are trying to explore for each plots. We may have more discussion on this part later.
+
+**After 9.1** Hope the last week still working week, so we can do the next chapter 6 and 8. Hope they just need you to implement the current scripts. Then it will be enough for your poster. 
 
 ---
 

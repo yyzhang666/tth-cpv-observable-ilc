@@ -1,5 +1,5 @@
 # =============================================================================
-# analysis_ml_superdataset_lr.yaml — O_ML baseline, pure LR helicity.
+# analysis_ml_superdataset_lr_v2.yaml — O_ML baseline, pure LR helicity.
 #
 # This file freezes everything a single baseline run needs. Do not edit
 # conventions here without updating docs/PHYSICS_CONVENTIONS.md.
@@ -19,6 +19,7 @@ samples:
   sm_reco_sample: tth_sm_reco_elpr
 
   # Generator-level normalization values
+  sm_cross_section_fb: 2.96055           # Total sm signal cross-section
   cpv_cross_section_fb: 0.395666999328   # Total CPV signal cross-section
   n_chunks: 79                       # Total processed chunks
   events_per_chunk: 12500            # Generator events per sidecar chunk
@@ -54,35 +55,35 @@ features:
   sets:
     lD:
       objects:
-        lepton:
+        top_side_fermion:
           - E
           - pt
           - theta
           - phi
-          - charge
 
-        down_type_daughter:
+        anti_top_side_fermion:
           - E
+          - pt
           - theta
           - phi
-          - mass
 
-      auxiliary: []
+      auxiliary: 
+        - down_jet_mass
+      
 
     lD_auxiliary:
       objects:
-        lepton:
+        top_side_fermion:
           - E
           - pt
           - theta
           - phi
-          - charge
 
-        down_type_daughter:
+        anti_top_side_fermion:
           - E
+          - pt
           - theta
           - phi
-          - mass
 
       auxiliary:
         - w_assignment_likelihood_selected
@@ -92,6 +93,7 @@ features:
         - m_top_lep
         - m_H
         - m_ttbar
+        - down_jet_mass
 
 training:
   lepton_flavors:

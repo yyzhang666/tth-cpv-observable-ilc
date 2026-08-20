@@ -39,45 +39,6 @@ def filter_rows(rows: list, split: str = "all", lepton_flavor: str = "all") -> l
         rows = [row for row in rows if row["lepton_flavor"] == lepton_flavor]
     return rows
 
-def extract_feature_value(row: dict, feature_name: str) -> float:
-    """Extract feature value: reads directly from row (v2), falling back 
-    to dynamic down-type resolution if the column is missing (v1).
-    """
-    # 1. Try direct column lookup (works for v2 and all standard features)
-    val = row.get(feature_name)
-    if val is not None and val != "":
-        try:
-            fval = float(val)
-            if math.isfinite(fval):
-                return fval
-        except (TypeError, ValueError):
-            pass
-
-    # 2. Fallback dynamic resolution for missing v1 down_type_daughter_* columns
-    if feature_name.startswith("down_type_daughter_"):
-        variable = feature_name.removeprefix("down_type_daughter_")
-        try:
-            idx_down = float(row.get("idx_W_down_candidate", -1.0))
-            idx_q = float(row.get("idx_W_quark", -1.0))
-            idx_qbar = float(row.get("idx_W_antiquark", -1.0))
-        except (TypeError, ValueError):
-            return float("nan")
-
-        if idx_down != -1.0 and math.isfinite(idx_down):
-            if idx_down == idx_q:
-                prefix = "wjet_quark"
-            elif idx_down == idx_qbar:
-                prefix = "wjet_antiquark"
-            else:
-                return float("nan")
-        else:
-            return float("nan")
-
-        val = row.get(f"{prefix}_{variable}")
-        return float(val) if val is not None else float("nan")
-
-    return float("nan")
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True)
@@ -125,25 +86,19 @@ def main() -> int:
     samples_cfg = cfg.get("samples", {})
     split_cfg   = cfg.get("split", {})
 
-    # Determine if sm or cpv
-    is_sm = "sm" in args.output_tag.lower() or args.weight_column == "weight_sm"
-
-    # Select cross section based on process (SM vs CPV)
-    if is_sm:
-        # Default LR SM cross section (eL pR: 2.96055 fb)
-        sigma_total_fb = float(samples_cfg.get("sm_cross_section_fb", 2.96055))
-    else:
-        # CPV interference cross section magnitude
-        sigma_total_fb = float(samples_cfg.get("cpv_cross_section_fb", 0.395666999328))
-
+    sigma_total_fb_cpv = float(samples_cfg.get("cpv_cross_section_fb", 0.395666999328)) #fb, value for total cross-section for CPV
     n_chunks           = int(samples_cfg.get("n_chunks", 79))
     event_per_chunk    = int(samples_cfg.get("events_per_chunk", 12500))
-    split_fraction  = float(split_cfg.get(args.split, 0.2)) if args.split != "all" else 1.0
+    if args.split != "all":
+        split_fraction = float(split_cfg.get(args.split, 0.2))
+    else:
+        split_fraction = 1.0
 
     n_gen_total = n_chunks * event_per_chunk
     n_gen_test  = n_gen_total * split_fraction
 
-    base_weight_scale = sigma_total_fb / n_gen_test
+    # Normalization factor per event to convert raw weights to physical fb
+    gen_weight_scale = sigma_total_fb_cpv / n_gen_test
 
 
     # All events for the specified lepton flavor
@@ -160,8 +115,12 @@ def main() -> int:
         feats = []
         valid = True
         for col in feature_cols:
-            value = extract_feature_value(row, col)
-            if not math.isfinite(value):
+            try:
+                value = float(row[col])
+            except (KeyError, TypeError, ValueError):
+                valid = False
+                break
+            if value != value:
                 valid = False
                 break
             feats.append(value)
@@ -185,9 +144,7 @@ def main() -> int:
             continue
 
         # Scale weight with scale factor 
-        sign = 1.0 if is_sm else float(row["label"])
-        w_scaled = sign * base_weight_scale
-        
+        w_scaled = w_template * gen_weight_scale
         row[args.weight_column] = w_scaled    # Updated row dict
 
         hist.fill(score, w_scaled)

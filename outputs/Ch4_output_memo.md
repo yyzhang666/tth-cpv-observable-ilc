@@ -1,8 +1,8 @@
 ## Confirmation of output files
 ### 0. NOTE
-Added `scripts/run_pipeline.sh` to run the complete angular observable pipeline in one step.
+Added `scripts/run_angular_observable_pipeline.sh` to run the complete angular observable pipeline in one step.
 
-Executing `./scripts/run_pipeline.sh` performs the following:
+Executing `./scripts/run_angular_observable_pipeline.sh` performs the following:
 - Exports features using export_features.py for both CPV and SM (across gen and reco levels).
 - Builds observables using `build_angular_observable.py` across all combinations of observables (O_W, O_lD), levels (gen, reco), and leptons (electron, muon, all).
 - Calculates Fisher information using `evaluate_fisher.py` for all built histograms at $\mathcal{L} = 8000\text{ fb}^{-1}$.

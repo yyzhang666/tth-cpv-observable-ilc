@@ -88,7 +88,7 @@ def resolve_feature_value(row, feature_name: str) -> float:
             selected_prefix = None
 
         if selected_prefix is None:
-            return float("nan")
+            return NAN
 
         return to_float(row[f"{selected_prefix}_{variable}"])
 
@@ -298,7 +298,7 @@ def main() -> int:
                 #early_stopping_rounds=int(params.get("early_stopping_rounds", 20)),
                 eval_metric="logloss",
             )
-            
+
             y_train_bin = [to_binary[y] for y in data["train"][1]]
             y_val_bin = [to_binary[y] for y in data["validation"][1]]
 
@@ -397,7 +397,7 @@ def main() -> int:
             if args.out_dir
             else repo_root()
             / cfg["outputs"]["base_dir"]
-            / "model"
+            / "model_v2"
             / feature_set_name
             / model_type
             / lepton_flavor

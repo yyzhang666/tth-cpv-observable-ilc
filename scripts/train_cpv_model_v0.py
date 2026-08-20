@@ -397,7 +397,7 @@ def main() -> int:
             if args.out_dir
             else repo_root()
             / cfg["outputs"]["base_dir"]
-            / "model"
+            / "model_v0"
             / feature_set_name
             / model_type
             / lepton_flavor

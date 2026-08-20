@@ -99,7 +99,7 @@ def main() -> int:
     parser.add_argument("--component", choices=("interference", "sm"),
                         default="interference")
     parser.add_argument("--level", choices=("gen", "reco"), default="reco")
-    parser.add_argument("--out", default=str(WORKFLOW_DIR / "arguments.txt"))
+    parser.add_argument("--out", default=str(WORKFLOW_DIR / "arguments_v2.txt"))
     args = parser.parse_args()
 
     config_path = Path(args.config).resolve()
@@ -118,7 +118,7 @@ def main() -> int:
     config_rel = config_path.relative_to(repo_root())
 
     model_tag = "cpv" if args.component == "interference" else "sm"
-    out_dir = f"outputs/ml_superdataset/features/{args.level}_{model_tag}"
+    out_dir = f"outputs/ml_superdataset/features_v2/{args.level}_{model_tag}"
 
     lines = [
         f"{config_rel}, {chunk}, {args.component}, {args.level}"

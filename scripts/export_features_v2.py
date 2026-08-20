@@ -11,11 +11,11 @@ scripts/run_kinfit_assignment.sh, then joins the selected indices to the
 matching complete_reco_kinfit_ready SLCIO chunk for jet four-vectors.
 
 Usage:
-    python3 scripts/export_features.py --config configs/analysis_ow_lr.yaml --level gen --chunk 0
-    python3 scripts/export_features.py --config configs/analysis_ow_lr.yaml --level reco --chunk 0
-    python3 scripts/export_features.py --config configs/analysis_ow_lr.yaml --level gen --component sm --chunk 0
-    python3 scripts/export_features.py --config configs/analysis_ow_lr.yaml --level reco --component sm --chunk 0
-    python3 scripts/export_features.py --config ... --level gen --chunk 0 --max-events 500
+    python3 scripts/export_features_v2.py --config configs/analysis_ow_lr.yaml --level gen --chunk 0
+    python3 scripts/export_features_v2.py --config configs/analysis_ow_lr.yaml --level reco --chunk 0
+    python3 scripts/export_features_v2.py --config configs/analysis_ow_lr.yaml --level gen --component sm --chunk 0
+    python3 scripts/export_features_v2.py --config configs/analysis_ow_lr.yaml --level reco --component sm --chunk 0
+    python3 scripts/export_features_v2.py --config ... --level gen --chunk 0 --max-events 500
 """
 
 from __future__ import annotations
@@ -57,8 +57,18 @@ from ilc_tth_cpv.slcio import (  # noqa: E402
 
 NAN = float("nan")
 
-OBJECTS = ("wjet_quark", "wjet_antiquark", "top_b", "antitop_bbar", "lepton",
-           "neutrino", "top", "antitop", "higgs")
+OBJECTS = (
+    "wjet_quark", 
+    "wjet_antiquark", 
+    "top_side_fermion",
+    "anti_top_side_fermion",
+    "top_b", 
+    "antitop_bbar", 
+    "lepton",
+    "neutrino", 
+    "top", 
+    "antitop", 
+    "higgs")
 
 RECO_KINFIT_BRANCHES = (
     "run_number",
@@ -449,22 +459,56 @@ def fill_object_features(record: dict, object_p4: dict, rest_p4) -> dict:
     phi_by_object = {}
     for name in OBJECTS:
         p4 = object_p4.get(name)
-        triple = (
+
+        boosted_p4 = (
+            # Boost p4 (energy, px, py, pz)
+            frames.boost_to_rest(p4, rest_p4)
+            if (p4 is not None and rest_p4 is not None)
+            else None
+        )
+
+        boosted_angles = (
+            # Takes unboosted lab-frame p4 (E, cos_theta, phi) and outputs the boosted quantities
             frames.boost_only_angles(p4, rest_p4)
             if (p4 is not None and rest_p4 is not None)
             else None
         )
-        if triple is None:
-            record.update({f"{name}_E": NAN, f"{name}_theta": NAN,
-                           f"{name}_phi": NAN, f"{name}_mass": NAN,
-                           f"{name}_valid": 0})
+
+        if boosted_p4 is None or boosted_angles is None:
+            record.update({
+                f"{name}_E": NAN, 
+                f"{name}_pt": NAN,
+                f"{name}_theta": NAN,
+                f"{name}_phi": NAN, 
+                f"{name}_mass": NAN,
+                f"{name}_valid": 0
+            })
         else:
-            energy, cos_theta, phi = triple
+            b_energy, px, py, pz   = boosted_p4
+            energy, cos_theta, phi = boosted_angles
+
+            inv_mass = frames.invariant_mass(p4)
+
+            sin_theta = math.sqrt(max(0.0, 1.0 - cos_theta**2))
+            p_mag = math.sqrt(max(0.0, energy**2 - inv_mass**2))
+
+            # Check if pt_boosted_formula = pt_cartesian manually
+            pt_boosted_formula = p_mag * sin_theta
+            pt_cartesian =  math.hypot(px, py)
+
+            # Skip validation for particles near rest (< 10e-4 GeV)
+            if float(pt_cartesian) > 10e-4:
+                if not math.isclose(pt_boosted_formula, pt_cartesian, rel_tol=1e-6, abs_tol=1e-6):
+                    raise RuntimeError(
+                        f"pT boost mismatch for {name}: formula={pt_boosted_formula}, cartesian={pt_cartesian}"
+                    )
+
             record.update({
                 f"{name}_E": energy,
+                f"{name}_pt": pt_cartesian,
                 f"{name}_theta": safe_theta(cos_theta),
                 f"{name}_phi": phi,
-                f"{name}_mass": frames.invariant_mass(p4),
+                f"{name}_mass": inv_mass,
                 f"{name}_valid": 1,
             })
             phi_by_object[name] = phi
@@ -523,16 +567,12 @@ def export_gen(
             break
 
         col = reader.readEvent()
-
         if col is None:
             break
 
         n_read += 1
         row_meta = event_record if component == "interference" else None
-        mc_list = [
-            col.getElementAt(k)
-            for k in range(col.getNumberOfElements())
-        ]
+        mc_list = [col.getElementAt(k) for k in range(col.getNumberOfElements())]
 
         selection_counts["events_read"] += 1
 
@@ -584,6 +624,15 @@ def export_gen(
 
         selection_counts["events_truth_selected"] += 1
 
+        # Convention A (theory-study primary): boost into the frame, then
+        # measure angles against the fixed lab axes — no rotation after boost.
+        rest_p4 = frames.rest_p4_for_frame(
+            frame_name,
+            four_momentum(truth.top),
+            four_momentum(truth.antitop),
+            four_momentum(truth.higgs),
+        )
+
         event_number = int(row_meta["event"]) if row_meta else int(event_record)
         event_id = id_offset + event_number
         record = {
@@ -597,43 +646,51 @@ def export_gen(
         }
         record.update(event_weight_fields(
             component,
-            interference_weight=(
-                float(row_meta["event_weight_signed"]) if row_meta else NAN
-            ),
+            interference_weight=(float(row_meta["event_weight_signed"]) if row_meta else NAN),
             sm_weights=sm_weights,
         ))
 
-        # Define rest frame 4-vector
-        rest_p4 = frames.rest_p4_for_frame(
-            frame_name,
-            four_momentum(truth.top),
-            four_momentum(truth.antitop),
-            four_momentum(truth.higgs),
-        )
 
-        phi_by_object = {}
-        for name in OBJECTS:
-            p4 = four_momentum(getattr(truth, name))
-            triple = (frames.boost_only_angles(p4, rest_p4)
-                      if (p4 and rest_p4) else None)
-            if triple is None:
-                record.update({
-                    f"{name}_E": NAN, 
-                    f"{name}_theta": NAN,    
-                    f"{name}_phi": NAN, 
-                    f"{name}_mass": NAN,
-                    f"{name}_valid": 0
-                })
-            else:
-                energy, cos_theta, phi = triple
-                record.update({
-                    f"{name}_E": energy,
-                    f"{name}_theta": math.acos(cos_theta),
-                    f"{name}_phi": phi,
-                    f"{name}_mass": frames.invariant_mass(p4),
-                    f"{name}_valid": 1,
-                })
-                phi_by_object[name] = phi
+        # Get lepton_pdg from truth infor and find lepton_charge
+        lepton_pdg = pdg(truth.lepton)
+        record["lepton_pdg"] = int(lepton_pdg) if lepton_pdg is not None else 0
+        lepton_charge_gen = -1 if (lepton_pdg is not None and lepton_pdg > 0) else 1
+
+        # Construct p4 for w-jet quark, w-jet anti-quark, and lepton from truth info.
+        wq_p4    = four_momentum(truth.wjet_quark)
+        wqbar_p4 = four_momentum(truth.wjet_antiquark)
+        lep_p4   = four_momentum(truth.lepton)
+
+        if lepton_charge_gen > 0:
+            top_side_fermion      = lep_p4
+            anti_top_side_fermion = wq_p4
+            down_type_jet         = wq_p4
+        elif lepton_charge_gen < 0:
+            top_side_fermion      = wqbar_p4
+            anti_top_side_fermion = lep_p4
+            down_type_jet         = wqbar_p4
+        else:
+            top_side_fermion      = None
+            anti_top_side_fermion = None
+            down_type_jet         = None
+
+        # Dictionary of particle 4-vectors (E, px, py, pt)
+        gen_object_p4 = {
+            "wjet_quark": wq_p4,
+            "wjet_antiquark": wqbar_p4,
+            "top_side_fermion": top_side_fermion,
+            "anti_top_side_fermion": anti_top_side_fermion,
+            "top_b": four_momentum(truth.top_b),
+            "antitop_bbar": four_momentum(truth.antitop_bbar),
+            "lepton": lep_p4,
+            "neutrino": four_momentum(truth.neutrino),
+            "top": four_momentum(truth.top),
+            "antitop": four_momentum(truth.antitop),
+            "higgs": four_momentum(truth.higgs),
+        }
+
+        # Fill E, pt, theta, phi, mass, valid
+        phi_by_object = fill_object_features(record, gen_object_p4, rest_p4)
 
         def dphi(a: str, b: str) -> float:
             if a in phi_by_object and b in phi_by_object:
@@ -641,31 +698,18 @@ def export_gen(
             return NAN
 
         # pair ordering: particle - antiparticle (PHYSICS_CONVENTIONS §4)
-        record["O_W"]   = dphi("wjet_quark", "wjet_antiquark")
+        record["O_W"]  = dphi("wjet_quark", "wjet_antiquark")
+        record["O_lD"] = dphi("top_side_fermion", "anti_top_side_fermion")
         #record["O_b"]   = dphi("top_b", "antitop_bbar")
         #record["O_top"] = dphi("top", "antitop")
 
         # O_lnu is CP-ordered: W-: phi(l-) - phi(anti-nu); W+: phi(nu) - phi(l+)
-        lepton_pdg = pdg(truth.lepton)
-        record["lepton_pdg"] = int(lepton_pdg) if lepton_pdg is not None else 0
-
         """
         if lepton_pdg is not None and lepton_pdg > 0:      # l- from W-
             record["O_lnu"] = dphi("lepton", "neutrino")
         else:                                              # l+ from W+
             record["O_lnu"] = dphi("neutrino", "lepton")
         """
-
-        # O_lD
-        lepton_charge_gen = -1 if (lepton_pdg is not None and lepton_pdg > 0) else 1
-        record["lepton_charge"] = int(lepton_charge_gen)
-
-        analyzer_order = flavor.semileptonic_down_type_order(lepton_charge_gen)
-
-        if analyzer_order is not None:
-            record["O_lD"] = dphi(analyzer_order[0], analyzer_order[1])
-        else:
-            record["O_lD"] = NAN
         
         # Determine gen level lepton_flavor
         if abs(lepton_pdg) == 11:
@@ -675,10 +719,16 @@ def export_gen(
         else:
             record["lepton_flavor"] = "other"
 
+        record["down_jet_mass"] = frames.invariant_mass(down_type_jet) if down_type_jet else NAN
+
         rows.append(record)
        
     report = validate_table(rows)
-    out_dir = repo_root() / cfg["outputs"]["base_dir"] / "features"
+
+    model_tag = "cpv" if component == "interference" else "sm"
+    out_dir = repo_root() / cfg["outputs"]["base_dir"] / "features_v2" / f"gen_{model_tag}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
     component_prefix = "sm_" if component == "sm" else ""
     out_path = out_dir / (
         f"features_{component_prefix}gen_{frame_name}_chunk{chunk['chunk']}.csv"
@@ -879,22 +929,6 @@ def export_reco(
         lepton = snapshot["lepton"]
         neutrino = fitted_neutrino_p4(fit_row)
 
-
-        
-        # Neutrino Kinematics (Post-Fit KinFit ROOT)
-        if neutrino is not None:
-            nu_E, nu_px, nu_py, nu_pz = neutrino
-            nu_p = math.sqrt(nu_px**2 + nu_py**2 + nu_pz**2)
-            record.update({
-                "nu_fit_pt": math.hypot(nu_px, nu_py),
-                "nu_fit_theta": safe_theta(nu_pz / nu_p) if nu_p > 0 else NAN,
-                "nu_fit_phi": math.atan2(nu_py, nu_px),
-            })
-        else:
-            record.update({
-                "nu_fit_pt": NAN, "nu_fit_theta": NAN, "nu_fit_phi": NAN
-            })
-
         # Find and define lepton charge (Q_l)
         lepton_charge = int(fit_row.get("lepton_charge", NAN))
         record["lepton_charge"] = lepton_charge
@@ -904,30 +938,39 @@ def export_reco(
         leptonic_t_daughters = add_p4s(lepton, neutrino, blep)
 
         if lepton_charge < 0:
-            top_daughters     = hadronic_t_daughters
-            antitop_daughters = leptonic_t_daughters
-            top_b_jet         = bhad
-            antitop_bbar_jet  = blep
-            down_type_jet     = wqbar
+            top_daughters         = hadronic_t_daughters
+            antitop_daughters     = leptonic_t_daughters
+            top_side_fermion      = wqbar
+            anti_top_side_fermion = lepton
+            top_b_jet             = bhad
+            antitop_bbar_jet      = blep
+            down_type_jet         = wqbar
         elif lepton_charge > 0:
-            top_daughters     = leptonic_t_daughters
-            antitop_daughters = hadronic_t_daughters
-            top_b_jet         = blep
-            antitop_bbar_jet  = bhad
-            down_type_jet     = wq
+            top_daughters         = leptonic_t_daughters
+            antitop_daughters     = hadronic_t_daughters
+            top_side_fermion      = lepton
+            anti_top_side_fermion = wq
+            top_b_jet             = blep
+            antitop_bbar_jet      = bhad
+            down_type_jet         = wq
         else:
-            top_daughters     = None
-            antitop_daughters = None
-            top_b_jet         = None
-            antitop_bbar_jet  = None
-            down_type_jet     = None
+            top_side_fermion      = None
+            anti_top_side_fermion = None
+            top_b_jet             = None
+            antitop_bbar_jet      = None
+            down_type_jet         = None
+
+
+        # Record single down_jet_mass column
+        record["down_jet_mass"] = frames.invariant_mass(down_type_jet) if down_type_jet else NAN
 
         # The W pair is oriented from signed Weaver light-flavor scores. The
-        # had/lep top sides remain a separate charge-ordering exercise.
+        # had/lep tdown_type_jetop sides remain a separate charge-ordering exercise.
         object_p4 = {
             "wjet_quark": wq,
             "wjet_antiquark": wqbar,
-            "down_type_daughter": down_type_jet,
+            "top_side_fermion": top_side_fermion,
+            "anti_top_side_fermion": anti_top_side_fermion,
             "top_b": top_b_jet,
             "antitop_bbar": antitop_bbar_jet,
             "lepton": lepton,
@@ -937,8 +980,7 @@ def export_reco(
             "higgs": add_p4s(h1, h2),
         }
 
-        # Convention A (theory-study primary): boost into the frame, then
-        # measure angles against the fixed lab axes — no rotation after boost.
+        # Reference frame rest_p4 calculation
         rest_p4 = frames.rest_p4_for_frame(
             frame_name,
             object_p4["top"],
@@ -958,17 +1000,33 @@ def export_reco(
                 "lepton_px": lepton_px,
                 "lepton_py": lepton_py,
                 "lepton_pz": lepton_pz,
-                "lepton_pt": math.hypot(lepton_px, lepton_py),
+                #"lepton_pt": math.hypot(lepton_px, lepton_py),
             })
         else:
             record.update({
                 "lepton_px": NAN, 
                 "lepton_py": NAN, 
                 "lepton_pz": NAN,
-                "lepton_pt": NAN,
+                #"lepton_pt": NAN,
             })
 
+        # Neutrino Kinematics (Raw Lab-Frame KinFit ROOT output)
+        if neutrino is not None:
+            nu_E, nu_px, nu_py, nu_pz = neutrino
+            nu_p = math.sqrt(nu_px**2 + nu_py**2 + nu_pz**2)
+            record.update({
+                "nu_fit_pt": math.hypot(nu_px, nu_py),
+                "nu_fit_theta": safe_theta(nu_pz / nu_p) if nu_p > 0 else NAN,
+                "nu_fit_phi": math.atan2(nu_py, nu_px),
+            })
+        else:
+            record.update({
+                "nu_fit_pt": NAN, 
+                "nu_fit_theta": NAN, 
+                "nu_fit_phi": NAN
+            })
 
+        
         # Calculate m_ttbar
         top_p4 = object_p4.get("top")
         antitop_p4 = object_p4.get("antitop")
@@ -987,34 +1045,31 @@ def export_reco(
 
         phi_by_object = fill_object_features(record, object_p4, rest_p4)
 
+        top_down_mass = frames.invariant_mass(top_side_fermion) if top_side_fermion else NAN
+        antitop_down_mass = frames.invariant_mass(anti_top_side_fermion) if anti_top_side_fermion else NAN
+
+        record["top_side_fermion_down_jet_mass"] = top_down_mass
+        record["anti_top_side_fermion_down_jet_mass"] = antitop_down_mass
+
         def dphi(a: str, b: str) -> float:
             if a in phi_by_object and b in phi_by_object:
                 return angles.delta_phi(phi_by_object[a], phi_by_object[b])
             return NAN
 
-        record["O_W"] = dphi("wjet_quark", "wjet_antiquark")
+        record["O_W"]  = dphi("wjet_quark", "wjet_antiquark")
+        record["O_lD"] = dphi("top_side_fermion", "anti_top_side_fermion")
         #record["O_b"] = dphi("top_b", "antitop_bbar")
         #record["O_top"] = dphi("top", "antitop")
 
         """ REMOVED O_lnu
         # Assign O_lnu based on the lepton charge
-        if lepton_charge < 0:
+        if lepton_charge < 0.0:
             record["O_lnu"] = dphi("lepton", "neutrino")
-        elif lepton_charge > 0:
+        elif lepton_charge > 0.0:
             record["O_lnu"] = dphi("neutrino", "lepton")
         else:
             record["O_lnu"] = NAN
         """
-
-        # Get analyzer
-        ordered_names = flavor.semileptonic_down_type_order(lepton_charge)
-
-        # O_lD observable
-        if ordered_names is None:
-            record["O_lD"] = NAN
-        else:
-            object_a, object_b = ordered_names
-            record["O_lD"] = dphi(object_a, object_b)
 
         # Diagnose the reconstructed choice
         if lepton_charge > 0:
@@ -1036,8 +1091,6 @@ def export_reco(
 
         record["L12"] = orientation["L12"]
         record["L21"] = orientation["L21"]
-
-        lepton_flavor = fit_row.get("lepton_flavor", "other")
 
         record["idx_W_down_candidate"] = idx_W_down_candidate
         record["down_candidate_source"] = "qqbar_orientation_plus_lepton_charge"
@@ -1074,7 +1127,11 @@ def export_reco(
         rows.append(record)
 
     report = validate_table(rows, required_objects=list(OBJECTS))
-    out_dir = repo_root() / cfg["outputs"]["base_dir"] / "features"
+
+    model_tag = "cpv" if component == "interference" else "sm"
+    out_dir = repo_root() / cfg["outputs"]["base_dir"] / "features_v2" / f"reco_{model_tag}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
     component_prefix = "sm_" if component == "sm" else ""
     out_path = out_dir / (
         f"features_{component_prefix}reco_{frame_name}_chunk{reco['chunk']}.csv"
