@@ -18,6 +18,7 @@ from scripts.mva.build_mva_group_materials import (
     normalization_inventory,
     projection_rows,
     refuse_overwrite,
+    roc_curve_rows,
     validate_stratified_coverage,
     weighted_threshold_scan,
 )
@@ -203,6 +204,25 @@ def test_weighted_threshold_scan_uses_physical_signal_efficiency() -> None:
     assert at_half["background"] == pytest.approx(3.0)
     assert at_half["signal_efficiency"] == pytest.approx(2 / 3)
     assert at_half["significance"] == pytest.approx(2 / (5 ** .5))
+
+
+def test_roc_curve_matches_unweighted_auc_and_working_point() -> None:
+    rows = [
+        {"sample_key": "tth-sm", "category": "tth-hbb", "score": .9},
+        {"sample_key": "tth-sm", "category": "tth-hbb", "score": .6},
+        {"sample_key": "ttz", "category": "ttz", "score": .8},
+        {"sample_key": "ttbb", "category": "ttbb", "score": .6},
+        {"sample_key": "6q", "category": "6q", "score": .2},
+        {"sample_key": "tth-cpv", "category": "tth-hbb", "score": .99},
+    ]
+    curve, summary = roc_curve_rows(rows, .7)
+    assert curve[0]["false_positive_rate"] == 0.0
+    assert curve[-1]["true_positive_rate"] == 1.0
+    assert summary["auc"] == pytest.approx(.75)
+    assert summary["true_positive_rate"] == pytest.approx(.5)
+    assert summary["false_positive_rate"] == pytest.approx(1 / 3)
+    assert summary["background_rejection"] == pytest.approx(2 / 3)
+    assert summary["weighting"] == "unweighted_raw_test_events"
 
 
 def test_missing_strata_table_and_coverage_bounds() -> None:

@@ -553,6 +553,78 @@ def plot_efficiency(curve: list[dict[str, Any]], out: Path) -> None:
     ax.set(xlabel="threshold", ylabel="Hbb test efficiency", title="SM/CPV Hbb efficiency (test only)"); ax.grid(alpha=.25); ax.legend(fontsize=8); fig.tight_layout(); fig.savefig(out, dpi=160); plt.close(fig)
 
 
+def roc_curve_rows(
+    rows: list[dict[str, Any]], threshold: float
+) -> tuple[list[dict[str, float]], dict[str, float | int | str]]:
+    """Build the unweighted ordinary-test ROC used by the evaluator's headline AUC."""
+    selected = [row for row in rows if row["sample_key"] != "tth-cpv"]
+    labels = np.asarray([row["category"] == "tth-hbb" for row in selected], dtype=np.int64)
+    scores = np.asarray([row["score"] for row in selected], dtype=float)
+    positives = int(labels.sum())
+    negatives = int(len(labels) - positives)
+    if positives == 0 or negatives == 0:
+        raise RuntimeError("ROC_REQUIRES_BOTH_SIGNAL_AND_BACKGROUND")
+
+    order = np.argsort(-scores, kind="mergesort")
+    ordered_scores = scores[order]
+    ordered_labels = labels[order]
+    distinct_ends = np.r_[np.flatnonzero(np.diff(ordered_scores)), len(ordered_scores) - 1]
+    true_positive = np.cumsum(ordered_labels)[distinct_ends]
+    false_positive = distinct_ends + 1 - true_positive
+    tpr = np.r_[0.0, true_positive / positives]
+    fpr = np.r_[0.0, false_positive / negatives]
+    curve_thresholds = np.r_[np.inf, ordered_scores[distinct_ends]]
+    curve = [{
+        "threshold": float(value),
+        "false_positive_rate": float(x),
+        "true_positive_rate": float(y),
+    } for value, x, y in zip(curve_thresholds, fpr, tpr)]
+    auc = float(np.trapz(tpr, fpr))
+    selected_at_threshold = scores >= threshold
+    operating_tpr = float(np.count_nonzero(selected_at_threshold & (labels == 1)) / positives)
+    operating_fpr = float(np.count_nonzero(selected_at_threshold & (labels == 0)) / negatives)
+    summary: dict[str, float | int | str] = {
+        "auc": auc,
+        "threshold": threshold,
+        "true_positive_rate": operating_tpr,
+        "false_positive_rate": operating_fpr,
+        "background_rejection": 1.0 - operating_fpr,
+        "signal_events": positives,
+        "background_events": negatives,
+        "weighting": "unweighted_raw_test_events",
+    }
+    return curve, summary
+
+
+def plot_roc_curve(
+    curve: list[dict[str, float]], summary: dict[str, float | int | str], out: Path
+) -> None:
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(6.4, 5.5))
+    ax.plot(
+        [row["false_positive_rate"] for row in curve],
+        [row["true_positive_rate"] for row in curve],
+        color="C0", lw=2.5, label=f"XGBoost test ROC (AUC={float(summary['auc']):.4f})",
+    )
+    ax.plot([0, 1], [0, 1], color="0.45", ls="--", lw=1.2, label="random classifier")
+    ax.scatter(
+        [float(summary["false_positive_rate"])],
+        [float(summary["true_positive_rate"])],
+        color="C3", marker="o", s=55, zorder=3,
+        label=(f"working point={float(summary['threshold']):.3f}\n"
+               f"TPR={float(summary['true_positive_rate']):.3f}, "
+               f"FPR={float(summary['false_positive_rate']):.3f}"),
+    )
+    ax.set(
+        xlabel="background efficiency (false-positive rate)",
+        ylabel="signal efficiency (true-positive rate)",
+        title="Independent test ROC (unweighted ordinary MC)",
+        xlim=(0.0, 1.0), ylim=(0.0, 1.02),
+    )
+    ax.grid(alpha=.22); ax.legend(loc="lower right", fontsize=8.5)
+    fig.tight_layout(); fig.savefig(out, dpi=180); plt.close(fig)
+
+
 def plot_efficiency_significance(rows: list[dict[str, Any]], threshold: float, out: Path) -> None:
     """Put the validation signal-efficiency trade-off and threshold statistic on one figure."""
     import matplotlib.pyplot as plt
@@ -668,6 +740,15 @@ def main() -> None:
         ); exact_rows_data = rows
         write_csv(output / "cutflow_test_exact.csv", exact_cutflow(rows, threshold), ["sample_or_category", "stage", "split", "denominator", "events_before_threshold", "events_pass", "efficiency", "test_yield", "status"])
         write_csv(output / "score_histograms.csv", score_histograms(rows), ["category", "bin_low", "bin_high", "raw_count", "raw_density", "test_weighted_yield"]); plot_exact_scores(rows, threshold, output / "score_distributions_exact.png")
+        roc_rows, roc_summary = roc_curve_rows(rows, threshold)
+        expected_auc = float(ev["metrics"]["test"]["auc"])
+        # NECESSITY: fail closed if the plotted rows or weight convention no longer
+        # reproduce the evaluator's published independent-test AUC.
+        if not math.isclose(float(roc_summary["auc"]), expected_auc, rel_tol=0.0, abs_tol=1e-12):
+            raise RuntimeError("EXACT_TEST_ROC_AUC_MISMATCH")
+        write_csv(output / "roc_curve_test.csv", roc_rows, ["threshold", "false_positive_rate", "true_positive_rate"])
+        write_csv(output / "roc_summary_test.csv", [roc_summary], ["auc", "threshold", "true_positive_rate", "false_positive_rate", "background_rejection", "signal_events", "background_events", "weighting"])
+        plot_roc_curve(roc_rows, roc_summary, output / "roc_curve_test.png")
         curve = efficiency_curve(rows); write_csv(output / "sm_cpv_hbb_efficiency.csv", curve, ["sample_key", "category", "polarization", "threshold", "events", "pass", "efficiency", "significance"]); plot_efficiency(curve, output / "sm_cpv_hbb_efficiency.png")
         naive, stratified, missing = projection_rows(authority, rows, threshold); write_csv(output / "projection_naive.csv", naive, ["category", "full_pre_mva_yield", "test_efficiency", "test_events", "projected_yield", "projection_status"]); write_csv(output / "projection_summary.csv", projection_summary(naive), ["projection", "signal_Hbb", "background", "Z", "signal_mc_uncertainty_binomial_approx", "background_mc_uncertainty_binomial_approx", "status"]); write_csv(output / "projection_stratified.csv", stratified, ["normalization_key", "category", "full_pre_mva_yield", "test_efficiency", "projected_yield", "projection_status"]); write_csv(output / "missing_strata.csv", missing, ["normalization_key", "category", "full_pre_mva_yield", "reason"])
 
