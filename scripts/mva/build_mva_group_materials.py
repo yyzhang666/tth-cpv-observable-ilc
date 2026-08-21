@@ -271,10 +271,13 @@ def exact_rows(
         if not np.array_equal(event_index, source_index):
             raise RuntimeError(f"{shard}: event_index/HDF5 mismatch")
         weight = catalog_row.get("weight_phys")
+        interference_magnitude = catalog_row.get("weight_interference_magnitude")
         for index, category in enumerate(categories):
             output.append({"job_key": job_key, "sample_key": row["sample_key"], "normalization_key": row["normalization_key"],
                            "polarization": row["polarization"], "category": str(category), "event_index": int(event_index[index]),
-                           "score": float(score[index]), "weight_phys": "" if weight is None else float(weight), "split": str(row["split"])})
+                           "score": float(score[index]), "weight_phys": "" if weight is None else float(weight),
+                           "weight_interference_magnitude": "" if interference_magnitude is None else abs(float(interference_magnitude)),
+                           "split": str(row["split"])})
     return output
 
 
@@ -388,6 +391,78 @@ def weighted_threshold_scan(rows: list[dict[str, Any]]) -> list[dict[str, float 
             "signal_efficiency": float(signal_efficiency[index]),
             "significance": float(significance[index]),
             "status": "validation_only_missing_test_normalization_keys_excluded",
+        }
+        for index in range(len(thresholds))
+    ]
+
+
+def sm_cpv_validation_tradeoff(
+    ordinary_rows: list[dict[str, Any]], cpv_rows: list[dict[str, Any]]
+) -> list[dict[str, float | str]]:
+    """Compare SM significance with a separately labelled CPV absolute-weight proxy."""
+    thresholds = np.linspace(0.0, 1.0, 1001)
+
+    def cumulative(
+        source_rows: list[dict[str, Any]], weight_field: str, predicate: Any
+    ) -> np.ndarray:
+        selected = [
+            row for row in source_rows
+            if predicate(row) and row.get(weight_field, "") != ""
+        ]
+        if not selected:
+            raise RuntimeError(f"EMPTY_TRADEOFF_COMPONENT: {weight_field}")
+        scores = np.asarray([row["score"] for row in selected], dtype=float)
+        weights = np.abs(np.asarray([row[weight_field] for row in selected], dtype=float))
+        if not np.isfinite(weights).all() or np.any(weights <= 0.0):
+            raise RuntimeError(f"NONPOSITIVE_TRADEOFF_WEIGHT: {weight_field}")
+        order = np.argsort(scores)
+        scores = scores[order]
+        weights = weights[order]
+        suffix = np.cumsum(weights[::-1])[::-1]
+        indices = np.searchsorted(scores, thresholds, side="left")
+        result = np.zeros_like(thresholds)
+        valid = indices < len(scores)
+        result[valid] = suffix[indices[valid]]
+        return result
+
+    sm_signal = cumulative(
+        ordinary_rows, "weight_phys", lambda row: row["category"] == "tth-hbb"
+    )
+    sm_background = cumulative(
+        ordinary_rows, "weight_phys", lambda row: row["category"] != "tth-hbb"
+    )
+    ordinary_including_sm = sm_signal + sm_background
+    cpv_abs_signal = cumulative(
+        cpv_rows,
+        "weight_interference_magnitude",
+        lambda row: row["sample_key"] == "tth-cpv" and row["category"] == "tth-hbb",
+    )
+    sm_total = float(sm_signal[0])
+    cpv_total = float(cpv_abs_signal[0])
+    sm_significance = np.divide(
+        sm_signal,
+        np.sqrt(sm_signal + sm_background),
+        out=np.zeros_like(sm_signal),
+        where=(sm_signal + sm_background) > 0.0,
+    )
+    # This is an absolute-interference exposure proxy, not a physical signed
+    # CPV significance. Ordinary yield includes tth-sm/Hbb as CPV background.
+    cpv_proxy = np.divide(
+        cpv_abs_signal,
+        np.sqrt(cpv_abs_signal + ordinary_including_sm),
+        out=np.zeros_like(cpv_abs_signal),
+        where=(cpv_abs_signal + ordinary_including_sm) > 0.0,
+    )
+    return [
+        {
+            "threshold": float(thresholds[index]),
+            "sm_hbb_efficiency": float(sm_signal[index] / sm_total),
+            "sm_significance": float(sm_significance[index]),
+            "cpv_hbb_abs_efficiency": float(cpv_abs_signal[index] / cpv_total),
+            "cpv_abs_proxy": float(cpv_proxy[index]),
+            "cpv_hbb_abs_exposure": float(cpv_abs_signal[index]),
+            "ordinary_background_including_sm": float(ordinary_including_sm[index]),
+            "status": "validation_diagnostic_cpv_absolute_weight_proxy_not_significance",
         }
         for index in range(len(thresholds))
     ]
@@ -646,6 +721,50 @@ def plot_efficiency_significance(rows: list[dict[str, Any]], threshold: float, o
     fig.tight_layout(); fig.savefig(out, dpi=180); plt.close(fig)
 
 
+def plot_sm_cpv_efficiency_significance(
+    rows: list[dict[str, Any]], threshold: float, out: Path
+) -> None:
+    """Draw a separate four-curve diagnostic without replacing the baseline plot."""
+    import matplotlib.pyplot as plt
+    x = np.asarray([row["threshold"] for row in rows], dtype=float)
+    fig, left = plt.subplots(figsize=(8.5, 5.4))
+    right = left.twinx()
+    sm_eff, = left.plot(
+        x, [row["sm_hbb_efficiency"] for row in rows],
+        color="C0", lw=2.5, label="SM Hbb efficiency",
+    )
+    cpv_eff, = left.plot(
+        x, [row["cpv_hbb_abs_efficiency"] for row in rows],
+        color="#f28e2b", lw=2.5, label="CPV Hbb absolute-weight efficiency",
+    )
+    sm_z, = right.plot(
+        x, [row["sm_significance"] for row in rows],
+        color="C9", lw=2.5, label=r"SM $S/\sqrt{S+B}$",
+    )
+    cpv_z, = right.plot(
+        x, [row["cpv_abs_proxy"] for row in rows],
+        color="#d62728", lw=2.5, label="CPV absolute-weight proxy (not significance)",
+    )
+    working = left.axvline(
+        threshold, color="black", ls="--", lw=1.2,
+        label=f"working point={threshold:.3f}",
+    )
+    left.set(
+        xlabel="MVA score threshold",
+        ylabel="validation weighted efficiency",
+        xlim=(0.0, 1.0), ylim=(0.0, 1.04),
+    )
+    right.set_ylabel("validation metric / CPV proxy")
+    left.grid(alpha=.22)
+    lines = [sm_eff, cpv_eff, sm_z, cpv_z, working]
+    left.legend(lines, [line.get_label() for line in lines], loc="best", fontsize=8.2)
+    left.set_title(
+        "Validation SM/CPV working-point comparison\n"
+        "CPV uses absolute interference weight; ordinary yield including SM is background"
+    )
+    fig.tight_layout(); fig.savefig(out, dpi=180); plt.close(fig)
+
+
 def model_feature_importance(training_dir: Path) -> list[dict[str, Any]]:
     """Read mean-gain importance from exactly the trees used for prediction."""
     import xgboost as xgb
@@ -764,11 +883,34 @@ def main() -> None:
             excluded_normalization_keys=missing_normalization_keys,
         )
         coverage_scan = weighted_threshold_scan(validation_scan_rows)
-        del validation_scan_rows
         coverage_best = max(coverage_scan, key=lambda row: float(row["significance"]))
         coverage_threshold = float(coverage_best["threshold"])
         write_csv(output / "threshold_scan_coverage_closed.csv", coverage_scan, ["threshold", "signal", "background", "signal_efficiency", "significance", "status"])
         plot_efficiency_significance(coverage_scan, coverage_threshold, output / "validation_efficiency_significance.png")
+        cpv_normalization_keys = {
+            str(record["normalization_key"])
+            for record in authority.catalog_jobs.values()
+            if record.get("sample_key") == "tth-cpv"
+        }
+        cpv_validation_rows = exact_rows(
+            authority,
+            args.scores_dir.resolve(),
+            include_cpv=True,
+            score_provenance=provenance_checks,
+            splits={"validation"},
+            normalization_keys=cpv_normalization_keys,
+        )
+        comparison_scan = sm_cpv_validation_tradeoff(validation_scan_rows, cpv_validation_rows)
+        write_csv(output / "threshold_scan_sm_cpv_proxy.csv", comparison_scan, [
+            "threshold", "sm_hbb_efficiency", "sm_significance", "cpv_hbb_abs_efficiency",
+            "cpv_abs_proxy", "cpv_hbb_abs_exposure", "ordinary_background_including_sm", "status",
+        ])
+        plot_sm_cpv_efficiency_significance(
+            comparison_scan,
+            coverage_threshold,
+            output / "validation_sm_cpv_efficiency_significance_proxy.png",
+        )
+        del validation_scan_rows, cpv_validation_rows
 
         validation_keys = {key[0] for key in missing_keys if int(strata[key]["validation_events"]) > 0}
         train_only_keys = {key[0] for key in missing_keys if int(strata[key]["validation_events"]) == 0}

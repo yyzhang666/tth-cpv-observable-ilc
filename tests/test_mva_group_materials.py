@@ -19,6 +19,7 @@ from scripts.mva.build_mva_group_materials import (
     projection_rows,
     refuse_overwrite,
     roc_curve_rows,
+    sm_cpv_validation_tradeoff,
     validate_stratified_coverage,
     weighted_threshold_scan,
 )
@@ -223,6 +224,26 @@ def test_roc_curve_matches_unweighted_auc_and_working_point() -> None:
     assert summary["false_positive_rate"] == pytest.approx(1 / 3)
     assert summary["background_rejection"] == pytest.approx(2 / 3)
     assert summary["weighting"] == "unweighted_raw_test_events"
+
+
+def test_sm_cpv_tradeoff_uses_absolute_weight_and_sm_as_background() -> None:
+    ordinary = [
+        {"sample_key": "tth-sm", "category": "tth-hbb", "score": .8, "weight_phys": 2.0},
+        {"sample_key": "ttz", "category": "ttz", "score": .7, "weight_phys": 3.0},
+        {"sample_key": "tth-sm", "category": "tth-nonbb", "score": .6, "weight_phys": 1.0},
+    ]
+    cpv = [
+        {"sample_key": "tth-cpv", "category": "tth-hbb", "score": .9, "weight_interference_magnitude": -4.0},
+        {"sample_key": "tth-cpv", "category": "tth-hbb", "score": .1, "weight_interference_magnitude": 2.0},
+    ]
+    at_half = sm_cpv_validation_tradeoff(ordinary, cpv)[500]
+    assert at_half["threshold"] == pytest.approx(.5)
+    assert at_half["sm_hbb_efficiency"] == pytest.approx(1.0)
+    assert at_half["sm_significance"] == pytest.approx(2 / (6 ** .5))
+    assert at_half["cpv_hbb_abs_efficiency"] == pytest.approx(2 / 3)
+    assert at_half["ordinary_background_including_sm"] == pytest.approx(6.0)
+    assert at_half["cpv_abs_proxy"] == pytest.approx(4 / (10 ** .5))
+    assert "not_significance" in at_half["status"]
 
 
 def test_missing_strata_table_and_coverage_bounds() -> None:
