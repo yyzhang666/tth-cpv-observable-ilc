@@ -3318,6 +3318,8 @@ As time permits, repeat the selected setup with the following options
     * Comments on tried with lab frame but not good: Model cannot learn frame difference with the current strategy.
   * Compare all ML obserbale mentioned above vs generator Optimal Observable (OO)( I will provide the csv of OO
     * Show we are on the way to be close to the detector-level optimal one 
+    * The First ROC and the Last ROC 
+    * The mispairing of thr Higgs and Top bb is a largest issue which is hard to avoid ( I will provide the data on the jet-pairing and identification performance as backup)
   * Bar chart of the Fisher of all observables we studied.
 
 **Background introduction and equations**: Don't assume our colleagues has enough QFT knowledge...but they also don't like too much equations and numbers, only necessary. The main line of the story maybe how to reconstruct the identity of the "down-type" quark and the order of the fermions. Be clear what we present come from and what the goal/physics question we are trying to explore for each plots. We may have more discussion on this part later.
