@@ -3304,7 +3304,7 @@ As time permits, repeat the selected setup with the following options
 
 **Project summary**: Study the sensitivity of the CPV observables induced by the t-tbar spin correlation on reconstruction level in e-e+>tth process at 550GeV linear collider. Compare the Fisher from cpv/sm without other background, assuming the new physics coefficient is 1.
 
-**Equations: :)
+**Background introduction and equations**: Don't assume our colleagues has enough QFT knowledge...but they also don't like too much equations and numbers, only necessary. The main line of the story maybe how to reconstruct the identity of the "down-type" quark and the order of the fermions. Be clear what we present come from and what the goal/physics question we are trying to explore for each plots. We may have more discussion on this part later.
 
 **Plots**: 
   * Angular observable distribution: O_jj, O_lD, O_lnu reco vs gen, sm vs cpv at Higgs rest frame with 10 chunks ( I will provide O_lnu)
@@ -3319,15 +3319,24 @@ As time permits, repeat the selected setup with the following options
   * Two plots 1. with nu,  2. additional two b-quark with lepton input again (maybe this is the best) 
     * The one with nu here didn't better than the pure O_lnu, showing model has been confused here. 
     * Comments on tried with lab frame but not good: Model cannot learn frame difference with the current strategy.
-  * Compare all ML obserbale mentioned above vs generator Optimal Observable (OO)( I will provide the csv of OO
+  *  I will plot this : Compare all ML obserbale distribution mentioned above vs generator Optimal Observable (OO)
     * Show we are on the way to be close to the detector-level optimal one 
-    * The First ROC and the Last ROC 
-    * The mispairing of thr Higgs and Top bb is a largest issue which is hard to avoid ( I will provide the data on the jet-pairing and identification performance as backup)
+    * You show this two plot: The First ROC vs the Last ROC 
+    * The mispairing of the Higgs and Top bb is a largest issue which is hard to avoid ( I will provide the data on the jet-pairing and identification performance to evaluate the effects as backup, as well some comparison with old studies)
   * Bar chart of the Fisher of all observables we studied.
 
-**Background introduction and equations**: Don't assume our colleagues has enough QFT knowledge...but they also don't like too much equations and numbers, only necessary. The main line of the story maybe how to reconstruct the identity of the "down-type" quark and the order of the fermions. Be clear what we present come from and what the goal/physics question we are trying to explore for each plots. We may have more discussion on this part later.
+Pick the things that you are comfortable to explain, leave something in the backup to answer questions.
 
-**After 9.1** Hope the last week still working week, so we can do the next chapter 6 and 8. Hope they just need you to implement the current scripts. Then it will be enough for your poster. 
+**Further study/Potential Improvements** 
+ * Three class training with background
+ * Full 8 fermions input (including Higgs-bb)
+ * Truth OO regression
+ * ...Anything you are aware of ..
+ * Polarisation combination (Training 4 models with the weight according to the different polarisation, see chapter 8)
+ * Interpretation to SMEFT (Chapter 9)
+
+
+**After 9.1** ~~Hope the last week still working week, so we can do the next chapter 6 and 8. Hope they just need you to implement the current scripts. Then it will be enough for your poster.~~ Write reports...I will do the last work for the CERN workshop...
 
 ---
 
