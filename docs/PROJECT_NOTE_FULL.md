@@ -3304,6 +3304,8 @@ As time permits, repeat the selected setup with the following options
 
 **Project summary**: Study the sensitivity of the CPV observables induced by the t-tbar spin correlation on reconstruction level in e-e+>tth process at 550GeV linear collider. Compare the Fisher from cpv/sm without other background, assuming the new physics coefficient is 1.
 
+**Equations: :)
+
 **Plots**: 
   * Angular observable distribution: O_jj, O_lD, O_lnu reco vs gen, sm vs cpv at Higgs rest frame with 10 chunks ( I will provide O_lnu)
     * Need to clarify thr defination of those observable here and emphasize the the importance of order.
@@ -3315,6 +3317,7 @@ As time permits, repeat the selected setup with the following options
       * Add background: More advantage! ( I will provide)
   * The ML observable distribution(with l,D feature input and best auxiliary set+ 1 additional w-jet): sm vs cpv, ML vs angular O_lD_auxiliary_1_w_jet(Note the bin number and range difference)
   * Two plots 1. with nu,  2. additional two b-quark with lepton input again (maybe this is the best) 
+    * The one with nu here didn't better than the pure O_lnu, showing model has been confused here. 
     * Comments on tried with lab frame but not good: Model cannot learn frame difference with the current strategy.
   * Compare all ML obserbale mentioned above vs generator Optimal Observable (OO)( I will provide the csv of OO
     * Show we are on the way to be close to the detector-level optimal one 
