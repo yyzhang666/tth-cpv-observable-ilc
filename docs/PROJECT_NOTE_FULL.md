@@ -3305,11 +3305,19 @@ As time permits, repeat the selected setup with the following options
 **Project summary**: Study the sensitivity of the CPV observables induced by the t-tbar spin correlation on reconstruction level in e-e+>tth process at 550GeV linear collider. Compare the Fisher from cpv/sm without other background, assuming the new physics coefficient is 1.
 
 **Plots**: 
-  * Angular observable distribution: O_jj, O_lD, reco vs gen, sm vs cpv at Higgs rest frame with 10 chunks
-  * Bar chart of the Fisher at different frame, showing the challenge of reconstruct the Higgs rest frame though it owns huge theoretical advantages.
-  * ML observable training information: Compare the ROC,importance of the v1+lepton charge/v2 XGBoost,CatBoost in 5.2
-  * Plain ML observable distribution(with only l,D feature input): sm vs cpv, ML vs angular O_lD
-  * Best ML observable distribution after 5.5 marked by **priority for 9.1** 
+  * Angular observable distribution: O_jj, O_lD, O_lnu reco vs gen, sm vs cpv at Higgs rest frame with 10 chunks ( I will provide O_lnu)
+    * Need to clarify thr defination of those observable here and emphasize the the importance of order.
+  * Bar chart of the Fisher at different frame, showing the challenge of reconstruct the Higgs rest frame though it owns huge theoretical advantages, O_lnu is the best at reco-level , holds both theoretical and reco advantages
+  * First ML observable training information: Compare the ROC,importance of the v1+lepton charge/v2 XGBoost,CatBoost in 5.2, 
+      * Motivation: if ML can recover some information from the loss of the reco
+      * Challenge : Learn the order . show the CatBoost can learn the order by lepton charge, show the “physics-awared" representation of data ( from lepton/ down jets to top-side, anti-top side)
+      * At the beginning, didn't learn more than the delta_phi, but with auxiliary variables and additional jets, it works.
+      * Add background: More advantage! ( I will provide)
+  * The ML observable distribution(with l,D feature input and best auxiliary set+ 1 additional w-jet): sm vs cpv, ML vs angular O_lD_auxiliary_1_w_jet(Note the bin number and range difference)
+  * Two plots 1. with nu,  2. additional two b-quark with lepton input again (maybe this is the best) 
+    * Comments on tried with lab frame but not good: Model cannot learn frame difference with the current strategy.
+  * Compare all ML obserbale mentioned above vs generator Optimal Observable (OO)( I will provide the csv of OO
+    * Show we are on the way to be close to the detector-level optimal one 
   * Bar chart of the Fisher of all observables we studied.
 
 **Background introduction and equations**: Don't assume our colleagues has enough QFT knowledge...but they also don't like too much equations and numbers, only necessary. The main line of the story maybe how to reconstruct the identity of the "down-type" quark and the order of the fermions. Be clear what we present come from and what the goal/physics question we are trying to explore for each plots. We may have more discussion on this part later.
