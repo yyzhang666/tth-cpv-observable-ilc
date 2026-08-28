@@ -19,6 +19,7 @@ samples:
   sm_reco_sample: tth_sm_reco_elpr
 
   # Generator-level normalization values
+  sm_cross_section_fb: 2.96055           # Total sm signal cross-section
   cross_section_fb: 0.395666999328   # Total CPV signal cross-section
   n_chunks: 79                       # Total processed chunks
   events_per_chunk: 12500            # Generator events per sidecar chunk
@@ -66,6 +67,12 @@ features:
           - theta
           - phi
 
+        second_w_daughter:
+          - E
+          - pt
+          - theta
+          - phi
+
       auxiliary: 
         - down_jet_mass
       
@@ -84,15 +91,150 @@ features:
           - theta
           - phi
 
+        # W-daughter representation and assignmnet study
+        second_w_daughter:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E 
+          - pt
+          - theta
+          - phi
+
       auxiliary:
         - w_assignment_likelihood_selected
         - final_selection_score
-        - m_W_had
-        - m_top_had
-        - m_top_lep
+        #- m_W_had
+        #- m_top_had
+        #- m_top_lep
         - m_H
         - m_ttbar
         - down_jet_mass
+
+
+    lD_auxiliary_wbjets:
+      objects:
+        top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        anti_top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E 
+          - pt
+          - theta
+          - phi
+
+        # W decay products 1
+        wjet_quark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 2
+        wjet_antiquark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Top-decay b object
+        top_b:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # antitop-decay bbar object
+        antitop_bbar:
+          - E
+          - pt
+          - theta
+          - phi
+
+      auxiliary:
+        - w_assignment_likelihood_selected
+        - final_selection_score
+        - m_H
+        - m_ttbar
+        - down_jet_mass
+
+    lD_auxiliary_wbjets_lepton:
+      objects:
+        lepton:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E 
+          - pt
+          - theta
+          - phi
+
+        top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        anti_top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 1
+        wjet_quark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 2
+        wjet_antiquark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Top-decay b object
+        top_b:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # antitop-decay bbar object
+        antitop_bbar:
+          - E
+          - pt
+          - theta
+          - phi
+
+      auxiliary:
+        - lepton_charge
+        - w_assignment_likelihood_selected
+        - final_selection_score
+        - m_H
+        - m_ttbar
+        - down_jet_mass
+
 
 training:
   lepton_flavors:
@@ -113,11 +255,11 @@ split:
 model:
   type: catboost               # ships with the key4hep cvmfs stack; catboost optional
   params:
-    iterations: 200         # try 150
-    max_depth: 6              # try 3, 4, 5...
+    iterations: 1000            # try 150
+    max_depth: 7               # try 3, 4, 5...
     learning_rate: 0.05        # try 0.05~0.1 
     random_seed: 42 
-    #early_stopping_rounds: 20
+    early_stopping_rounds: 50
   class_order: [-1, 1]        # [interference<0, interference>0]; frozen
 
 weights:

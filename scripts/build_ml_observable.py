@@ -39,21 +39,43 @@ def filter_rows(rows: list, split: str = "all", lepton_flavor: str = "all") -> l
         rows = [row for row in rows if row["lepton_flavor"] == lepton_flavor]
     return rows
 
-def extract_feature_value(row: dict, feature_name: str) -> float:
-    """Extract feature value: reads directly from row (v2), falling back 
-    to dynamic down-type resolution if the column is missing (v1).
-    """
-    # 1. Try direct column lookup (works for v2 and all standard features)
-    val = row.get(feature_name)
-    if val is not None and val != "":
-        try:
-            fval = float(val)
-            if math.isfinite(fval):
-                return fval
-        except (TypeError, ValueError):
-            pass
 
-    # 2. Fallback dynamic resolution for missing v1 down_type_daughter_* columns
+def to_float(val) -> float:
+    """Safely convert values to finite floats or NaN."""
+    if val is None or val == "":
+        return float("nan")
+    try:
+        fval = float(val)
+        return fval if math.isfinite(fval) else float("nan")
+    except (TypeError, ValueError):
+        return float("nan")
+    
+
+def extract_feature_value(row: dict, feature_name: str) -> float:
+    """Extract feature value using direct lookup with dynamic fallback resolution
+    for derived features (w_assignment_likelihood_selected, down_type_daughter_*, second_w_daughter_*).
+    """
+    # Try direct column lookup (works for v2 and all standard features)
+    fval = to_float(row.get(feature_name))
+    if math.isfinite(fval):
+        return fval
+
+    # Dynamic resolution for w_assignment_likelihood_selected
+    if feature_name == "w_assignment_likelihood_selected":
+        preference = row.get("w_orientation_status")
+        L12 = row.get("L12")
+        L21 = row.get("L21")
+
+        if preference == "L12_preferred":
+            selected_L = L12
+        elif preference == "L21_preferred":
+            selected_L = L21
+        else:
+            selected_L = None
+
+        return to_float(selected_L)
+
+    # Fallback dynamic resolution for missing v1 down_type_daughter_* columns
     if feature_name.startswith("down_type_daughter_"):
         variable = feature_name.removeprefix("down_type_daughter_")
         try:
@@ -76,8 +98,62 @@ def extract_feature_value(row: dict, feature_name: str) -> float:
         val = row.get(f"{prefix}_{variable}")
         return float(val) if val is not None else float("nan")
 
-    return float("nan")
+    # Fallback dynamic resolution for second_w_daughter_* features
+    if feature_name.startswith("second_w_daughter_"):
+        variable = feature_name.removeprefix("second_w_daughter_")
 
+        idx_W_down_candidate = to_float(row.get("idx_W_down_candidate"))
+        idx_W_quark          = to_float(row.get("idx_W_quark"))
+        idx_W_antiquark      = to_float(row.get("idx_W_antiquark"))
+
+        if not (math.isfinite(idx_W_down_candidate) and math.isfinite(idx_W_quark) and math.isfinite(idx_W_antiquark)):
+            return float("nan")
+
+        if idx_W_down_candidate == idx_W_quark:
+            prefix = "wjet_antiquark"
+        elif idx_W_down_candidate == idx_W_antiquark:
+            prefix = "wjet_quark"
+        else:
+            return float("nan")
+
+        # Calculate pT from E, theta, mass
+        if variable == "pt":
+            E     = to_float(row.get(f"{prefix}_E"))
+            theta = to_float(row.get(f"{prefix}_theta"))
+            m     = to_float(row.get(f"{prefix}_mass"))
+
+            if not (math.isfinite(E) and math.isfinite(theta)):
+                return float("nan")
+
+            m_val = m if math.isfinite(m) else 0.0
+
+            p = math.sqrt(max(0.0, E**2 - m_val**2))
+            return p * math.sin(theta)
+
+        return to_float(row.get(f"{prefix}_{variable}"))
+
+    # Dynamic resolution for neutrino_* features
+    if feature_name.startswith("neutrino_"):
+        
+        # 1. Try to read the column directly from the CSV
+        val = row.get(feature_name)
+        if val is not None:
+            parsed_val = to_float(val)
+            if math.isfinite(parsed_val):
+                return parsed_val
+
+        # 2. Safety fallback: calculate pt from E and theta if neutrino_pt is missing
+        if feature_name == "neutrino_pt":
+            E     = to_float(row.get("neutrino_E"))
+            theta = to_float(row.get("neutrino_theta"))
+            if math.isfinite(E) and math.isfinite(theta):
+                return E * math.sin(theta)
+
+        return float("nan")
+        
+    return to_float(row.get(feature_name))
+
+        
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True)
@@ -89,10 +165,17 @@ def main() -> int:
     parser.add_argument("--weight-column", default="weight_template")
     parser.add_argument("--output-tag", default="",
                         help="optional filename tag, e.g. sm")
+    parser.add_argument("--out-dir", default="", help="custom output directory path") 
     parser.add_argument("--version", default="", choices=("", "v0", "v1", "v2"),
                         help="explicit version tag (v0, v1, v2); auto-detected if omitted")
     parser.add_argument("--logit", action="store_true", help="also compute log(P+/P-)")
     args = parser.parse_args()
+
+    output_tag = args.output_tag
+    if not output_tag:
+        features_parent = Path(args.features).parent.name
+        if features_parent and not features_parent.startswith("features"):
+            output_tag = features_parent
 
     cfg = load_analysis_config(Path(args.config))
     meta_path = Path(args.model).parent / "model_metadata.json"
@@ -103,6 +186,7 @@ def main() -> int:
     feature_cols = model_meta["feature_list"]
     classes = [int(c) for c in model_meta["class_order_model"]]
     model_type = model_meta.get("model_type", "xgboost")
+    feature_set_name = model_meta.get("feature_set", "lD")
 
     # Identify the ML model type (XGBoost/caboost)
     if model_type == "xgboost":
@@ -126,7 +210,7 @@ def main() -> int:
     split_cfg   = cfg.get("split", {})
 
     # Determine if sm or cpv
-    is_sm = "sm" in args.output_tag.lower() or args.weight_column == "weight_sm"
+    is_sm = "sm" in output_tag.lower() or args.weight_column == "weight_sm"
 
     # Select cross section based on process (SM vs CPV)
     if is_sm:
@@ -228,15 +312,20 @@ def main() -> int:
     else:
         obs_folder = "ml_observable"  # Default for v1
 
+    if args.out_dir:
+        out_dir = Path(args.out_dir)
+    else:
+        out_dir = repo_root() / cfg["outputs"]["base_dir"] / obs_folder / feature_set_name / model_type
 
-    out_dir = repo_root() / cfg["outputs"]["base_dir"] / obs_folder / model_type
     out_dir.mkdir(parents=True, exist_ok=True)
+
     if not score_rows:
         raise SystemExit(
             f"No finite {args.weight_column} values for split {args.split}. "
             "For SM physical templates, check cross_section_fb in samples.yaml."
         )
-    tag = f"_{args.output_tag}" if args.output_tag else ""
+
+    tag = f"_{output_tag}" if output_tag else ""   
     lepton_flavor_tag = f"_{args.lepton_flavor}" if args.lepton_flavor != "all" else ""
 
     write_table(
@@ -250,9 +339,10 @@ def main() -> int:
         "n_dropped_invalid": len(eval_rows) - len(kept),
         "score_definition": "P(+) - P(-)",
         "weight_column": args.weight_column,
-        "output_tag": args.output_tag,
+        "output_tag": output_tag,
         "created": datetime.datetime.now().isoformat(),
     })
+
     write_table(
         out_dir / f"template_{args.split}{lepton_flavor_tag}{tag}_bins.csv",
         hist.as_rows(frame="score", observable="O_ML"),
@@ -262,7 +352,7 @@ def main() -> int:
             "split": args.split,
             "lepton_flavor": args.lepton_flavor,
             "weight_column": args.weight_column,
-            "output_tag": args.output_tag,
+            "output_tag": output_tag,
             "n_events_filled": len(score_rows),
             "integral_signed_fb": hist.integral_signed(),
             "integral_abs_fb": hist.integral_abs(),
@@ -270,11 +360,29 @@ def main() -> int:
             "created": datetime.datetime.now().isoformat(),
         },
     )
+
     print(f"scores   -> {out_dir / f'scores_{args.split}{lepton_flavor_tag}{tag}.csv'} ({len(score_rows)} events)")
     print(f"template -> {out_dir / f'template_{args.split}{lepton_flavor_tag}{tag}_bins.csv'}")
     weight_unit = "shape fraction" if args.weight_column == "weight_sm_shape" else "fb"
     print(f"signed integral = {hist.integral_signed():+.6g} {weight_unit} "
           f"z_signed={weight_report['z_signed']:+.2f}")
+
+    stem = f"template_{args.split}{lepton_flavor_tag}{tag}"
+    observable = "O_ML"
+    frame = "score"
+
+    try:
+        from ilc_tth_cpv.plotting import plot_signed_histogram
+
+        png = plot_signed_histogram(
+            hist,
+            out_dir / f"{stem}.png",
+            title=f"{observable} [{frame}] split={args.split}",
+            xlabel=f"ML Score O_ML = P(+) - P(-)",
+        )
+        print(f"plot   -> {png}")
+    except Exception as exc:  # matplotlib may be absent in minimal envs
+        print(f"plot skipped ({exc})")
     return 0
 
 

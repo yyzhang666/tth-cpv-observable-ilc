@@ -192,6 +192,11 @@ def main() -> int:
         help="Pattern for chunk CSV files (containing {chunk})",
     )
     parser.add_argument(
+        "--frame",
+        default="higgs_rest",
+        help="Reference frame: 'higgs_rest' or 'lab' (default: higgs_rest)",
+    )
+    parser.add_argument(
         "--out-dir",
         default=None,
         help="Output directory for merged superdataset and metadata",
@@ -212,14 +217,14 @@ def main() -> int:
 
     # Build input pattern 
     if args.input_pattern is None:
-        input_pattern = f"{base_dir}/features{model_tag}_{args.level}_higgs_rest_chunk{{chunk}}.csv"
+        input_pattern = f"{base_dir}/features{model_tag}_{args.level}_{args.frame}_chunk{{chunk}}.csv"
     else:
         input_pattern = args.input_pattern
 
     # Build output filename
     if args.out_name is None:
         chunk_str = args.chunks.replace("-", "_").replace(",", "_")
-        out_name = f"features{model_tag}_{args.level}_higgs_rest_chunk{chunk_str}.csv"
+        out_name = f"features{model_tag}_{args.level}_{args.frame}_chunk{chunk_str}.csv"
     else:
         out_name = args.out_name
 

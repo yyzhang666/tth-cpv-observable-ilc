@@ -3268,7 +3268,9 @@ Input the features only from the reconstructed lepton and selected down-type jet
 
 **Second Model: Adding  auxiliary variables**
 
-See the lD_auxiliary above. Try only the first two first. Then all auxiliary variables.
+See the lD_auxiliary above
+* Minimal: w_assignment_likelihood, final_selection_score,m_ttbar,m_H
+* ALL
 If **The Taining Loss** is not converge, may need to wait me to make more data.
 
 **Physics motivation: This section motivated by the fact that we have already known the angular O_lD works both gen and reco level , while O_jj works 
@@ -3280,7 +3282,9 @@ exploit them for CPV, or just treat them as noise?**
 
 Compare the next two options on W
 1. **Priority for 9.1** Add the kinematics of the second W daughter jet into features ( First with higher likelihood, second with lower, no other auxiliary )
-   * Better using v1+lepton charge with Catboost, don't need to modify the export features.
+   * Two options:
+     * Using v1+lepton charge with Catboost, don't need to modify the export features. But it initially got lower Fisher.
+     * Using v2, +"Second_Jets", maybe add some logic to resolve the "feature name" in the train_cpv_model.py is more convenient.
 2. Optional: Different jet as down-type input once （ One events, two rows)
    * With CatBoost v2, but each jet of the hadronic decay will be chosen as top/anti-side-top fermion filling the row once, weighted by the likelihood
 
@@ -3296,7 +3300,8 @@ than the lepton-plus-down-type-jet baseline.
 
 As time permits, repeat the selected setup with the following options
 
-* **Priority for 9.1** Enlarge the input with the complete reconstructed W products and top-decay $b/\bar b$ objects to test whether additional physical information helps or confuses the model.
+* **Priority for 9.1** Enlarge the input with the complete reconstructed W products and top-decay $b/\bar b$ objects to test whether additional physical information helps or confuses the model
+  * IF HAVE TIME, TRY ANOTHER at LAB FRAME.
 * Study an SM-inclusive three-class model
 * A neural network and revisit the W-daughter permutation problem, train using the two W jets alone to test whether NN can avoid or resolve the jet-ordering problem
 

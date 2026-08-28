@@ -331,7 +331,7 @@ The files with old method (naive q / q¯ orientation) is moved to: <br>
 
 
 ## Additional Comparison Plots (Ch. 4.5.5)
-Created a new script `plot_four_hist.py` in `src/ilc_tth_cpv/` to plot four curves in a single figure:
+Created a new script `plot_combined_hist.py` in `src/ilc_tth_cpv/` to plot four curves in a single figure:
 - reco SM vs reco signed CPV-interference
 - gen SM vs gen signed CPV-interference
 SM bins are scaled by 0.1 (SM/10) for better visibility and make it easier to compare with CPV-interference.
@@ -342,7 +342,7 @@ Frame (higgs_rest, lab, ttbar_rest) can also be specified via command-line argum
 
 To run:
 ```
-python3 src/ilc_tth_cpv/plot_four_hist.py \
+python3 src/ilc_tth_cpv/plot_combined_hist.py \
   --observable O_W \
   --frame higgs_rest
 ```

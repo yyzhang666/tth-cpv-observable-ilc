@@ -1,3 +1,40 @@
+## 0. Whole ML Analysis Pipeline Summary
+
+1. Produce Features, Merge Chunks
+```
+python3 make_arguments.py \
+  --config ../../configs/analysis_ml_superdataset_lr.yaml \
+  --chunks 1-79 \
+  --component interference \
+  --level reco
+
+condor_submit submit_export_features.sub
+```
+
+Merge Chunks
+```
+python3 scripts/merge_feature_chunks.py \
+    --version v1 \
+    --model cpv \
+    --level reco \
+    --frame higgs_rest \
+    --chunks 1-79 
+```
+
+2. Training
+```
+python3 scripts/train_cpv_model.py \
+        --config configs/analysis_ml_superdataset_lr_v2.yaml \
+        --features outputs/ml_superdataset/features/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+        --feature-set lD
+```
+
+3. Build Observables
+```
+./scripts/run_ml_observable_pipeline.sh reco
+```
+
+
 ## 1. Data Preparation (Ch. 5.1)
 
 ### 1.1 Check/Edit `export_features.py`
@@ -61,7 +98,8 @@ python3 make_arguments.py \
   
 condor_submit submit_export_features.sub
 ```
-**STATUS: Re-Run Complete (2026/08/19)**
+STATUS: Re-Run Complete (2026/08/19)
+
 
 Input 2 (sm, chunk1-79, gen-level, higgs_rest frame):
 ```
@@ -73,7 +111,8 @@ python3 make_arguments.py \
   
 condor_submit submit_export_features.sub
 ```
-**STATUS: Error**
+STATUS: Error
+
 
 Input 3 (cpv, chunk1-79, reco-level, higgs_rest frame):
 ```
@@ -85,7 +124,8 @@ python3 make_arguments.py \
   
 condor_submit submit_export_features.sub
 ```
-**STATUS: Re-Run Complete (2026/08/19)**
+STATUS: Re-Run Complete (2026/08/19)
+
 
 Input 4 (sm, chunk1-79, reco-level, higgs_rest frame):
 ```
@@ -97,7 +137,8 @@ python3 make_arguments.py \
   
 condor_submit submit_export_features.sub
 ```
-**STATUS: Re-Run Complete(2026/08/20)**
+STATUS: Re-Run Complete(2026/08/20)
+
 
 ### 1.4  Write a new script `/scripts/merge_feature_chunks.py`
 
@@ -296,9 +337,10 @@ Outputs are in `outputs/ml_superdataset/features_v2`.
 
 Train model:
 ```
-python3 scripts/train_cpv_model_v2.py \
+python3 scripts/train_cpv_model.py \
         --config configs/analysis_ml_superdataset_lr_v2.yaml \
         --features outputs/ml_superdataset/features_v2/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+        --version v2 \
         --feature-set lD
 ```
 
@@ -310,13 +352,14 @@ Outputs are in `outputs/ml_superdataset/model_v2/lD/xgboost`
 - Created `configs/analysis_ml_superdataset_lr_v0.yaml`
 - Created `configs/analysis_ml_superdataset_lr_catboost_v0.yaml` for catboost
 - Features are same as the v1, so they are used
-- Created `script/train_cpv_model_v0.py` for training.
+- For training, the same `script/train_cpv_model.py` cab be used. Specify `--version v0` in input argument.
 
 Input example (for catboost):
 ```
-python3 scripts/train_cpv_model_v0.py \
+python3 scripts/train_cpv_model.py \
   --config configs/analysis_ml_superdataset_lr_catboost_v0.yaml \
   --features outputs/ml_superdataset/features/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+  --version v0 \
   --feature-set lD
 ```
 
@@ -365,6 +408,7 @@ Train model input example (v1):
 python3 scripts/train_cpv_model.py \
         --config configs/analysis_ml_superdataset_lr_catboost.yaml \
         --features outputs/ml_superdataset/features/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+        --version v1 \
         --feature-set lD
 ```
 
@@ -411,6 +455,7 @@ Running this file ...:
   - xgboost and catboost (in separate folders)
   - electron and muon (they have different file names, either `electron` or `muon`
   - cpv and sm
+- produces histogram of ML observables
 - evaluates fisher information for all:
   - different versions
   - electron and muon
@@ -449,16 +494,6 @@ File "/data/dust/user/ozakinan/analysis/tth-cpv-observable-ilc/scripts/export_fe
 ReferenceError: attempt to access a null-pointer
 ```
 
-ML Observable Production: <br>
-- v0 (= Raw v1, without lepton_charge):
-  - [ ] XGBoost
-  - [ ] catboost
-- v1 (+ lepton_charge):
-  - [ ] XGBoost
-  - [ ] catboost
-- v2: 
-  - [ ] XGBoost
-  - [ ] catboost
  
 #### 2.7.2 Fisher Information Calculation
 Input example:
@@ -485,7 +520,7 @@ OR you can also use `script/run_ml_observable_pipeline.sh` mentioned above, whic
 | O_ML | muon | higgs_rest | xgboost | v1 |  |  |  | 0.0270757 |  |
 | O_ML | electron + muon | higgs_rest | xgboost | v1 |  |  |  |  |  |
 | O_ML | electron | higgs_rest | xgboost | v2 |  |  |  | 0.8781519013438279 |  |
-| O_ML | muon | higgs_rest | xgboost | v2 |  |  |  |  | 0.883595206181391 |
+| O_ML | muon | higgs_rest | xgboost | v2 |  |  |  | 0.883595206181391 |  |
 | O_ML | electron + muon | higgs_rest | xgboost | v2 |  |  |  |  |  |
 | O_ML | electron | higgs_rest | catboost | v0 |  |  |  | 0.00316548 |  |
 | O_ML | muon | higgs_rest | catboost | v0 |  |  |  | 0.00219951 |  |
@@ -497,5 +532,453 @@ OR you can also use `script/run_ml_observable_pipeline.sh` mentioned above, whic
 | O_ML | muon | higgs_rest | catboost | v2 |  |  |  | 1.1259856676365156 |  |
 | O_ML | electron + muon | higgs_rest | catboost | v2 |  |  |  |  |  |
 
+
+#### 2.7.3 Plotting Combined Histogram
+For simply plotting the histograms like `template_test_electron_reco_cpv.png`, the pipeline `scripts/run_ml_observable_pipeline.sh` will automatically produce histograms. 
+
+For combined histogram (reco cpv and scaled reco sm), use `plot_combined_hist.py` to plot. It will produce histograms for both electron and muon automatically. Make sure to set mode `ml`, as this code is also used for plotting combined angular observable histograms.
+
+Input example (xgboost, v2, test)
+```
+python3 src/ilc_tth_cpv/plot_combined_hist.py \
+  --mode ml \
+  --model-type xgboost \
+  --version v2 \
+  --split test
+```
+
+Output example:
+```
+outputs/ml_superdataset/ml_observable_v2/xgboost/ml_observable_reco_sm_vs_cpv_electron_bins.png
+outputs/ml_superdataset/ml_observable_v2/xgboost/ml_observable_reco_sm_vs_cpv_muon_bins.png
+```
+
+### 2.8 Adding auxiliary variables
+#### 2.8.1 Try with fewer lD_auxiliary values (minimal_1)
+Modified `auxiliary:` under `lD_auxiliary:` in `configs/analysis_ml_superdataset_lr_catboost_v2.yaml`, to contain include only:
+- auxiliary
+  - w_assignment_likelihood_selected
+  - final_selection_score
+  - m_ttbar
+  - down_jet_mass
+
+Training Input:
+```
+python3 scripts/train_cpv_model.py \
+        --config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+        --features outputs/ml_superdataset/features_v2/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+        --version v2 \
+        --feature-set lD_auxiliary \
+        --out-dir outputs/ml_superdataset/model_v2/lD_auxiliary/minimal_1/catboost
+```
+
+Building ML observable:
+```
+ python3 scripts/build_ml_observable.py \
+    --config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+    --features outputs/ml_superdataset/features_v2/reco_sm/features_sm_reco_higgs_rest_chunk1_79.csv \
+    --model outputs/ml_superdataset/model_v2/lD_auxiliary/minimal/catboost/electron/cpv_catboost.cbm \
+    --lepton-flavor electron \
+    --output-tag sm \
+    --version v2
+```
+
+Output: `outputs/ml_superdataset/ml_observable_v2/lD_auxiliary/minimal/catboost`
+
+Calculate fisher information:
+```
+python3 scripts/evaluate_fisher.py \
+  --template outputs/ml_superdataset/ml_observable_v2/lD_auxiliary/minimal/catboost/template_test_electron_reco_cpv_bins.csv \
+  --sm-template outputs/ml_superdataset/ml_observable_v2/lD_auxiliary/minimal/catboost/template_test_electron_reco_sm_bins.csv \
+  --luminosity-scale 8000
+```
+
+Fisher information:
+- electron: 1.23386
+- muon: 1.35247
+
+
+#### 2.8.2 Try with all lD_auxiliary values (full)
+Modified `auxiliary:` under `lD_auxiliary:` in `configs/analysis_ml_superdataset_lr_catboost__v2.yaml`, to contain include all:
+- auxiliary
+  - w_assignment_likelihood_selected
+  - final_selection_score
+  - m_W_had
+  - m_top_had
+  - m_top_lep
+  - m_ttbar
+  - down_jet_mass
+ 
+Building ML observable:
+```
+ python3 scripts/build_ml_observable.py \
+    --config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+    --features outputs/ml_superdataset/features_v2/reco_sm/features_sm_reco_higgs_rest_chunk1_79.csv \
+    --model outputs/ml_superdataset/model_v2/lD_auxiliary/full/catboost/electron/cpv_catboost.cbm \
+    --lepton-flavor electron \
+    --output-tag sm \
+    --version v2
+```
+
+Output: `outputs/ml_superdataset/ml_observable_v2/lD_auxiliary/full/catboost`
+
+Calculate fisher information:
+```
+python3 scripts/evaluate_fisher.py \
+  --template outputs/ml_superdataset/ml_observable_v2/lD_auxiliary/full/catboost/template_test_electron_reco_cpv_bins.csv \
+  --sm-template outputs/ml_superdataset/ml_observable_v2/lD_auxiliary/full/catboost/template_test_electron_reco_sm_bins.csv \
+  --luminosity-scale 8000
+```
+
+Fisher information:
+- electron: 1.17279
+- muon: 1.22341
+
+
+#### 2.8.3 Update the lD_auxiliary minimal model (minimal_2)
+From the 2.8.1's result, we see the slight improvement on fisher information, so we try improve more by modifying lD_auxiliary minimal model. Now we add `m_H` to the minimal model
+Modified `auxiliary:` under `lD_auxiliary:` in `configs/analysis_ml_superdataset_lr_catboost_v2.yaml`, to contain include only:
+- auxiliary
+  - w_assignment_likelihood_selected
+  - final_selection_score
+  - m_H
+  - m_ttbar
+  - down_jet_mass
+
+Training Input:
+```
+python3 scripts/train_cpv_model.py \
+        --config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+        --features outputs/ml_superdataset/features_v2/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+        --version v2 \
+        --feature-set lD_auxiliary \
+        --out-dir outputs/ml_superdataset/model_v2/lD_auxiliary/minimal_2/catboost
+```
+
+Building ML observable:
+```
+ python3 scripts/build_ml_observable.py \
+    --config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+    --features outputs/ml_superdataset/features_v2/reco_sm/features_sm_reco_higgs_rest_chunk1_79.csv \
+    --model outputs/ml_superdataset/model_v2/lD_auxiliary/minimal/catboost/electron/cpv_catboost.cbm \
+    --lepton-flavor electron \
+    --output-tag sm \
+    --version v2
+```
+
+Output: `outputs/ml_superdataset/ml_observable_v2/lD_auxiliary/minimal/catboost`
+
+Calculate fisher information:
+```
+python3 scripts/evaluate_fisher.py \
+  --template outputs/ml_superdataset/ml_observable_v2/lD_auxiliary/minimal/catboost/template_test_electron_reco_cpv_bins.csv \
+  --sm-template outputs/ml_superdataset/ml_observable_v2/lD_auxiliary/minimal/catboost/template_test_electron_reco_sm_bins.csv \
+  --luminosity-scale 8000
+```
+
+Fisher information:
+- electron: 1.23386
+- muon: 1.35247
+
+
+
+#### 2.8.4 Guide to lD_auxiliary pipeline
+1. Modify `configs/analysis_ml_superdataset_lr_catboost_v2.yaml` accordingly
+
+2. Train the model using the modified config file
+
+Training Input for both full and minimal:
+```
+python3 scripts/train_cpv_model.py \
+        --config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+        --features outputs/ml_superdataset/features_v2/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+        --version v2 \
+        --feature-set lD_auxiliary \
+        --out-dir outputs/ml_superdataset/model_v2/lD_auxiliary/full/catboost
+```
+
+3. Run script `./scripts/run_lD_auxiliary_pipeline.sh full` or `./scripts/run_lD_auxiliary_pipeline.sh minimal`
+
+It will:
+- build ML observable for both electron/muon, sm/cpv
+- evaluate fisher info for both electron/muon
+- output in `outputs/ml_superdataset/ml_observable_v2/lD_auxiliary/full/catboost` or `outputs/ml_superdataset/ml_observable_v2/lD_auxiliary/minimal/catboost`
+
+#### 2.8.5 Fisher Information Comparison (lD, lD_auxiliary)
+Common for all:
+- frame: `higgs_rest`
+- version: `v2`
+
+| Observable | Lepton category | ML model | feature | min/full | N reco | I reco |
+|------------|-----------------|----------|---------|----------|--------|--------|
+| O_ML | electron | catboost | lD | -- |  | 1.15657 |
+| O_ML | muon | catboost | lD | -- |  | 1.12598 |
+| O_ML | electron + muon | catboost | lD | -- |  | 2.28255 |
+| O_ML | electron | catboost | lD_auxiliary | minimal_1 |  | 1.23386 |
+| O_ML | muon | catboost | lD_auxiliary | minimal_1 |  | 1.35247 |
+| O_ML | electron + muon | catboost | lD_auxiliary | minimal_1 |  | 2.58633 |
+| O_ML | electron | catboost | lD_auxiliary | minimal_2 |  | 1.31001 |
+| O_ML | muon | catboost | lD_auxiliary | minimal_2 |  | 1.30644 |
+| O_ML | electron + muon | catboost | lD_auxiliary | minimal_2 |  | 2.61645 |
+| O_ML | electron | catboost | lD_auxiliary | full |  | 1.17279 |
+| O_ML | muon | catboost | lD_auxiliary | full |  | 1.22341 |
+| O_ML | electron + muon | catboost | lD_auxiliary | full |  | 2.3962 |
+
+
+## 3. W-daughter representation and assignment study (Ch. 5.3)
+### 3.1 Add second_w_daughter features (minimal_w2)
+
+Modify `configs/analysis_ml_superdataset_lr_catboost_v2.yaml` and add `second_w_daughter` in features. (Use catboost, v2, lD_auxiliary minimal_2 model for study for this.)
+
+Added following in `configs/analysis_ml_superdataset_lr_catboost_v2.yaml` features section:
+- second_w_daughter:
+  - E
+  - pt
+  - theta
+  - phi
+
+Then, updated `scripts/build_ml_observable.py` and `scripts/train_cpv_model.py` in order to deal with the name mismatch (fallback dynamic resolution for second_w_daughter_* features).
+
+Input (train model):
+```
+python3 scripts/train_cpv_model.py \
+  --config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+  --features outputs/ml_superdataset/features_v2/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+  --version v2 \
+  --feature-set lD_auxiliary \
+  --out-dir outputs/ml_superdataset/model_v2/lD_auxiliary/minimal_w2/catboost
+```
+
+Outputs are in: `outputs/ml_superdataset/model_v2/lD_auxiliary/minimal_w2`
+
+Then run `./scripts/run_lD_auxiliary_pipeline.sh minimal_w2` to create observable and evaluate fisher.
+
+### 3.2 Fisher information comparison
+| Observable | Lepton category | ML model | feature | min/full | N reco | I reco |
+|------------|-----------------|----------|---------|----------|--------|--------|
+| O_ML | electron | catboost | lD_auxiliary | minimal_1 |  | 1.23386 |
+| O_ML | muon | catboost | lD_auxiliary | minimal_1 |  | 1.35247 |
+| O_ML | electron + muon | catboost | lD_auxiliary | minimal_1 |  | 2.58633 |
+| O_ML | electron | catboost | lD_auxiliary | minimal_2 |  | 1.31001 |
+| O_ML | muon | catboost | lD_auxiliary | minimal_2 |  | 1.30644 |
+| O_ML | electron + muon | catboost | lD_auxiliary | minimal_2 |  | 2.61645 |
+| O_ML | electron | catboost | lD_auxiliary | minimal_w2 |  | 1.4228 |
+| O_ML | muon | catboost | lD_auxiliary | minimal_w2 |  | 1.46083 |
+| O_ML | electron + muon | catboost | lD_auxiliary | minimal_w2 |  | 2.88363 |
+
+
+## 4. Adding the fitted neutrino (Ch. 5.4)
+### 4.1 Add neutrino features (minimal_nufit)
+
+Modify `configs/analysis_ml_superdataset_lr_catboost_v2.yaml` and add `neutrino` in features. (Use catboost, v2, lD_auxiliary minimal_w2 model for study for this.)
+- There IS `second_w_daughter` kinematics features in this model.
+
+Added following in `configs/analysis_ml_superdataset_lr_catboost_v2.yaml` features section:
+- neutrino:
+  - E
+  - pt
+  - theta
+  - phi
+
+Input (train model):
+```
+python3 scripts/train_cpv_model.py \
+  --config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+  --features outputs/ml_superdataset/features_v2/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+  --version v2 \
+  --feature-set lD_auxiliary \
+  --out-dir outputs/ml_superdataset/model_v2/lD_auxiliary/minimal_nufit/catboost
+```
+
+Outputs are in: `outputs/ml_superdataset/model_v2/lD_auxiliary/minimal_nufit`
+
+Then run `./scripts/run_lD_auxiliary_pipeline.sh minimal_nufit` to create observable and evaluate fisher.
+
+### 4.2 Fisher information comparison
+| Observable | Lepton category | ML model | feature | min/full | N reco | I reco |
+|------------|-----------------|----------|---------|----------|--------|--------|
+| O_ML | electron | catboost | lD_auxiliary | minimal_2 |  | 1.31001 |
+| O_ML | muon | catboost | lD_auxiliary | minimal_2 |  | 1.30644 |
+| O_ML | electron + muon | catboost | lD_auxiliary | minimal_2 |  | 2.61645 |
+| O_ML | electron | catboost | lD_auxiliary | minimal_w2 |  | 1.19654 |
+| O_ML | muon | catboost | lD_auxiliary | minimal_w2 |  | 1.28715 |
+| O_ML | electron + muon | catboost | lD_auxiliary | minimal_w2 |  | 2.5743 |
+| O_ML | electron | catboost | lD_auxiliary | minimal_nufit |  | 3.00304 |
+| O_ML | muon | catboost | lD_auxiliary | minimal_nufit |  | 2.8863 |
+| O_ML | electron + muon | catboost | lD_auxiliary | minimal_nufit |  | 5.88934 |
+
+
+## 5. Optional studies (Ch. 5.5)
+### 5.1 Add W & b jets kinematic features into lD_auxiliary minimal_nufit model
+#### 5.1.1 Training and Build ML Observable with lD_auxiliary_wbjets model
+
+In `configs/analysis_ml_superdataset_lr_catboost_v2.yaml` feature part, added ` lD_auxiliary_wbjets` sets. This change adds kinematics (E, pt, theta, phi) of:
+- W decay products
+  - wjet_quark
+  - wjet_antiquark
+- Top-decay b/bbar object
+  - top_b
+  - antitop_bbar
+ 
+(Used lD_auxiliary, minimal_nufit model as the original and modified from it as above.)
+
+Input for training:
+```
+python3 scripts/train_cpv_model.py \
+        --config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+        --features outputs/ml_superdataset/features_v2/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+        --version v2 \
+        --feature-set lD_auxiliary_wbjets \
+        --out-dir outputs/ml_superdataset/model_v2/lD_auxiliary_wbjets/catboost
+```
+
+Input for building ML observable: `./scripts/run_lD_auxiliary_pipeline.sh wbjets` to create observable and evaluate fisher.
+
+#### 5.1.2 Fisher information comparison
+| Observable | Lepton category | ML model | feature | min/full | N reco | I reco |
+|------------|-----------------|----------|---------|----------|--------|--------|
+| O_ML | electron | catboost | lD_auxiliary | minimal_2 |  | 1.31001 |
+| O_ML | muon | catboost | lD_auxiliary | minimal_2 |  | 1.30644 |
+| O_ML | electron + muon | catboost | lD_auxiliary | minimal_2 |  | 2.61645 |
+| O_ML | electron | catboost | lD_auxiliary | minimal_w2 |  | 1.19654 |
+| O_ML | muon | catboost | lD_auxiliary | minimal_w2 |  | 1.28715 |
+| O_ML | electron + muon | catboost | lD_auxiliary | minimal_w2 |  | 2.5743 |
+| O_ML | electron | catboost | lD_auxiliary | minimal_nufit |  | 3.00304 |
+| O_ML | muon | catboost | lD_auxiliary | minimal_nufit |  | 2.8863 |
+| O_ML | electron + muon | catboost | lD_auxiliary | minimal_nufit |  | 5.88934 |
+| O_ML | electron | catboost | lD_auxiliary_wbjets | -- |  | 3.81795 |
+| O_ML | muon | catboost | lD_auxiliary_wbjets | -- |  | 4.10482 |
+| O_ML | electron + muon | catboost | lD_auxiliary_wbjets | -- |  | 7.92277 |
+
+
+### 5.2 Try with lab frame
+#### 5.2.1 Produce features for lab frame
+Crated `configs/analysis_ml_superdataset_lr_catboost_v2_lab.yaml`, which is a copy from the yaml file (lD_auxiliary_wbjets model), changed frame to `lab`.
+
+Input to create features:
+```
+ python3 condor/export_feature/make_arguments_v2.py \
+  --config configs/analysis_ml_superdataset_lr_catboost_v2_lab.yaml \
+  --chunks 1-79 \
+  --component interference \
+  --level reco
+
+condor_submit condor/export_feature/submit_export_features_v2.sub
+```
+
+Input to merge chunks:
+```
+python3 scripts/merge_feature_chunks.py \
+    --version v2 \
+    --model cpv \
+    --level reco \
+    --frame lab \
+    --chunks 1-79 
+```
+
+Outputs for are in `outputs/ml_superdataset/features_v2`. Example output: `reco_cpv/features_reco_lab_chunk1.csv`.
+
+#### 5.2.2 Training and Building ML Observable
+
+Input for training:
+```
+python3 scripts/train_cpv_model.py \
+  --config configs/analysis_ml_superdataset_lr_catboost_v2_lab.yaml \
+  --features outputs/ml_superdataset/features_v2/reco_cpv/features_reco_lab_chunk1_79.csv \
+  --version v2 \
+  --feature-set lD_auxiliary_wbjets \
+  --out-dir outputs/ml_superdataset/model_v2_lab/lD_auxiliary_wbjets/catboost
+```
+
+Input for building ML observable: `./scripts/run_lD_auxiliary_pipeline.sh wbjets lab` to create observable and evaluate fisher.
+
+Outputs are in `outputs/ml_superdataset/ml_observable_v2_lab/lD_auxiliary_wbjets/catboost`.
+
+#### 5.2.3 Fisher information comparison
+| Observable | Lepton category | ML model | feature | frame | N reco | I reco |
+|------------|-----------------|----------|---------|----------|--------|--------|
+| O_ML | electron | catboost | lD_auxiliary_wbjets | higgs_rest |  | 3.81795 |
+| O_ML | muon | catboost | lD_auxiliary_wbjets | higgs_rest |  | 4.10482 |
+| O_ML | electron + muon | catboost | lD_auxiliary_wbjets | higgs_rest |  | 7.92277 |
+| O_ML | electron | catboost | lD_auxiliary_wbjets | lab |  | 3.15559 |
+| O_ML | muon | catboost | lD_auxiliary_wbjets | lab |  | 2.45449 |
+| O_ML | electron + muon | catboost | lD_auxiliary_wbjets | lab |  | 5.61008 |
+
+
+
+## 6. Finding the Best ML Model
+### 6.1 Parameter Tuning with the Best Model (lD_auxiliary_wbjets)
+#### 6.1.1 Parameter Tuning
+Using the model `lD_auxiliary_wbjets`, tune parameter to improve the fisher.
+
+Change parameters in `configs/analysis_ml_superdataset_lr_catboost_v2.yaml`.
+
+Input for model training:
+```
+python3 scripts/train_cpv_model.py \
+  --config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+  --features outputs/ml_superdataset/features_v2/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+  --version v2 \
+  --tag iter1000_d7_lr005_es50 \
+  --feature-set lD_auxiliary_wbjets \
+  --out-dir outputs/ml_superdataset/model_v2/lD_auxiliary_wbjets/catboost
+```
+
+Build ML observable and evaluate fisher information:
+```
+./scripts/run_lD_auxiliary_pipeline.sh wbjets higgs_rest iter1000_d7_lr005_es50
+```
+
+#### 6.1.2 Parameter Tuning & Fisher Information Summary Table
+| Trial | ML model | feature | iterations | max_depth | learning_rate | random_seed | early_stopping_rounds | I_reco (electron) | I_reco (muon) |
+|-------|----------|---------|------------|-----------|---------------|-------------|-----------------------|-------------------|---------------|
+| 1 | catboost | lD_auxiliary_wbjets| 200 | 6 | 0.05 | 42 | -- | 3.81794 | 4.10482 |
+| 2 | catboost | lD_auxiliary_wbjets| 300 | 6 | 0.05 | 42 | -- |  |  |
+| 3 | catboost | lD_auxiliary_wbjets| 500 | 6 | 0.05 | 42 | -- |  |  |
+| 4 | catboost | lD_auxiliary_wbjets| 500 | 6 | 0.05 | 42 | 50 | 4.63103 | 4.89806 |
+| 5 | catboost | lD_auxiliary_wbjets| 700 | 6 | 0.05 | 42 | 50 | 4.71095 | 4.99734 |
+| 6 | catboost | lD_auxiliary_wbjets| 1000 | 5 | 0.05 | 42 | 50 | 4.53046 | 4.59674 |
+| 7 | catboost | lD_auxiliary_wbjets| 1000 | 6 | 0.05 | 42 | 50 | 4.82400 | 4.99734 |
+| 8 | catboost | lD_auxiliary_wbjets| 1000 | 7 | 0.05 | 42 | 50 | 5.04906 | 5.33151 |
+
+
+### 6.2 Add lepton kinematic features (and lepton_charge) into lD_auxiliary_wbjets model
+#### 6.2.1 Training and Build ML Observable with lD_auxiliary_wbjets_lepton model
+
+In `configs/analysis_ml_superdataset_lr_catboost_v2.yaml` feature part, added ` lD_auxiliary_wbjets_lepton` sets. This change adds:
+- lepton
+  - E
+  - pt
+  - theta
+  - phi
+- lepton_charge (in auxiliary section)
+
+(Used lD_auxiliary_wbjets model as the original and modified from it as above.)
+
+Input for training:
+```
+python3 scripts/train_cpv_model.py \
+        --config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+        --features outputs/ml_superdataset/features_v2/reco_cpv/features_reco_higgs_rest_chunk1_79.csv \
+        --version v2 \
+        --tag iter1000_d7_lr005_es50 \
+        --feature-set lD_auxiliary_wbjets_lepton \
+        --out-dir outputs/ml_superdataset/model_v2/lD_auxiliary_wbjets_lepton/catboost
+```
+
+Input for building ML observable and evaluate fisher information: 
+```
+./scripts/run_lD_auxiliary_pipeline.sh wbjets_lepton higgs_rest iter1000_d7_lr005_es50
+```
+
+#### 6.2.2 Fisher Information Comparison
+| Observable | Lepton category | ML model | feature | parameter | N reco | I reco |
+|------------|-----------------|----------|---------|-----------|--------|--------|
+| O_ML | electron | catboost | lD_auxiliary_wbjets | iter1000_d7_lr005_es50 |  | 5.04906 |
+| O_ML | muon | catboost | lD_auxiliary_wbjets | iter1000_d7_lr005_es50 |  | 5.33151 |
+| O_ML | electron + muon | catboost | lD_auxiliary_wbjets | iter1000_d7_lr005_es50 |  | 10.38057 |
+| O_ML | electron | catboost | lD_auxiliary_wbjets_lepton | iter1000_d7_lr005_es50 |  | 6.24496 |
+| O_ML | muon | catboost | lD_auxiliary_wbjets_lepton | iter1000_d7_lr005_es50 |  | 6.36106 |
+| O_ML | electron + muon | catboost | lD_auxiliary_wbjets_lepton | iter1000_d7_lr005_es50 |  | 12.60602 |
 
 

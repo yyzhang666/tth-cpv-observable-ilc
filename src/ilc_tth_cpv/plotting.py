@@ -50,7 +50,9 @@ def plot_signed_histogram(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
-    ax.grid(True, alpha=0.25)
+    #ax.grid(True, alpha=0.25)
+    ax.set_xlim(edges[0], edges[-1])
+    ax.tick_params(direction="in", top=True, right=True)
     ax.legend(frameon=False)
     fig.tight_layout()
     fig.savefig(out_path, dpi=150)

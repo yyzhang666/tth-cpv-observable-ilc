@@ -1,5 +1,5 @@
 # =============================================================================
-# analysis_ml_superdataset_lr_v0.yaml — O_ML baseline, pure LR helicity.
+# analysis_ml_superdataset_lr_catboost_v2.yaml — O_ML baseline, pure LR helicity.
 #
 # This file freezes everything a single baseline run needs. Do not edit
 # conventions here without updating docs/PHYSICS_CONVENTIONS.md.
@@ -20,7 +20,7 @@ samples:
 
   # Generator-level normalization values
   sm_cross_section_fb: 2.96055           # Total sm signal cross-section
-  cpv_cross_section_fb: 0.395666999328   # Total CPV signal cross-section
+  cross_section_fb: 0.395666999328   # Total CPV signal cross-section
   n_chunks: 79                       # Total processed chunks
   events_per_chunk: 12500            # Generator events per sidecar chunk
 
@@ -45,7 +45,7 @@ observable:
   object_b: lepton
   basis: lab_axes                # production_plane is reserved for Ma2018 sign observables
   frames: [lab, higgs_rest, ttbar_rest]
-  default_frame: higgs_rest      # strongest O_W frame in the theory study
+  default_frame: lab    
   n_bins: 20
   range: [-1.0, 1.0]
 
@@ -55,42 +55,123 @@ features:
   sets:
     lD:
       objects:
-        lepton:
+        top_side_fermion:
           - E
           - pt
           - theta
           - phi
 
-        down_type_daughter:
+        anti_top_side_fermion:
           - E
+          - pt
           - theta
           - phi
-          - mass
 
-      auxiliary: []
+        second_w_daughter:
+          - E
+          - pt
+          - theta
+          - phi
+
+      auxiliary: 
+        - down_jet_mass
+      
 
     lD_auxiliary:
       objects:
-        lepton:
+        top_side_fermion:
           - E
           - pt
           - theta
           - phi
 
-        down_type_daughter:
+        anti_top_side_fermion:
           - E
+          - pt
           - theta
           - phi
-          - mass
+
+        # W-daughter representation and assignmnet study
+        #second_w_daughter:
+        #  - E
+        #  - pt
+        #  - theta
+        #  - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E 
+          - pt
+          - theta
+          - phi
 
       auxiliary:
         - w_assignment_likelihood_selected
         - final_selection_score
-        - m_W_had
-        - m_top_had
-        - m_top_lep
+        #- m_W_had
+        #- m_top_had
+        #- m_top_lep
         - m_H
         - m_ttbar
+        - down_jet_mass
+
+
+    lD_auxiliary_wbjets:
+      objects:
+        top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        anti_top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E 
+          - pt
+          - theta
+          - phi
+
+        # W decay products 1
+        wjet_quark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 2
+        wjet_antiquark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Top-decay b/bbar object
+        top_b:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # antitop-decay bbar object
+        antitop_bbar:
+          - E
+          - pt
+          - theta
+          - phi
+
+      auxiliary:
+        - w_assignment_likelihood_selected
+        - final_selection_score
+        - m_H
+        - m_ttbar
+        - down_jet_mass
+
 
 training:
   lepton_flavors:
@@ -109,10 +190,10 @@ split:
   seed: 20260720
 
 model:
-  type: xgboost               # ships with the key4hep cvmfs stack; catboost optional
+  type: catboost               # ships with the key4hep cvmfs stack; catboost optional
   params:
-    n_estimators: 200         # try 150
-    max_depth: 6              # try 3, 4, 5...
+    iterations: 200            # try 150
+    max_depth: 6               # try 3, 4, 5...
     learning_rate: 0.05        # try 0.05~0.1 
     random_seed: 42 
     #early_stopping_rounds: 20

@@ -19,6 +19,7 @@ samples:
   sm_reco_sample: tth_sm_reco_elpr
 
   # Generator-level normalization values
+  sm_cross_section_fb: 2.96055           # Total sm signal cross-section
   cross_section_fb: 0.395666999328   # Total CPV signal cross-section
   n_chunks: 79                       # Total processed chunks
   events_per_chunk: 12500            # Generator events per sidecar chunk

@@ -22,6 +22,7 @@ import datetime
 import json
 import sys
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.metrics import roc_curve, auc, precision_score
@@ -63,17 +64,25 @@ def feature_columns_from_config(cfg, feature_set_name: str):
 
 
 def resolve_feature_value(row, feature_name: str) -> float:
-    """Resolve one configured feature for one event."""
+    """Extract feature value using direct lookup with dynamic fallback resolution
+    for derived features (w_assignment_likelihood_selected, down_type_daughter_*, second_w_daughter_*).
+    """
+
+    # Try direct columl lookup first
+    fval = to_float(row.get(feature_name))
+    if math.isfinite(fval):
+        return fval
 
     # Decide whther the selected down-type jet corresponds to wjet_quark or wjet_antiquark
     # then read the requested variable from that object
 
-    idx_W_down_candidate = float(row.get("idx_W_down_candidate"))
-    idx_W_quark          = float(row.get("idx_W_quark"))
-    idx_W_antiquark      = float(row.get("idx_W_antiquark"))
-
+    # Candiate 1 (Down-type daughter jet)
     if feature_name.startswith("down_type_daughter_"):
         variable = feature_name.removeprefix("down_type_daughter_")
+
+        idx_W_down_candidate = to_float(row.get("idx_W_down_candidate"))
+        idx_W_quark          = to_float(row.get("idx_W_quark"))
+        idx_W_antiquark      = to_float(row.get("idx_W_antiquark"))
     
         if idx_W_down_candidate not in (None, -1.0):
             if idx_W_down_candidate == idx_W_quark:
@@ -90,11 +99,65 @@ def resolve_feature_value(row, feature_name: str) -> float:
         if selected_prefix is None:
             return float("nan")
 
-        return to_float(row[f"{selected_prefix}_{variable}"])
+        return to_float(row.get(f"{selected_prefix}_{variable}"))
+
+    # Candidate 2 (Second W daugher jet - opposite for Candidate 1)
+    if feature_name.startswith("second_w_daughter_"):
+        variable = feature_name.removeprefix("second_w_daughter_")
+
+        # Get the W-jet down type candidate
+        idx_W_down_candidate = to_float(row.get("idx_W_down_candidate"))
+
+        idx_W_quark     = to_float(row.get("idx_W_quark"))
+        idx_W_antiquark = to_float(row.get("idx_W_antiquark"))
+
+        if not (math.isfinite(idx_W_down_candidate) and math.isfinite(idx_W_quark) and math.isfinite(idx_W_antiquark)):
+            return float("nan")
+
+        if idx_W_down_candidate == idx_W_quark:
+            # This means that candidate 1 was wjet_quark, so the candidate 2 is antiquark.
+            prefix = "wjet_antiquark"
+        elif idx_W_down_candidate == idx_W_antiquark:
+            prefix = "wjet_quark"
+        else:
+            return float("nan")
+
+        # Calculate pT from E, theta, mass if requested
+        if variable == "pt":
+            E     = to_float(row.get(f"{prefix}_E"))
+            theta = to_float(row.get(f"{prefix}_theta"))
+            m     = to_float(row.get(f"{prefix}_mass"))
+
+            if not (math.isfinite(E) and math.isfinite(theta)):
+                return float("nan")
+
+            m_val = m if math.isfinite(m) else 0.0
+            p = math.sqrt(max(0.0, E**2 - m_val**2))
+            return p * math.sin(theta)
+
+        return to_float(row.get(f"{prefix}_{variable}"))
+
+    # Dynamic resolution for neutrino* features
+    if feature_name.startswith("neutrino"):
+        
+        # 1. Try to read the column directly from the CSV
+        val = row.get(feature_name)
+        if val is not None:
+            parsed_val = to_float(val)
+            if math.isfinite(parsed_val):
+                return parsed_val
+
+        # 2. Safety fallback: calculate pt from E and theta if neutrino_pt is missing
+        if feature_name == "neutrino_pt":
+            E     = to_float(row.get("neutrino_E"))
+            theta = to_float(row.get("neutrino_theta"))
+            if math.isfinite(E) and math.isfinite(theta):
+                return E * math.sin(theta)
+
+        return float("nan")
 
 
     # Resolve w_assignment_likelihood_selected from L12/L21 preferene by the w_orientation_status
-    
     if feature_name == "w_assignment_likelihood_selected":
         preference = row.get("w_orientation_status")
         L12 = row.get("L12")
@@ -110,7 +173,7 @@ def resolve_feature_value(row, feature_name: str) -> float:
         if selected_L is None:
             return float("nan")
 
-        return float(selected_L)
+        return to_float(selected_L)
 
     return to_float(row.get(feature_name))
 
@@ -193,6 +256,18 @@ def main() -> int:
         "--feature-set",
         default=None,
         help="Named feature set from features.sets in the YAML config",
+    )
+    parser.add_argument(
+        "--version",
+        choices=("v0", "v1", "v2"),
+        default="v1",
+        help="Dataset/model version (v0, v1 or v2)",
+    )
+
+    parser.add_argument(
+        "--tag",
+        default=None,
+        help="Explicit folder tag for hyperparameter runs (e.g. trial1, depth_6, lr_005)",
     )
 
     parser.add_argument("--out-dir", default=None)
@@ -392,16 +467,21 @@ def main() -> int:
         
         print(f"[{lepton_flavor}] Test Precision: {test_precision:.4f}")
 
-        out_dir = (
-            Path(args.out_dir)
+        version_dir = "model" if args.version == "v1" else f"model_{args.version}"
+
+        base_out_dir = (
+            Path(args.out_dir) / lepton_flavor
             if args.out_dir
             else repo_root()
             / cfg["outputs"]["base_dir"]
-            / "model"
+            / version_dir
             / feature_set_name
             / model_type
             / lepton_flavor
         )
+
+        # Append tag only if provided by user
+        out_dir = base_out_dir / args.tag if args.tag else base_out_dir
         
 
         out_dir.mkdir(
@@ -425,8 +505,9 @@ def main() -> int:
         plt.xlabel("Boosting Iterations / Trees")
         plt.ylabel("Log Loss")
         plt.title(f"Training Loss Curve — {lepton_flavor}")
-        plt.legend()
-        plt.grid(True, linestyle="--", alpha=0.6)
+        plt.legend(frameon=False)
+        plt.tick_params(direction="in", top=True, right=True)
+        #plt.grid(True, linestyle="--", alpha=0.6)
         plt.tight_layout()
         plt.savefig(out_dir / "training_loss.png", dpi=300)
         plt.close()
@@ -456,8 +537,9 @@ def main() -> int:
         plt.xlabel("False Positive Rate")
         plt.ylabel("True Positive Rate")
         plt.title(f"ROC Curves — {lepton_flavor}")
-        plt.legend(loc="lower right")
-        plt.grid(True, linestyle="--", alpha=0.6)
+        plt.legend(loc="lower right", frameon=False)
+        plt.tick_params(direction="in", top=True, right=True)
+        #plt.grid(True, linestyle="--", alpha=0.6)
         plt.tight_layout()
         plt.savefig(out_dir / "roc_curve.png", dpi=300)
         plt.close()
@@ -472,6 +554,8 @@ def main() -> int:
         plt.yticks(range(len(indices)), [feature_cols[i] for i in indices])
         plt.xlabel("Feature Importance (Gain)")
         plt.title(f"Feature Importances — {lepton_flavor}")
+        plt.tick_params(axis="x", direction="in", top=True)
+        plt.tick_params(axis="y", left=False, right=False)
         plt.tight_layout()
         plt.savefig(out_dir / "feature_importance.png", dpi=300)
         plt.close()
