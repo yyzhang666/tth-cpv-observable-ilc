@@ -38,9 +38,10 @@ The full scientific programme: [docs/PROJECT_NOTE_FULL.md](docs/PROJECT_NOTE_FUL
   production final selection uses `FinalSelectionMode=logchi2_plus_flavor`
   with `FlavorWeight=0.3`, and all reco-level observables use that selected
   candidate.
-- The event-selection MVA and the background tables are prepared by the
-  supervisor in parallel; the interfaces here are frozen but currently
-  `enabled: false` ([docs/MVA_INTERFACE.md](docs/MVA_INTERFACE.md),
+- Event-selection MVA production remains a separate workstream.  This branch
+  consumes the frozen `eLpR` v0 background/SM-test/CPV-test event tables in
+  `data/event_csv/v0/` for observable optimization and diagnostics; it does
+  not duplicate the MVA-production repository ([docs/MVA_INTERFACE.md](docs/MVA_INTERFACE.md),
   [docs/BACKGROUND_INTERFACE.md](docs/BACKGROUND_INTERFACE.md)).
 - Everything blocking or ambiguous is tracked in
   [KNOWN_ISSUES.md](KNOWN_ISSUES.md). Read it before trusting any convention.
@@ -158,6 +159,13 @@ Fisher / likelihood               scripts/evaluate_fisher.py
 selection MVA + backgrounds       (interfaces frozen, deliveries pending)
 LCF polarisation combination      scripts/apply_polarization_weights.py
 ```
+
+The maintained event-table workflow is documented in
+[docs/OBSERVABLE_RESEARCH_WORKFLOW.md](docs/OBSERVABLE_RESEARCH_WORKFLOW.md).
+Its runnable entry points are separated into `scripts/workflows/`; one-off
+cross-checks and historical investigations belong in `scripts/diagnostics/`.
+The former `scripts/evaluate_event_csv_fisher.py` command remains a compatible
+wrapper, so the published v0 commands continue to run.
 
 ## Where things are
 

@@ -1,0 +1,47 @@
+schema_version: 1
+status: analysis-development
+physics_scope:
+  process: e+e- -> ttH, semileptonic, H -> bb
+  energy_gev: 550
+  luminosity_fb: 8000
+  polarization: eLpR
+
+event_csv_v0:
+  stage: reco test split after the baseline selection-MVA coverage floor
+  background: data/event_csv/v0/eLpR_backgroud_dataset_mva_v0.csv
+  sm: data/event_csv/v0/eLpR_sm_test_dataset_mva_v0.csv
+  cpv: data/event_csv/v0/eLpR_cpv_test_dataset_mva_v0.csv
+  q_sel:
+    column: q_sel
+    comparator: ">"
+    default_threshold: 0.954
+    background_coverage_floor: 0.954
+  weights:
+    column: weight_8ab
+    sm: positive expected yield
+    background: positive expected yield
+    cpv: signed interference derivative
+
+model_scores:
+  wbjets_lepton_v0: q_CPV_wbjets_lepton
+
+angles:
+  O_lnu: charge-ordered lepton-neutrino delta phi
+  O_lD: top-side minus anti-top-side down-type-fermion delta phi
+  O_W: oriented W-quark minus W-antiquark delta phi
+  O_jj_W: alias of O_W
+  O_b: charge-oriented top-b minus antitop-bbar delta phi
+  O_top: charge-oriented top minus antitop delta phi
+
+multiclass_dataset:
+  status: schema-ready; training policy for CPV must be selected explicitly
+  class_order: [background, sm, cpv]
+  stable_id_column: event_id
+  split_columns: [split_group, split]
+  context_columns: [process, helicity, category, lepton_flavor, q_sel]
+  weight_columns:
+    training_weight: nonnegative loss weight
+    template_weight: signed only for cpv; positive for sm/background
+  cpv_training_weight_policies: [unit, abs_template]
+  forbidden_training_weight: signed CPV interference weight
+  note: Current v0 signal files are test-only and are not a training sample.
