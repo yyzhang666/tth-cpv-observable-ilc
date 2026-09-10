@@ -22,7 +22,6 @@ import datetime
 import json
 import sys
 import numpy as np
-import math
 import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.metrics import roc_curve, auc, precision_score
@@ -30,152 +29,12 @@ from sklearn.metrics import roc_curve, auc, precision_score
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from ilc_tth_cpv.io import load_analysis_config, read_table, repo_root  # noqa: E402
+from ilc_tth_cpv.ml_features import (  # noqa: E402
+    feature_columns_from_config,
+    resolve_feature_value,
+    to_float,
+)
 from ilc_tth_cpv.validation import check_split_disjoint  # noqa: E402
-
-
-def to_float(value) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return float("nan")
-
-
-def feature_columns_from_config(cfg, feature_set_name: str):
-    """Expand one YAML feature set into an ordered list of feature names."""
-    features_cfg = cfg["features"]
-    feature_sets = features_cfg["sets"]
-
-    if feature_set_name not in feature_sets:
-        raise SystemExit(
-            f"Unknown feature set {feature_set_name!r}. "
-            f"Available: {list(feature_sets)}"
-        )
-
-    feature_cfg = feature_sets[feature_set_name]
-    feature_cols = []
-
-    for object_name, variables in feature_cfg.get("objects", {}).items():
-        for variable in variables:
-            feature_cols.append(f"{object_name}_{variable}")
-
-    feature_cols.extend(feature_cfg.get("auxiliary", []))
-
-    return feature_cols
-
-
-def resolve_feature_value(row, feature_name: str) -> float:
-    """Extract feature value using direct lookup with dynamic fallback resolution
-    for derived features (w_assignment_likelihood_selected, down_type_daughter_*, second_w_daughter_*).
-    """
-
-    # Try direct columl lookup first
-    fval = to_float(row.get(feature_name))
-    if math.isfinite(fval):
-        return fval
-
-    # Decide whther the selected down-type jet corresponds to wjet_quark or wjet_antiquark
-    # then read the requested variable from that object
-
-    # Candiate 1 (Down-type daughter jet)
-    if feature_name.startswith("down_type_daughter_"):
-        variable = feature_name.removeprefix("down_type_daughter_")
-
-        idx_W_down_candidate = to_float(row.get("idx_W_down_candidate"))
-        idx_W_quark          = to_float(row.get("idx_W_quark"))
-        idx_W_antiquark      = to_float(row.get("idx_W_antiquark"))
-    
-        if idx_W_down_candidate not in (None, -1.0):
-            if idx_W_down_candidate == idx_W_quark:
-                # Down-type candidate is w_jet_quark
-                selected_prefix = "wjet_quark"
-            elif idx_W_down_candidate == idx_W_antiquark:
-                # Down-type candidate is w_jet_antiquark
-                selected_prefix = "wjet_antiquark"
-            else:
-                selected_prefix = None
-        else:
-            selected_prefix = None
-
-        if selected_prefix is None:
-            return float("nan")
-
-        return to_float(row.get(f"{selected_prefix}_{variable}"))
-
-    # Candidate 2 (Second W daugher jet - opposite for Candidate 1)
-    if feature_name.startswith("second_w_daughter_"):
-        variable = feature_name.removeprefix("second_w_daughter_")
-
-        # Get the W-jet down type candidate
-        idx_W_down_candidate = to_float(row.get("idx_W_down_candidate"))
-
-        idx_W_quark     = to_float(row.get("idx_W_quark"))
-        idx_W_antiquark = to_float(row.get("idx_W_antiquark"))
-
-        if not (math.isfinite(idx_W_down_candidate) and math.isfinite(idx_W_quark) and math.isfinite(idx_W_antiquark)):
-            return float("nan")
-
-        if idx_W_down_candidate == idx_W_quark:
-            # This means that candidate 1 was wjet_quark, so the candidate 2 is antiquark.
-            prefix = "wjet_antiquark"
-        elif idx_W_down_candidate == idx_W_antiquark:
-            prefix = "wjet_quark"
-        else:
-            return float("nan")
-
-        # Calculate pT from E, theta, mass if requested
-        if variable == "pt":
-            E     = to_float(row.get(f"{prefix}_E"))
-            theta = to_float(row.get(f"{prefix}_theta"))
-            m     = to_float(row.get(f"{prefix}_mass"))
-
-            if not (math.isfinite(E) and math.isfinite(theta)):
-                return float("nan")
-
-            m_val = m if math.isfinite(m) else 0.0
-            p = math.sqrt(max(0.0, E**2 - m_val**2))
-            return p * math.sin(theta)
-
-        return to_float(row.get(f"{prefix}_{variable}"))
-
-    # Dynamic resolution for neutrino* features
-    if feature_name.startswith("neutrino"):
-        
-        # 1. Try to read the column directly from the CSV
-        val = row.get(feature_name)
-        if val is not None:
-            parsed_val = to_float(val)
-            if math.isfinite(parsed_val):
-                return parsed_val
-
-        # 2. Safety fallback: calculate pt from E and theta if neutrino_pt is missing
-        if feature_name == "neutrino_pt":
-            E     = to_float(row.get("neutrino_E"))
-            theta = to_float(row.get("neutrino_theta"))
-            if math.isfinite(E) and math.isfinite(theta):
-                return E * math.sin(theta)
-
-        return float("nan")
-
-
-    # Resolve w_assignment_likelihood_selected from L12/L21 preferene by the w_orientation_status
-    if feature_name == "w_assignment_likelihood_selected":
-        preference = row.get("w_orientation_status")
-        L12 = row.get("L12")
-        L21 = row.get("L21")
-
-        if preference == "L12_preferred":
-            selected_L = L12
-        elif preference == "L21_preferred":
-            selected_L = L21
-        else:
-            selected_L = None
-
-        if selected_L is None:
-            return float("nan")
-
-        return to_float(selected_L)
-
-    return to_float(row.get(feature_name))
 
 
 def prepare(
@@ -291,10 +150,13 @@ def main() -> int:
         else features_cfg["default_set"]
     )
 
-    feature_cols = feature_columns_from_config(
-        cfg,
-        feature_set_name,
-    )
+    try:
+        feature_cols = feature_columns_from_config(
+            cfg,
+            feature_set_name,
+        )
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
     print(f"feature set: {feature_set_name}")
     print(f"features ({len(feature_cols)}):")

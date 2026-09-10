@@ -8,6 +8,7 @@ physics_scope:
 
 event_csv_v0:
   stage: reco test split after the baseline selection-MVA coverage floor
+  default_split: test
   background: data/event_csv/v0/eLpR_backgroud_dataset_mva_v0.csv
   sm: data/event_csv/v0/eLpR_sm_test_dataset_mva_v0.csv
   cpv: data/event_csv/v0/eLpR_cpv_test_dataset_mva_v0.csv
@@ -18,6 +19,7 @@ event_csv_v0:
     background_coverage_floor: 0.954
   weights:
     column: weight_8ab
+    test_projection: already projected so each role/flavor test subset represents 8 ab-1
     sm: positive expected yield
     background: positive expected yield
     cpv: signed interference derivative
@@ -34,14 +36,25 @@ angles:
   O_top: charge-oriented top minus antitop delta phi
 
 multiclass_dataset:
-  status: schema-ready; training policy for CPV must be selected explicitly
-  class_order: [background, sm, cpv]
+  status: cp-aware three-class schema; v0 inputs remain test-only
+  class_order:
+    - {target: -1, name: cpv_negative}
+    - {target: 0, name: neutral}
+    - {target: 1, name: cpv_positive}
+  neutral_modes:
+    sm: background is scored for Fisher but excluded from training
+    sm-plus-background: background joins SM in neutral training class
+  observable: q_threeclass = P(+1) - P(-1)
   stable_id_column: event_id
   split_columns: [split_group, split]
-  context_columns: [process, helicity, category, lepton_flavor, q_sel]
+  context_columns: [source_role, process, lepton_flavor, q_sel, training_include]
   weight_columns:
-    training_weight: nonnegative loss weight
-    template_weight: signed only for cpv; positive for sm/background
-  cpv_training_weight_policies: [unit, abs_template]
+    base_training_weight: nonnegative loss weight before train-derived class balancing
+    source_template_weight: input weight before an explicit test-split exposure projection
+    test_weight_scale: per-role/flavor test projection factor; one outside test
+    template_weight: signed CPV S1 or positive SM/background yield; never balanced
+  default_training_weights:
+    cpv: abs_template
+    sm_background: template
   forbidden_training_weight: signed CPV interference weight
-  note: Current v0 signal files are test-only and are not a training sample.
+  note: Current v0 signal files are test-only and can only exercise schema/inference guards.

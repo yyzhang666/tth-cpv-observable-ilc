@@ -25,6 +25,12 @@ def test_baseline_model_alias_is_separate_from_q_sel():
     assert MODULE.ML_MODEL_COLUMNS["wbjets_lepton_v0"] != "q_sel"
 
 
+def test_scored_background_event_id_is_a_valid_event_key():
+    assert MODULE.event_key(
+        {"event_id": "background:job-7:42"}, "background"
+    ) == ("background:job-7:42",)
+
+
 def write_rows(path: Path, rows: list[dict[str, str]]) -> None:
     with path.open("w", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=list(rows[0]))

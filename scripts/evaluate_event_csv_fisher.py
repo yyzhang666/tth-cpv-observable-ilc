@@ -16,6 +16,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from ilc_tth_cpv.event_workflow import (  # noqa: E402,F401
     ML_MODEL_COLUMNS,
+    event_key,
     main,
     read_and_select,
     strict_q_sel_pass,

@@ -68,27 +68,77 @@ table, summary, input/output SHA256 values, event accounting, runtime, and Git
 state.  A non-finite observable removes only that event from that observable;
 it does not create a file-level veto.
 
-## Future three-class input
+## CP-aware three-class observable
 
-This command prepares a uniform table but deliberately does not train:
+The three targets are always `CPV- / neutral / CPV+`.  The two controlled
+schemes differ only in the neutral training population:
+
+- `--neutral-class sm`: SM is neutral; background is retained for test scoring
+  and Fisher but has `training_include=0`.
+- `--neutral-class sm-plus-background`: SM and background share target 0 and
+  both participate in training.  Their separate `source_role` values survive
+  so the Fisher denominator still uses distinct S0 and B templates.
+
+Prepare either scheme from three normalized event tables:
 
 ```bash
 python3 scripts/workflows/prepare_multiclass_dataset.py \
   --background-csv /path/full_background.csv \
   --sm-csv /path/full_sm.csv --cpv-csv /path/full_cpv.csv \
-  --feature-column q_CPV_wbjets_lepton \
-  --feature-column O_lnu \
+  --neutral-class sm \
+  --analysis-config configs/analysis_ml_superdataset_lr_catboost_v2.yaml \
+  --feature-set lD_auxiliary_wbjets_lepton \
   --q-sel-threshold 0.954 \
-  --cpv-training-weight-policy unit \
-  --output outputs/multiclass/v1/events.csv
+  --test-weights-already-8ab \
+  --output outputs/threeclass/sm/events.csv
 ```
 
-The output has stable role-prefixed event IDs, deterministic
-train/validation/test assignments, a nonnegative `training_weight`, and a
-separate `template_weight`.  CPV `template_weight` may be signed for physics
-templates, but signed interference is forbidden as a classification-loss
-weight.  The bundled v0 signal files are test-only; their use is blocked by
-default and `--allow-test-only-v0` exists only for a schema smoke test.
+For the second scheme, run the same command with
+`--neutral-class sm-plus-background` and write to (for example)
+`outputs/threeclass/sm_plus_background/events.csv`.  Keep every other option,
+input, feature, seed, and test event identical for a controlled comparison.
+The builder preserves authoritative splits or hashes `split_group`/job/chunk;
+it never splits individual rows independently.  It uses absolute CPV template
+weights and nonnegative SM/background template weights for training, while
+the signed CPV `template_weight` remains untouched.
+
+`--test-weights-already-8ab` is an explicit assertion that every role/flavor
+test subset already represents 8 ab-1; it is not inferred from the column
+name.  If the input weights instead represent all splits together, replace
+that flag with six explicit factors, for example
+`--test-weight-scale sm:electron=6.67`, repeated for background/SM/CPV and
+electron/muon.  The builder preserves both `source_template_weight` and the
+factor, and the trainer refuses an unrecorded projection.  This prevents a
+15% held-out split from being reported as the full 8 ab-1 exposure.
+
+Train and score both lepton channels:
+
+```bash
+python3 scripts/workflows/train_threeclass_model.py \
+  --dataset outputs/threeclass/sm/events.csv \
+  --out-dir outputs/threeclass/sm/model --plot
+```
+
+The trainer equalizes total train weight among the three target classes within
+each lepton flavor, without changing the SM:background mixture inside neutral.
+It writes `scores/{background,sm,cpv}_scores.csv`; the observable is
+`q_threeclass = p_plus - p_minus`.  Evaluate it with the unchanged Fisher
+workflow:
+
+```bash
+python3 scripts/workflows/run_event_fisher.py \
+  --background-csv outputs/threeclass/sm/model/scores/background_scores.csv \
+  --sm-csv outputs/threeclass/sm/model/scores/sm_scores.csv \
+  --cpv-csv outputs/threeclass/sm/model/scores/cpv_scores.csv \
+  --ml-score-column q_threeclass --bins 20 --range -1 1 \
+  --q-sel-threshold 0.954 --plot \
+  --output-dir outputs/threeclass/sm/fisher
+```
+
+The bundled v0 signal CSVs contain only the old test split.  They may exercise
+the builder with `--allow-test-only-v0`, but the trainer always rejects that
+output as non-trainable.  The implementation contract and focused test record
+are in `docs/THREECLASS_WORKFLOW_VALIDATION_20260910.md`.
 
 ## Directory policy
 

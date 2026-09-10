@@ -77,13 +77,13 @@ def strict_q_sel_pass(score: float, threshold: float) -> bool:
 
 
 def event_key(row: dict[str, str], role: str) -> tuple[str, ...]:
+    if row.get("event_id"):
+        return (row["event_id"],)
     if role == "background":
         try:
             return (row["job_key"], row["event_index"])
         except KeyError as exc:
             raise ValueError("background CSV requires job_key,event_index") from exc
-    if "event_id" in row:
-        return (row["event_id"],)
     try:
         return (row["chunk"], row["event_index"])
     except KeyError as exc:
