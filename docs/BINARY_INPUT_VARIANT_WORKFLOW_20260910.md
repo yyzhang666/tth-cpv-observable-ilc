@@ -37,7 +37,8 @@
   tth-cpv-observable-ilc-ozakinan-repro-20260907
 ```
 
-该副本应位于 `observable_workflow` 分支。新脚本、新配置和新输出全部位于这里。
+该副本当前本地工作分支为 `codex/observable-workflow-repro-20260907`，同步的远端目标为
+`observable_workflow`。新脚本、新配置和新输出全部位于这里。
 
 ### 3.2 永久只读的 Nana 冻结副本
 
@@ -336,7 +337,8 @@ git status --short --branch
 git branch --show-current
 ```
 
-要求：位于 `observable_workflow`，并确认没有会被覆盖的用户改动。
+要求：NAF 本地位于 `codex/observable-workflow-repro-20260907`，其提交基线与远端
+`observable_workflow` 一致，并确认没有会被覆盖的用户改动。
 
 ### Step 1：冻结 baseline schema
 
@@ -563,8 +565,7 @@ common_event_comparison.csv
 
 先阅读 NAF_WORKING_RULES.md、ILC_NAF_MARLIN_ANALYSIS_GUARDRAILS_COMPACT.md、相关 handoff 和 targeted mistake-log；这是会改变物理输入定义和正式 Fisher 比较的 STRICT 工作。用户禁止 Luna，规划、实现和复核全部使用 SOL/主代理完成。
 
-只在 /data/dust/user/zhangyuy/analysis/tth/yuyang_tth_observable/worktrees/tth-cpv-observable-ilc-ozakinan-repro-20260907 的 observable_workflow 分支新增文件和输出。Nana frozen archive 以及 /data/dust/user/zhangyuy/tth-cpv-observable-ilc 永久只读。source /data/dust/user/zhangyuy/analysis/tth/ZHH/setup.sh。
+只在 /data/dust/user/zhangyuy/analysis/tth/yuyang_tth_observable/worktrees/tth-cpv-observable-ilc-ozakinan-repro-20260907 的本地 codex/observable-workflow-repro-20260907 分支新增文件和输出，并同步到远端 observable_workflow。Nana frozen archive 以及 /data/dust/user/zhangyuy/tth-cpv-observable-ilc 永久只读。source /data/dust/user/zhangyuy/analysis/tth/ZHH/setup.sh。
 
 不要一开始跑全量。先完成 Step 0–2，并向我展示：源字段审计、精确 feature schemas、dry-run 路径、1000 行 smoke-test、事件键/权重不变性结果。得到确认后再跑 control 闭环，然后按 0→1→2→3…7 的顺序继续。不要修改旧脚本或覆盖旧结果。
 ```
-
