@@ -34,36 +34,59 @@ def names(event):
     return set(str(value) for value in event.getCollectionNames())
 
 
-def vector(value):
+def fixed_vector3(value, label):
     try:
-        return [float(value[index]) for index in range(value.size())]
-    except Exception:
-        try:
-            return [float(item) for item in value]
-        except Exception:
-            return []
+        return [float(value[index]) for index in range(3)]
+    except Exception as error:
+        raise RuntimeError(f"cannot read fixed three-vector {label} by index") from error
+
+
+def sized_vector(value, label):
+    try:
+        size = int(value.size())
+    except Exception as error:
+        raise RuntimeError(f"variable-length payload {label} has no valid size()") from error
+    if size < 0 or size > 100000:
+        raise RuntimeError(f"variable-length payload {label} has invalid size {size}")
+    try:
+        return [float(value[index]) for index in range(size)]
+    except Exception as error:
+        raise RuntimeError(f"cannot read variable-length payload {label} by index") from error
+
+
+def sized_objects(value, label):
+    try:
+        size = int(value.size())
+    except Exception as error:
+        raise RuntimeError(f"object vector {label} has no valid size()") from error
+    if size < 0 or size > 100000:
+        raise RuntimeError(f"object vector {label} has invalid size {size}")
+    try:
+        return [value[index] for index in range(size)]
+    except Exception as error:
+        raise RuntimeError(f"cannot read object vector {label} by index") from error
 
 
 def pfo_payload(pfo):
     payload = {
         "type": int(pfo.getType()),
         "energy": float(pfo.getEnergy()),
-        "momentum": vector(pfo.getMomentum()),
+        "momentum": fixed_vector3(pfo.getMomentum(), "momentum"),
         "mass": float(pfo.getMass()),
         "charge": float(pfo.getCharge()),
-        "covariance": vector(pfo.getCovMatrix()),
-        "n_particles": len(pfo.getParticles()),
-        "n_tracks": len(pfo.getTracks()),
-        "n_clusters": len(pfo.getClusters()),
+        "covariance": sized_vector(pfo.getCovMatrix(), "covariance"),
+        "n_particles": len(sized_objects(pfo.getParticles(), "particles")),
+        "n_tracks": len(sized_objects(pfo.getTracks(), "tracks")),
+        "n_clusters": len(sized_objects(pfo.getClusters(), "clusters")),
         "particle_ids": [],
     }
-    for pid in pfo.getParticleIDs():
+    for pid in sized_objects(pfo.getParticleIDs(), "particle_ids"):
         payload["particle_ids"].append(
             {
                 "algorithm_type": int(pid.getAlgorithmType()),
                 "pdg": int(pid.getPDG()),
                 "likelihood": float(pid.getLikelihood()),
-                "parameters": vector(pid.getParameters()),
+                "parameters": sized_vector(pid.getParameters(), "particle_id_parameters"),
             }
         )
     return payload

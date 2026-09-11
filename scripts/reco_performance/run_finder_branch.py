@@ -47,6 +47,36 @@ def runtime_environment(repo: Path) -> tuple[dict[str, str], dict]:
     return env, {"root_python_dir": root_python, "marlin_dll": marlin_dll, "loaded_library_hashes": libraries}
 
 
+def validate_finder_output(path: Path, expected_events: int, reader_factory=None) -> dict:
+    required = {"MCParticlesSkimmed", "PFOsWithoutOverlayCheated", "Isolep", "PFOsAfterIso"}
+    if reader_factory is None:
+        from pyLCIO import IOIMPL
+
+        reader_factory = lambda: IOIMPL.LCFactory.getInstance().createLCReader()
+    reader = reader_factory()
+    reader.open(str(path))
+    count = 0
+    try:
+        while True:
+            event = reader.readNextEvent()
+            if event is None:
+                break
+            names = {str(value) for value in event.getCollectionNames()}
+            missing = sorted(required - names)
+            if missing:
+                raise RuntimeError(f"Finder output event {count} missing collections: {', '.join(missing)}")
+            count += 1
+    finally:
+        reader.close()
+    if count != int(expected_events):
+        raise RuntimeError(f"Finder output event count {count} != requested {expected_events}")
+    return {"events": count, "required_collections": sorted(required)}
+
+
+def accepted_exit_134(returncode: int, explicitly_allowed: bool) -> bool:
+    return int(returncode) in (134, -6) and bool(explicitly_allowed)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--template", type=Path, required=True)
@@ -56,6 +86,7 @@ def main():
     parser.add_argument("--max-records", type=int, required=True)
     parser.add_argument("--skip-events", type=int, required=True)
     parser.add_argument("--allow-long-run", action="store_true")
+    parser.add_argument("--accept-validated-exit-134", action="store_true")
     parser.add_argument("--prepare-only", action="store_true")
     args = parser.parse_args()
     if args.max_records <= 0:
@@ -106,16 +137,24 @@ def main():
         return
     shell = 'source "$1" >/dev/null 2>&1; export PYTHONPATH="$2:${PYTHONPATH:-}"; exec Marlin "$3"'
     with log_path.open("xb") as log_stream:
-        subprocess.run(
+        result = subprocess.run(
             ["bash", "-lc", shell, "bash", str(SETUP), env["PYTHONPATH"], str(run_xml)],
-            check=True,
             cwd=run_dir,
             env=env,
             stdout=log_stream,
             stderr=subprocess.STDOUT,
         )
+    payload["marlin_exit_code"] = result.returncode
+    runtime_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    exit_134_allowed = accepted_exit_134(result.returncode, args.accept_validated_exit_134)
+    if result.returncode != 0 and not exit_134_allowed:
+        raise RuntimeError(f"Marlin failed with exit code {result.returncode}; artifacts retained")
     if not output.is_file():
         raise RuntimeError(f"Marlin returned without creating output: {output}")
+    validation = validate_finder_output(output, args.max_records)
+    payload["output_validation"] = validation
+    payload["accepted_exit_134"] = bool(exit_134_allowed)
+    runtime_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

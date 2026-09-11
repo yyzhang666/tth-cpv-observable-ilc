@@ -7,6 +7,8 @@ import copy
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,6 +22,8 @@ def load(name, path):
 
 builder = load("finder_builder", ROOT / "scripts/reco_performance/build_finder_steering.py")
 analysis = load("lepton_analysis", ROOT / "scripts/reco_performance/analyze_leptons.py")
+validator = load("lepton_validator", ROOT / "scripts/reco_performance/validate_lepton_branch.py")
+runner = load("finder_runner", ROOT / "scripts/reco_performance/run_finder_branch.py")
 
 
 def canonical(element):
@@ -115,3 +119,71 @@ def test_finder_runner_persists_combined_marlin_log():
     assert 'run_dir / "marlin.log"' in source
     assert "stderr=subprocess.STDOUT" in source
     assert '.open("xb")' in source
+
+
+class PointerLike:
+    def __init__(self, values, expose_size):
+        self.values = values
+        self.expose_size = expose_size
+
+    def __getitem__(self, index):
+        return self.values[index]
+
+    def __iter__(self):
+        raise AssertionError("generic iteration must never be attempted")
+
+    def size(self):
+        if not self.expose_size:
+            raise AttributeError("no size")
+        return len(self.values)
+
+
+def test_validator_reads_fixed_momentum_indices_without_iteration():
+    assert validator.fixed_vector3(PointerLike([1, 2, 3], False), "momentum") == [1.0, 2.0, 3.0]
+
+
+def test_validator_requires_size_for_variable_payloads():
+    assert validator.sized_vector(PointerLike([1, 2], True), "cov") == [1.0, 2.0]
+    with pytest.raises(RuntimeError, match="no valid size"):
+        validator.sized_vector(PointerLike([1, 2], False), "cov")
+
+
+class Event:
+    def __init__(self, collections):
+        self.collections = collections
+
+    def getCollectionNames(self):
+        return list(self.collections)
+
+
+class Reader:
+    def __init__(self, events):
+        self.events = iter(events)
+        self.closed = False
+
+    def open(self, _path):
+        return None
+
+    def readNextEvent(self):
+        return next(self.events, None)
+
+    def close(self):
+        self.closed = True
+
+
+def test_finder_output_validation_requires_exact_count_and_collections(tmp_path):
+    required = {"MCParticlesSkimmed", "PFOsWithoutOverlayCheated", "Isolep", "PFOsAfterIso"}
+    report = runner.validate_finder_output(tmp_path / "out.slcio", 2, lambda: Reader([Event(required), Event(required)]))
+    assert report["events"] == 2
+    with pytest.raises(RuntimeError, match="event count"):
+        runner.validate_finder_output(tmp_path / "out.slcio", 2, lambda: Reader([Event(required)]))
+    with pytest.raises(RuntimeError, match="missing collections"):
+        runner.validate_finder_output(tmp_path / "out.slcio", 1, lambda: Reader([Event(required - {"Isolep"})]))
+
+
+def test_exit_134_requires_explicit_validation_path():
+    assert not runner.accepted_exit_134(134, False)
+    assert not runner.accepted_exit_134(-6, False)
+    assert runner.accepted_exit_134(134, True)
+    assert runner.accepted_exit_134(-6, True)
+    assert not runner.accepted_exit_134(1, True)
