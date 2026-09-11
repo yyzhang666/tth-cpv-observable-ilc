@@ -1,0 +1,8 @@
+{
+  "legacy/count_hbb_ttbar_dilep_pass.py": {"sha256": "a25bda572f8e933c82547aec732f303f5c38c45ffb8df890d62e516a42a13f23", "source": "/data/dust/user/zhangyuy/analysis/tth/isolepton_check/count_hbb_ttbar_dilep_pass.py"},
+  "legacy/count_hbb_ttbar_had_iso_pass.py": {"sha256": "93ecaaf863890d73ce6741cc97946451904b3dc0cc7f254ac104a62a2374d7e2", "source": "/data/dust/user/zhangyuy/analysis/tth/isolepton_check/count_hbb_ttbar_had_iso_pass.py"},
+  "legacy/isolepton_eff_purity_v2077.py": {"sha256": "6b82297ed0b3218bd925f1c44b63ca0c20cb98c182223b080134633cc0cb7918", "source": "/data/dust/user/zhangyuy/analysis/tth/isolepton_check/isolepton_eff_purity_v2077.py"},
+  "legacy/isolepton_finder_eff_purity_v2077.py": {"sha256": "84f0a0440aab76ec8498f0474b5e6851b5251bbde20045cc2b3a1daa738c72b7", "source": "/data/dust/user/zhangyuy/analysis/tth/isolepton_check/isolepton_finder_eff_purity_v2077.py"},
+  "steering/reference/complete_reco_kinfit_ready.xml": {"sha256": "0eee147e1f5ece550e85cbd858d1af0ce1a28b3d1ebfd2f2f2ef82b7779c1db8", "source": "/data/dust/user/zhangyuy/analysis/workflow_scripts/complete_reco_kinfit_ready.xml"},
+  "steering/reference/lepton_reco.xml": {"sha256": "d220c365f8bde17df8d67fae8b629c596c1020ddd2900715c607df84d578bc6f", "source": "/data/dust/user/zhangyuy/analysis/tth/ZHH/scripts/lepton_reco.xml"}
+}

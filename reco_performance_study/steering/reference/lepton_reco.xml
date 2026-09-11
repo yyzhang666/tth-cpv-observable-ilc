@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<marlin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://ilcsoft.desy.de/marlin/marlin.xsd">
+
+     <library path="/data/dust/user/zhangyuy/analysis/tth/ZHH/source/build/lib/libZHHProcessors.so" />
+
+  <!-- =======================
+       常量定义
+       ======================= -->
+  <constants>
+    <!-- 需要你在环境里设置 ILDConfigDir，或者这里改成绝对路径 -->
+    <constant name="ILDConfigDir" value="/data/dust/user/zhangyuy/analysis/tth/ZHH/dependencies/ILDConfig" />
+
+   <!--<constant name="IsFastSim" value="true" />--> 
+
+    <!-- MC 粒子 & PFO 名称 -->
+    <constant name="MCParticleCollectionName" value="MCParticlesSkimmed" />
+    <constant name="PFOsWithoutOverlayCollection" value="PFOsWithoutOverlayCheated" />
+
+    <!-- 输出设置 -->
+    <constant name="OutputDirectory" value="." />
+    <constant name="OutputBaseName" value="lepton_reco_ana" />
+    <constant name="OutputRootFile" value="${OutputBaseName}.root" />
+
+    <!-- 运行条件 -->
+    <constant name="CMSEnergy" value="550." />
+    <constant name="Verbosity" value="MESSAGE" />
+
+    <!-- 如果有需要 GEAR 的处理器，可在 global 里使用 -->
+    <!--<constant name="GearXMLFileName" value="ILD_o1_v05.xml" />-->
+  </constants>
+
+  <!-- =======================
+       执行顺序
+       ======================= -->
+  <execute>
+    <!-- 输出 ROOT (AIDA) 必须最先 init -->
+    <processor name="MyAIDAProcessor" />
+    <processor name="MyStatusmonitor" />
+
+    <!-- 1. 去掉 overlay：PandoraPFOs -> PFOsWithoutOverlayCheated -->
+    <processor name="MyCheatedMCOverlayRemoval" />
+
+    <!--TrueJet-->
+
+    <processor name="MyTrueJet" />
+
+
+    <!-- 2. 用去 overlay 的 PFO 聚类，用于 jet-based isolation -->
+    <processor name="MyFastJetProcessor" />
+
+    <!-- 3. 通用 IsolatedLeptonFinder（cone + jet isolation）-->
+    <processor name="MyIsolatedLeptonFinderProcessor" />
+
+    <!-- 4. Muon Tagger -->
+    <processor name="IsolatedMuonTagging" />
+
+    <!-- 5. 对 Finder 和 Muon 打 LeptonPerf -->
+    <processor name="MyLeptonPerf_Finder" />
+    <processor name="MyLeptonPerf_Muon" />
+
+    <!-- 6. Electron Tagger -->
+    <processor name="IsolatedElectronTagging" />
+
+    <!-- 7. Tau Tagger -->
+    <processor name="IsolatedTauTagging" />
+
+    <!-- 8. 对 Electron & Tau 打 LeptonPerf -->
+    <processor name="MyLeptonPerf_Electron" />
+    <processor name="MyLeptonPerf_Tau" />
+
+    <processor name="LCIOOutput" />
+
+  </execute>
+
+  <!-- =======================
+       Global 设置
+       ======================= -->
+  <global>
+    <parameter name="LCIOInputFiles">
+      <!-- 在这里填你的 dst 文件路径 -->
+      /data/dust/user/zhangyuy/ZHH/mysgv/tth_sgv_full_truthlink.slcio
+    </parameter>
+
+    <!-- 事件数等 -->
+    <parameter name="MaxRecordNumber" value="0" />
+    <parameter name="SkipNEvents" value="0" />
+    <parameter name="SupressCheck" value="false" />
+
+    <!-- 如果有 GEAR 依赖，可以打开 -->
+    <!--<parameter name="GearXMLFile">${GearXMLFileName}</parameter>-->
+
+    <parameter name="Verbosity" options="DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT">${Verbosity}</parameter>
+    <parameter name="RandomSeed" value="1234567890" />
+    <parameter name="OutputSteeringFile" value="" />
+    <parameter name="AllowToModifyEvent" value="true" />
+   <!--<parameter name="IsFastSim" type="bool">true</parameter> --> 
+  </global>
+
+  <!-- =======================
+       AIDA ROOT 输出
+       ======================= -->
+  <processor name="MyAIDAProcessor" type="AIDAProcessor">
+    <parameter name="Compress" type="int">1</parameter>
+    <parameter name="FileName" type="string">${OutputDirectory}/${OutputBaseName}_AIDA</parameter>
+    <parameter name="FileType" type="string">root</parameter>
+  </processor>
+
+  <!-- 状态监视 -->
+  <processor name="MyStatusmonitor" type="Statusmonitor">
+    <parameter name="HowOften" type="int">1</parameter>
+    <parameter name="Verbosity" type="string">MESSAGE</parameter>
+  </processor>
+
+  <!-- =======================
+       1. CheatedMCOverlayRemoval
+       ======================= -->
+  <processor name="MyCheatedMCOverlayRemoval" type="CheatedMCOverlayRemoval">
+    <parameter name="RecoParticleCollection" type="string" lcioInType="ReconstructedParticle">PandoraPFOs</parameter>
+    <parameter name="MCParticleCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+    <parameter name="RecoMCTruthLink" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+    <parameter name="MCTruthRecoLink" type="string" lcioInType="LCRelation">MCTruthRecoLink</parameter>
+    <parameter name="OutputPfoCollection" type="string" lcioOutType="ReconstructedParticle">${PFOsWithoutOverlayCollection}</parameter>
+
+    <parameter name="PIDAlgoSync" type="bool">false</parameter>
+    <parameter name="PIDAlgosToKeep" type="StringVec"></parameter>
+
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+    <!-- =======================
+       TrueJet (truth jet grouping)
+       ======================= -->
+  <processor name="MyTrueJet" type="TrueJet">
+
+    <!-- 输入：用你的实际 collection 名 -->
+    <parameter name="MCParticleCollection" type="string" lcioInType="MCParticle">
+      ${MCParticleCollectionName}
+    </parameter>
+
+    <parameter name="RecoParticleCollection" type="string" lcioInType="ReconstructedParticle">
+      ${PFOsWithoutOverlayCollection}
+    </parameter>
+
+    <parameter name="RecoMCTruthLink" type="string" lcioInType="LCRelation">
+      RecoMCTruthLink
+    </parameter>
+
+    <!-- 其余全部不填：输出 collection 名会用 README 的默认值：
+         TrueJets, FinalColourNeutrals, InitialColourNeutrals,
+         TrueJetPFOLink, TrueJetMCParticleLink,
+         FinalElementonLink, InitialElementonLink,
+         FinalColourNeutralLink, InitialColourNeutralLink
+
+         Whizard1 flag：仅当你确认输入是 Whizard1/IDR DST 记录格式时才需要改。
+         如果你跑起来发现 format 相关报错，再据报错精确设置它。
+    -->
+  </processor>
+
+
+  <!-- =======================
+       2. FastJet for jet-based isolation
+       ======================= -->
+  <processor name="MyFastJetProcessor" type="FastJetProcessor">
+    <parameter name="algorithm" type="StringVec">ee_kt_algorithm</parameter>
+    <parameter name="clusteringMode" type="StringVec">ExclusiveNJets 8</parameter>
+    <parameter name="recombinationScheme" type="string">E_scheme</parameter>
+    <parameter name="recParticleIn" type="string" lcioInType="ReconstructedParticle">${PFOsWithoutOverlayCollection}</parameter>
+    <parameter name="jetOut" type="string" lcioOutType="ReconstructedParticle">JetsForIsolep</parameter>
+  </processor>
+
+  <!-- =======================
+       3. IsolatedLeptonFinderProcessor2
+       ======================= -->
+  <processor name="MyIsolatedLeptonFinderProcessor" type="IsolatedLeptonFinderProcessor">
+    <!--Isolated Lepton Finder Processor-->
+
+    <!--Input and output collections-->
+    <parameter name="InputCollection" type="string" lcioInType="ReconstructedParticle">${PFOsWithoutOverlayCollection} </parameter>
+    <parameter name="OutputCollectionIsolatedLeptons" type="string" lcioOutType="ReconstructedParticle">Isolep </parameter>
+    <parameter name="OutputCollectionWithoutIsolatedLepton" type="string" lcioOutType="ReconstructedParticle">PFOsAfterIso </parameter>
+
+    <!-- Isolation requirements -->
+    <parameter name="CosConeAngle" type="float">0.98 </parameter>
+
+    <!-- Use Polynomial Isolation (Formula: E_cone^2 < 6*E_track - 90) -->
+    <parameter name="UseRectangularIsolation" type="bool">false </parameter>
+    <parameter name="UsePolynomialIsolation" type="bool">true </parameter>
+
+    <!-- A = 0 -->
+    <parameter name="IsolationPolynomialCutA" type="float">0 </parameter>
+    <!-- B = 6 -->
+    <parameter name="IsolationPolynomialCutB" type="float">6 </parameter>
+    <!-- C = -90 -->
+    <parameter name="IsolationPolynomialCutC" type="float">-90 </parameter>
+
+    <parameter name="IsolationMinimumConeEnergy" type="float">0 </parameter>
+    <parameter name="IsolationMaximumConeEnergy" type="float">1e+20 </parameter>
+
+    <!-- Track Energy Cut: Consistent with the formula root(6*(E-15)) -->
+    <!-- If E < 15, the RHS is negative, impossible to pass unless cone is imaginary. -->
+    <parameter name="IsolationMinimumTrackEnergy" type="float">15 </parameter>
+    <parameter name="IsolationMaximumTrackEnergy" type="float">1e+20 </parameter>
+
+    <!-- Jet-based isolation -->
+    <parameter name="UseJetIsolation" type="bool">true </parameter>
+
+    <!-- PID requirements (From previous discussion) -->
+    <parameter name="UsePID" type="bool">false </parameter>
+    <parameter name="ElectronMinEcalToHcalFraction" type="float">0.9 </parameter>
+    <parameter name="ElectronMaxEcalToHcalFraction" type="float">1.0 </parameter>
+    <parameter name="ElectronMinEnergyDepositByMomentum" type="float">0.7 </parameter>
+    <parameter name="ElectronMaxEnergyDepositByMomentum" type="float">1.4 </parameter>
+    <parameter name="MuonMinEcalToHcalFraction" type="float">0.05 </parameter>
+    <parameter name="MuonMaxEcalToHcalFraction" type="float">0.3 </parameter>
+    <parameter name="MuonMinEnergyDepositByMomentum" type="float">0 </parameter>
+    <parameter name="MuonMaxEnergyDepositByMomentum" type="float">0.3 </parameter>
+
+    <!-- Impact parameter requirements (Absolute cuts < 0.05mm) -->
+    <parameter name="UseImpactParameter" type="bool">true </parameter>
+    <parameter name="ImpactParameterMinD0" type="float">0 </parameter>
+    <parameter name="ImpactParameterMaxD0" type="float">0.05 </parameter>
+    <parameter name="ImpactParameterMinZ0" type="float">0 </parameter>
+    <parameter name="ImpactParameterMaxZ0" type="float">0.05 </parameter>
+    <parameter name="ImpactParameterMin3D" type="float">0 </parameter>
+    <parameter name="ImpactParameterMax3D" type="float">0.05 </parameter>
+
+    <parameter name="UseImpactParameterSignificance" type="bool">false </parameter>
+
+</processor>
+  <!-- =======================
+       4. Muon Tagger
+       ======================= -->
+  <processor name="IsolatedMuonTagging" type="IsolatedLeptonTaggingProcessor">
+   <!--<parameter name="IsFastSim" type="bool">${IsFastSim}</parameter>--> 
+    <!-- cosines -->
+    <parameter name="CosConeLarge" type="float">0.95</parameter>
+    <parameter name="CosConeSmall" type="float">0.98</parameter>
+
+    <!-- MVA cuts -->
+    <parameter name="CutOnTheISOElectronMVA" type="float">5</parameter>
+    <parameter name="CutOnTheISOMuonMVA" type="float">0.7</parameter>
+
+    <parameter name="UseYokeForMuonID" type="bool">false</parameter>
+    <!-- MVA weights -->
+    <!--<parameter name="DirOfISOElectronWeights" type="string">${ILDConfigDir}/IsolatedLeptonTagging/weights/yyxyev_yyxyyx_500.mILD_l5_o1_v02</parameter>-->
+    <!--<parameter name="DirOfISOMuonWeights" type="string">${ILDConfigDir}/IsolatedLeptonTagging/weights/yyxylv_yyxyyx_500.mILD_l5_o1_v02</parameter>-->
+    <parameter name="DirOfISOElectronWeights" type="string">/data/dust/user/zhangyuy/analysis/tth/dataset/weights/TMVA_MLP_ev</parameter>
+    <parameter name="DirOfISOMuonWeights" type="string">/data/dust/user/zhangyuy/analysis/tth/dataset/weights/TMVA_MLP_lv</parameter>
+
+    <!-- Input PFO & PV -->
+    <parameter name="InputPandoraPFOsCollection" type="string" lcioInType="ReconstructedParticle">${PFOsWithoutOverlayCollection}</parameter>
+    <parameter name="InputPrimaryVertexCollection" type="string" lcioInType="ReconstructedParticle">PrimaryVertex</parameter>
+
+    <parameter name="IsSelectingOneIsoLep" type="bool">false</parameter>
+
+    <!-- IP / E/P / yoke cuts -->
+    <parameter name="MaxD0SigForElectron" type="float">50</parameter>
+    <parameter name="MaxD0SigForMuon" type="float">20</parameter>
+    <parameter name="MaxEOverPForElectron" type="float">1.3</parameter>
+    <parameter name="MaxEOverPForMuon" type="float">0.3</parameter>
+    <parameter name="MaxZ0SigForElectron" type="float">50</parameter>
+    <parameter name="MaxZ0SigForMuon" type="float">20</parameter>
+    <parameter name="MinEOverPForElectron" type="float">0.5</parameter>
+    <parameter name="MinEecalOverTotEForElectron" type="float">0.9</parameter>
+
+    <parameter name="UseYokeForMuonID" type="bool">false</parameter>
+    <parameter name="MinEyokeForMuon" type="float">1.2</parameter>
+    <parameter name="MinPForElectron" type="float">5</parameter>
+    <parameter name="MinPForMuon" type="float">5</parameter>
+    <parameter name="UseIP" type="bool">true</parameter>
+
+    <!-- Outputs -->
+    <parameter name="OutputIsoLeptonsCollection" type="string" lcioOutType="ReconstructedParticle">ISOMuons</parameter>
+    <parameter name="OutputPFOsWithoutIsoLepCollection" type="string" lcioOutType="ReconstructedParticle">PFOsMinusISOMuons</parameter>
+
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+  <!-- =======================
+       5. Electron Tagger
+       ======================= -->
+  <processor name="IsolatedElectronTagging" type="IsolatedLeptonTaggingProcessor">
+    <!--<parameter name="IsFastSim" type="bool">${IsFastSim}</parameter>-->
+    <parameter name="CosConeLarge" type="float">0.95</parameter>
+    <parameter name="CosConeSmall" type="float">0.98</parameter>
+
+    <parameter name="CutOnTheISOElectronMVA" type="float">0.5</parameter>
+    <parameter name="CutOnTheISOMuonMVA" type="float">2</parameter>
+
+    <!--<parameter name="DirOfISOElectronWeights" type="string">${ILDConfigDir}/IsolatedLeptonTagging/weights/yyxyev_yyxyyx_500.mILD_l5_o1_v02</parameter>-->
+    <!--<parameter name="DirOfISOMuonWeights" type="string">${ILDConfigDir}/IsolatedLeptonTagging/weights/yyxylv_yyxyyx_500.mILD_l5_o1_v02</parameter>-->
+
+    <parameter name="DirOfISOElectronWeights" type="string">/data/dust/user/zhangyuy/analysis/tth/dataset/weights/TMVA_MLP_ev</parameter>
+    <parameter name="DirOfISOMuonWeights" type="string">/data/dust/user/zhangyuy/analysis/tth/dataset/weights/TMVA_MLP_lv</parameter>
+
+    <parameter name="InputPandoraPFOsCollection" type="string" lcioInType="ReconstructedParticle">PFOsMinusISOMuons</parameter>
+    <parameter name="InputPrimaryVertexCollection" type="string" lcioInType="ReconstructedParticle">PrimaryVertex</parameter>
+
+    <parameter name="IsSelectingOneIsoLep" type="bool">false</parameter>
+
+    <parameter name="MaxD0SigForElectron" type="float">10</parameter>
+    <parameter name="MaxD0SigForMuon" type="float">10</parameter>
+    <parameter name="MaxEOverPForElectron" type="float">1.3</parameter>
+    <parameter name="MaxEOverPForMuon" type="float">0.3</parameter>
+    <parameter name="MaxZ0SigForElectron" type="float">10</parameter>
+    <parameter name="MaxZ0SigForMuon" type="float">10</parameter>
+    <parameter name="MinEOverPForElectron" type="float">0.5</parameter>
+    <parameter name="MinEecalOverTotEForElectron" type="float">0.9</parameter>
+    <parameter name="UseYokeForMuonID" type="bool">false</parameter>
+    <parameter name="MinEyokeForMuon" type="float">1.2</parameter>
+    <parameter name="MinPForElectron" type="float">5</parameter>
+    <parameter name="MinPForMuon" type="float">5</parameter>
+    <parameter name="UseIP" type="bool">true</parameter>
+
+    <parameter name="OutputIsoLeptonsCollection" type="string" lcioOutType="ReconstructedParticle">ISOElectrons</parameter>
+    <!-- 这里用 PFOsMinusMuonsElectrons，方便后续 tau tag -->
+    <parameter name="OutputPFOsWithoutIsoLepCollection" type="string" lcioOutType="ReconstructedParticle">PFOsMinusMuonsElectrons</parameter>
+
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+  <!-- =======================
+       6. Tau Tagger (TaJetClustering)
+       ======================= -->
+  <processor name="IsolatedTauTagging" type="TaJetClustering">
+    <parameter name="PFOCollection" type="string" lcioInType="ReconstructedParticle">PFOsMinusMuonsElectrons</parameter>
+    <parameter name="OutputTauCollection" type="string" lcioOutType="ReconstructedParticle">ISOTaus</parameter>
+    <parameter name="RemainPFOCollection" type="string" lcioOutType="ReconstructedParticle">PFOsMinusIsolatedLeptons</parameter>
+
+    <parameter name="TauMass" type="double">2</parameter>
+    <parameter name="TauCosAngle" type="double">0.98</parameter>
+    <parameter name="NoSelection" type="int">0</parameter>
+    <parameter name="AcceptFlexibleLowEnergyTrack" type="int">1</parameter>
+    <parameter name="MinimumJetEnergy" type="double">3</parameter>
+    <parameter name="MinimumTrackEnergy" type="double">2</parameter>
+    <parameter name="MinimumTrackEnergyAssoc" type="double">2</parameter>
+    <parameter name="ConeMinCosAngle" type="double">0.9</parameter>
+    <parameter name="ConeMaxCosAngle" type="double">1</parameter>
+    <parameter name="ConeMaxEnergyFrac" type="double">0.4</parameter>
+  </processor>
+
+  <!-- =======================
+       7. LeptonPerfStudy (4个)
+       ======================= -->
+
+  <!-- Finder: Isolep -->
+  <processor name="MyLeptonPerf_Finder" type="LeptonPerfStudy">
+    <parameter name="InputIsoLeptonsCollection" type="string" lcioInType="ReconstructedParticle">Isolep</parameter>
+    <parameter name="InputPFOsCollection" type="string" lcioInType="ReconstructedParticle">${PFOsWithoutOverlayCollection}</parameter>
+    <parameter name="InputMCParticlesCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+    <parameter name="InputMCTruthLinkCollection" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+    <parameter name="InputPrimaryVertexCollection" type="string" lcioInType="Vertex">PrimaryVertex</parameter>
+
+    <!-- **** 修改点 **** -->
+    <parameter name="OutputLeptonPerfVarsCollection" type="string" lcioOutType="LCGenericObject">LeptonPerfVars_Finder</parameter>
+
+    <parameter name="CosConeSmall" type="float">0.98</parameter>
+    <parameter name="CosConeLarge" type="float">0.95</parameter>
+    <parameter name="UseIP" type="bool">true</parameter>
+    <parameter name="UseYokeEnergy" type="bool">true</parameter>
+    <parameter name="OutputMCTruthLeptonVarsCollection"
+           type="string"
+           lcioOutType="LCGenericObject">
+  MCTruthLeptonVars
+</parameter>
+
+</processor>
+
+
+  <!-- Muon tagger: ISOMuons -->
+  <processor name="MyLeptonPerf_Muon" type="LeptonPerfStudy">
+    <parameter name="InputIsoLeptonsCollection" type="string" lcioInType="ReconstructedParticle">ISOMuons</parameter>
+    <parameter name="InputPFOsCollection" type="string" lcioInType="ReconstructedParticle">${PFOsWithoutOverlayCollection}</parameter>
+    <parameter name="InputMCParticlesCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+    <parameter name="InputMCTruthLinkCollection" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+    <parameter name="InputPrimaryVertexCollection" type="string" lcioInType="Vertex">PrimaryVertex</parameter>
+
+    <!-- **** 修改点 **** -->
+    <parameter name="OutputLeptonPerfVarsCollection" type="string" lcioOutType="LCGenericObject">LeptonPerfVars_Muon</parameter>
+
+    <parameter name="CosConeSmall" type="float">0.98</parameter>
+    <parameter name="CosConeLarge" type="float">0.95</parameter>
+    <parameter name="UseIP" type="bool">true</parameter>
+    <parameter name="UseYokeEnergy" type="bool">true</parameter>
+    <parameter name="OutputMCTruthLeptonVarsCollection"
+           type="string"
+           lcioOutType="LCGenericObject">
+</parameter>
+
+</processor>
+
+
+  <!-- Electron tagger: ISOElectrons -->
+  <processor name="MyLeptonPerf_Electron" type="LeptonPerfStudy">
+    <parameter name="InputIsoLeptonsCollection" type="string" lcioInType="ReconstructedParticle">ISOElectrons</parameter>
+    <parameter name="InputPFOsCollection" type="string" lcioInType="ReconstructedParticle">${PFOsWithoutOverlayCollection}</parameter>
+    <parameter name="InputMCParticlesCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+    <parameter name="InputMCTruthLinkCollection" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+    <parameter name="InputPrimaryVertexCollection" type="string" lcioInType="Vertex">PrimaryVertex</parameter>
+
+    <!-- **** 修改点 **** -->
+    <parameter name="OutputLeptonPerfVarsCollection" type="string" lcioOutType="LCGenericObject">LeptonPerfVars_Electron</parameter>
+
+    <parameter name="CosConeSmall" type="float">0.98</parameter>
+    <parameter name="CosConeLarge" type="float">0.95</parameter>
+    <parameter name="UseIP" type="bool">true</parameter>
+    <parameter name="UseYokeEnergy" type="bool">true</parameter>
+    <parameter name="OutputMCTruthLeptonVarsCollection"
+           type="string"
+           lcioOutType="LCGenericObject">
+</parameter>
+
+</processor>
+
+
+  <!-- Tau tagger: ISOTaus -->
+  <processor name="MyLeptonPerf_Tau" type="LeptonPerfStudy">
+    <parameter name="InputIsoLeptonsCollection" type="string" lcioInType="ReconstructedParticle">ISOTaus</parameter>
+    <parameter name="InputPFOsCollection" type="string" lcioInType="ReconstructedParticle">${PFOsWithoutOverlayCollection}</parameter>
+    <parameter name="InputMCParticlesCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+    <parameter name="InputMCTruthLinkCollection" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+    <parameter name="InputPrimaryVertexCollection" type="string" lcioInType="Vertex">PrimaryVertex</parameter>
+
+    <!-- **** 修改点 **** -->
+    <parameter name="OutputLeptonPerfVarsCollection" type="string" lcioOutType="LCGenericObject">LeptonPerfVars_Tau</parameter>
+
+    <parameter name="CosConeSmall" type="float">0.98</parameter>
+    <parameter name="CosConeLarge" type="float">0.95</parameter>
+    <parameter name="UseIP" type="bool">true</parameter>
+    <parameter name="UseYokeEnergy" type="bool">true</parameter>
+    <parameter name="OutputMCTruthLeptonVarsCollection"
+           type="string"
+           lcioOutType="LCGenericObject">
+</parameter>
+
+</processor>
+
+
+  <processor name="LCIOOutput" type="LCIOOutputProcessor">
+    <parameter name="OutputFile" type="string">output/lepton_reco.slcio</parameter>
+    <parameter name="WriteMode" type="string">WRITE_APPEND</parameter>
+
+    <parameter name="FullSubsetCollections" type="string">
+        Isolep
+        ISOElectrons
+        ISOMuons
+        ISOTaus
+        LeptonPerfVars_Finder
+        LeptonPerfVars_Muon
+        LeptonPerfVars_Electron
+        LeptonPerfVars_Tau
+        MCTruthLeptonVars
+        TrueJets
+        FinalColourNeutrals
+        InitialColourNeutrals
+        TrueJetPFOLink
+        TrueJetMCParticleLink
+        FinalElementonLink
+        InitialElementonLink
+        FinalColourNeutralLink
+        InitialColourNeutralLink
+        ${MCParticleCollectionName}
+        RecoMCTruthLink
+        MCTruthRecoLink
+
+
+    </parameter>
+</processor>
+
+
+
+</marlin>

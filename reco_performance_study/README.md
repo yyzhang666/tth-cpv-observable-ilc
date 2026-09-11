@@ -46,6 +46,31 @@ Only pure-function regression tests and a bounded generator smoke may run
 before the long-run gate is recorded.  Finder/SGV/reco/kinfit production and
 all runs above 1000 events remain pending explicit gate review.
 
+## Lepton branch execution
+
+`steering/physsim_finder_branch.xml` is generated from the byte-identical
+reference snapshots.  It preserves the current complete-reco prefix through
+PFO corrections, overlay removal, and TrueJet; it then uses the old
+`MyFastJetProcessor` and `MyIsolatedLeptonFinderProcessor` definitions.  Its
+input, output, maximum-record, and skip values are mandatory render tokens;
+the output mode is `WRITE_NEW`.
+
+`run_finder_branch.py` sources
+`/data/dust/user/zhangyuy/analysis/tth/ZHH/setup.sh`, records setup/template/as-run
+XML and loaded `MARLIN_DLL` hashes, and refuses existing outputs.  With the
+Python 3.11 venv, the directory returned by `root-config --libdir` must be
+prepended to `PYTHONPATH`, followed by this repository's `src`, while retaining
+the setup-provided path.  Before the long-run gate the wrapper permits at most
+20 events unless the caller explicitly records and supplies the long-run
+override.
+
+The post-run validator checks every required collection for each bounded event
+and compares a deterministic numeric/object-count fingerprint of
+`PFOsWithoutOverlayCheated` against complete-reco.  The analysis joins the two
+branches only by `(source_file_id, run, event)`, invokes the four frozen legacy
+truth/counting implementations separately, accumulates integer counts, and
+only then calculates table percentages.
+
 ## Necessity statements
 
 - NECESSITY: immutable steering snapshots prevent a later shared-XML edit from
@@ -56,3 +81,7 @@ all runs above 1000 events remain pending explicit gate review.
   key, or runtime-hash drift before an expensive run.
 - NECESSITY: the explicit Whizard `MCParticle` lookup prevents collection
   fallback from silently changing the generator truth definition.
+- NECESSITY: the 20-event default execution gate prevents an unreviewed XML
+  variant from becoming a production Marlin run.
+- NECESSITY: event-key and upstream-PFO equality checks prevent combining
+  Finder and Tagger values from different events or preprocessing branches.

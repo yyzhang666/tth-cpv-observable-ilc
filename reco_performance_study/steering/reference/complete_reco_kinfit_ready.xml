@@ -1,0 +1,1161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<marlin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://ilcsoft.desy.de/marlin/marlin.xsd">
+
+  <!-- Custom processors used here (e.g. CheatedMCOverlayRemoval) -->
+  <library path="/data/dust/user/zhangyuy/analysis/tth/ZHH/source/build/lib/libZHHProcessors.so" />
+
+  <constants>
+    <constant name="ILDConfigDir" value="/data/dust/user/zhangyuy/analysis/tth/ZHH/dependencies/ILDConfig" />
+    <constant name="ZHH_REPO_ROOT" value="/data/dust/user/zhangyuy/analysis/tth/ZHH" />
+
+    <constant name="MCParticleCollectionName" value="MCParticlesSkimmed" />
+    <constant name="PFOsWithoutOverlayCollection" value="PFOsWithoutOverlayCheated" />
+
+    <!-- fast-sim steering -->
+    <constant name="IsFastSim" value="true" />
+    <constant name="errorflowconfusion" value="true" />
+
+    <!-- LCFIPlus / Weaver model files -->
+    <constant name="LCFIPlusML_ONNX" value="${ZHH_REPO_ROOT}/dependencies/LCFIPlusConfig/onnx/ilc_nnqq_sgv1m_11cat/ilc_nnqq_sgv1m_11cat.onnx" />
+    <constant name="LCFIPlusML_JSON" value="${ZHH_REPO_ROOT}/dependencies/LCFIPlusConfig/onnx/ilc_nnqq_sgv1m_11cat/preprocess.json" />
+
+    <constant name="lcgeo_DIR" value="/cvmfs/sw.hsf.org/key4hep/releases/2024-03-10/x86_64-centos7-gcc12.2.0-opt/k4geo/0.20-e42drs/share/k4geo" />
+    <constant name="DetectorModel" value="ILD_l5_o1_v02" />
+    <constant name="CompactFile" value="${lcgeo_DIR}/ILD/compact/${DetectorModel}/${DetectorModel}.xml" />
+
+    <constant name="OutputDirectory" value="." />
+    <constant name="OutputBaseName" value="complete_reco_default_sgv" />
+    <constant name="Verbosity" value="SILENT" />
+  </constants>
+
+  <execute>
+    <processor name="MyAIDAProcessor" />
+    <processor name="InitDD4hep" />
+    <processor name="MyStatusmonitor" />
+
+    <!-- CURRENT CONFIRMED PFO corrections for SGV kinfit-ready workflow -->
+    <processor name="MyAddNeutralPFOCovMatLite" />
+    <processor name="MyChargedPFOCorrection" />
+    <if condition="${IsFastSim}">
+      <processor name="MySwitchCovMat" />
+      <processor name="MyPatchCollections" />
+    </if>
+
+    <!-- overlay removal -->
+    <processor name="MyCheatedMCOverlayRemoval" />
+
+     <!--TrueJet-->
+
+    <processor name="MyTrueJet" />
+
+    <!-- isolated lepton tagging (Muon -> Electron), no finder -->
+    <processor name="IsolatedMuonTagging" />
+    <processor name="IsolatedElectronTagging" />
+    <processor name="MyLeptonPairing" />
+
+    <!-- jet clustering + vertex refinement + Weaver + kinfit-ready reco products for N = 4,5,6,7,8 -->
+    <processor name="JC4FT" />
+    <processor name="MySLDCorrection4J" />
+    <processor name="MyErrorFlow4J" />
+    <processor name="JC5FT" />
+    <processor name="MySLDCorrection5J" />
+    <processor name="MyErrorFlow5J" />
+    <processor name="JC6FT" />
+    <processor name="MySLDCorrection6J" />
+    <processor name="MyErrorFlow6J" />
+    <processor name="JC7FT" />
+    <processor name="MySLDCorrection7J" />
+    <processor name="MyErrorFlow7J" />
+    <processor name="JC8FT" />
+    <processor name="MySLDCorrection8J" />
+    <processor name="MyErrorFlow8J" />
+
+    <processor name="LCIOOutput" />
+  </execute>
+
+  <global>
+    <parameter name="LCIOInputFiles">
+      <!--/data/dust/user/zhangyuy/ZHH/mysgv/tth_sgv_full_truthlink.slcio-->
+      <!-- /data/dust/user/zhangyuy/analysis/tth/ZHH/test/ttz_sgvout.slcio -->
+      <!-- /data/dust/user/zhangyuy/ZHH/mysgv/yycyyu_eLpR_sgvout_PERF_10000.slcio -->
+      /data/dust/user/zhangyuy/analysis/tth/events_whizard/tth_whizard_skip0_max200_sgv.slcio
+    </parameter>
+
+    <parameter name="MaxRecordNumber" value="6000" />
+    <parameter name="SkipNEvents" value="0" />
+    <parameter name="SupressCheck" value="false" />
+    <parameter name="Verbosity" options="DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT">${Verbosity}</parameter>
+    <parameter name="RandomSeed" value="1234567890" />
+    <parameter name="OutputSteeringFile" value="" />
+    <parameter name="AllowToModifyEvent" value="true" />
+  </global>
+
+  <processor name="MyAIDAProcessor" type="AIDAProcessor">
+    <parameter name="Compress" type="int">1</parameter>
+    <parameter name="FileName" type="string">${OutputDirectory}/${OutputBaseName}_AIDA</parameter>
+    <parameter name="FileType" type="string">root</parameter>
+  </processor>
+
+  <processor name="InitDD4hep" type="InitializeDD4hep">
+    <parameter name="DD4hepXMLFile" type="string">${CompactFile}</parameter>
+    <parameter name="Verbosity" type="string">SILENT</parameter>
+  </processor>
+
+  <processor name="MyStatusmonitor" type="Statusmonitor">
+    <parameter name="HowOften" type="int">100</parameter>
+    <parameter name="Verbosity" type="string">MESSAGE</parameter>
+  </processor>
+
+  <!-- ============================================================
+       PFO covariance / fast-sim fixes
+       ============================================================ -->
+  <processor name="MyAddNeutralPFOCovMatLite" type="AddNeutralPFOCovMat">
+    <parameter name="inputPfoCollection" type="string" lcioInType="RECONSTRUCTEDPARTICLE">PandoraPFOs</parameter>
+    <parameter name="AssumeNeutralPFOMassive" type="bool">true</parameter>
+    <parameter name="isClusterEnergyKinEnergy" type="bool">false</parameter>
+    <parameter name="updatePFO4Momentum" type="bool">true</parameter>
+    <parameter name="useTrueJacobian" type="bool">false</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+  <processor name="MyChargedPFOCorrection" type="ChargedPFOCorrection">
+    <parameter name="PfoCollection" type="string" lcioInType="RECONSTRUCTEDPARTICLE">PandoraPFOs</parameter>
+    <parameter name="MarlinTrkTracksCollection" type="string" lcioInType="Track">MarlinTrkTracks</parameter>
+    <parameter name="MarlinTrkTracksCollectionKaon" type="string" lcioInType="Track">MarlinTrkTracks</parameter>
+    <parameter name="MarlinTrkTracksCollectionProton" type="string" lcioInType="Track">MarlinTrkTracks</parameter>
+    <parameter name="TrackMCTruthLinkCollection" type="string" lcioInType="LCRelation">TrackMCTruthLink</parameter>
+    <parameter name="MCTruthTrackLinkCollection" type="string" lcioInType="LCRelation">MCTruthTrackLink</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+  <processor name="MySwitchCovMat" type="SwitchCovMat">
+    <parameter name="inputPfoCollection" type="string" lcioInType="RECONSTRUCTEDPARTICLE">PandoraPFOs</parameter>
+    <parameter name="outputPfoCollection" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">PandoraPFO_switchcovmat</parameter>
+    <parameter name="AssumeNeutralPFOMassive" type="bool">true</parameter>
+    <parameter name="isClusterEnergyKinEnergy" type="bool">false</parameter>
+    <parameter name="updatePFO4Momentum" type="bool">false</parameter>
+    <parameter name="useTrueJacobian" type="bool">false</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+  <processor name="MyPatchCollections" type="PatchCollections">
+    <parameter name="PatchCollections" type="string">
+      BuildUpVertex_V0 Vertex
+    </parameter>
+  </processor>
+
+  <!-- ============================================================
+       Overlay removal
+       ============================================================ -->
+  <processor name="MyCheatedMCOverlayRemoval" type="CheatedMCOverlayRemoval">
+    <parameter name="RecoParticleCollection" type="string" lcioInType="ReconstructedParticle">PandoraPFOs</parameter>
+    <parameter name="MCParticleCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+    <parameter name="RecoMCTruthLink" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+    <parameter name="MCTruthRecoLink" type="string" lcioInType="LCRelation">MCTruthRecoLink</parameter>
+    <parameter name="OutputPfoCollection" type="string" lcioOutType="ReconstructedParticle">${PFOsWithoutOverlayCollection}</parameter>
+    <parameter name="PIDAlgoSync" type="bool">false</parameter>
+    <parameter name="PIDAlgosToKeep" type="StringVec"></parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+   <!-- =======================
+       TrueJet (truth jet grouping)
+       ======================= -->
+  <processor name="MyTrueJet" type="TrueJet">
+
+    <!-- 输入：用你的实际 collection 名 -->
+    <parameter name="MCParticleCollection" type="string" lcioInType="MCParticle">
+      ${MCParticleCollectionName}
+    </parameter>
+
+    <parameter name="RecoParticleCollection" type="string" lcioInType="ReconstructedParticle">
+      ${PFOsWithoutOverlayCollection}
+    </parameter>
+
+    <parameter name="RecoMCTruthLink" type="string" lcioInType="LCRelation">
+      RecoMCTruthLink
+    </parameter>
+
+    <!-- 其余全部不填：输出 collection 名会用 README 的默认值：
+         TrueJets, FinalColourNeutrals, InitialColourNeutrals,
+         TrueJetPFOLink, TrueJetMCParticleLink,
+         FinalElementonLink, InitialElementonLink,
+         FinalColourNeutralLink, InitialColourNeutralLink
+
+         如果你跑起来发现 format 相关报错，再据报错精确设置它。
+    -->
+  </processor>
+
+  <!-- ============================================================
+       Electron / muon tagging only (keep lepton_reco.xml settings)
+       ============================================================ -->
+  <processor name="IsolatedMuonTagging" type="IsolatedLeptonTaggingProcessor">
+    <parameter name="CosConeLarge" type="float">0.95</parameter>
+    <parameter name="CosConeSmall" type="float">0.98</parameter>
+    <parameter name="CutOnTheISOElectronMVA" type="float">5</parameter>
+    <parameter name="CutOnTheISOMuonMVA" type="float">0.7</parameter>
+    <parameter name="UseYokeForMuonID" type="bool">false</parameter>
+    <parameter name="DirOfISOElectronWeights" type="string">/data/dust/user/zhangyuy/analysis/tth/dataset/weights/TMVA_MLP_ev</parameter>
+    <parameter name="DirOfISOMuonWeights" type="string">/data/dust/user/zhangyuy/analysis/tth/dataset/weights/TMVA_MLP_lv</parameter>
+    <parameter name="InputPandoraPFOsCollection" type="string" lcioInType="ReconstructedParticle">${PFOsWithoutOverlayCollection}</parameter>
+    <parameter name="InputPrimaryVertexCollection" type="string" lcioInType="ReconstructedParticle">PrimaryVertex</parameter>
+    <parameter name="IsSelectingOneIsoLep" type="bool">false</parameter>
+    <parameter name="MaxD0SigForElectron" type="float">50</parameter>
+    <parameter name="MaxD0SigForMuon" type="float">20</parameter>
+    <parameter name="MaxEOverPForElectron" type="float">1.3</parameter>
+    <parameter name="MaxEOverPForMuon" type="float">0.3</parameter>
+    <parameter name="MaxZ0SigForElectron" type="float">50</parameter>
+    <parameter name="MaxZ0SigForMuon" type="float">20</parameter>
+    <parameter name="MinEOverPForElectron" type="float">0.5</parameter>
+    <parameter name="MinEecalOverTotEForElectron" type="float">0.9</parameter>
+    <parameter name="UseYokeForMuonID" type="bool">false</parameter>
+    <parameter name="MinEyokeForMuon" type="float">1.2</parameter>
+    <parameter name="MinPForElectron" type="float">5</parameter>
+    <parameter name="MinPForMuon" type="float">5</parameter>
+    <parameter name="UseIP" type="bool">true</parameter>
+    <parameter name="OutputIsoLeptonsCollection" type="string" lcioOutType="ReconstructedParticle">ISOMuons</parameter>
+    <parameter name="OutputPFOsWithoutIsoLepCollection" type="string" lcioOutType="ReconstructedParticle">PFOsMinusISOMuons</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+  <processor name="IsolatedElectronTagging" type="IsolatedLeptonTaggingProcessor">
+    <parameter name="CosConeLarge" type="float">0.95</parameter>
+    <parameter name="CosConeSmall" type="float">0.98</parameter>
+    <parameter name="CutOnTheISOElectronMVA" type="float">0.5</parameter>
+    <parameter name="CutOnTheISOMuonMVA" type="float">2</parameter>
+    <parameter name="DirOfISOElectronWeights" type="string">/data/dust/user/zhangyuy/analysis/tth/dataset/weights/TMVA_MLP_ev</parameter>
+    <parameter name="DirOfISOMuonWeights" type="string">/data/dust/user/zhangyuy/analysis/tth/dataset/weights/TMVA_MLP_lv</parameter>
+    <parameter name="InputPandoraPFOsCollection" type="string" lcioInType="ReconstructedParticle">PFOsMinusISOMuons</parameter>
+    <parameter name="InputPrimaryVertexCollection" type="string" lcioInType="ReconstructedParticle">PrimaryVertex</parameter>
+    <parameter name="IsSelectingOneIsoLep" type="bool">false</parameter>
+    <parameter name="MaxD0SigForElectron" type="float">10</parameter>
+    <parameter name="MaxD0SigForMuon" type="float">10</parameter>
+    <parameter name="MaxEOverPForElectron" type="float">1.3</parameter>
+    <parameter name="MaxEOverPForMuon" type="float">0.3</parameter>
+    <parameter name="MaxZ0SigForElectron" type="float">10</parameter>
+    <parameter name="MaxZ0SigForMuon" type="float">10</parameter>
+    <parameter name="MinEOverPForElectron" type="float">0.5</parameter>
+    <parameter name="MinEecalOverTotEForElectron" type="float">0.9</parameter>
+    <parameter name="UseYokeForMuonID" type="bool">false</parameter>
+    <parameter name="MinEyokeForMuon" type="float">1.2</parameter>
+    <parameter name="MinPForElectron" type="float">5</parameter>
+    <parameter name="MinPForMuon" type="float">5</parameter>
+    <parameter name="UseIP" type="bool">true</parameter>
+    <parameter name="OutputIsoLeptonsCollection" type="string" lcioOutType="ReconstructedParticle">ISOElectrons</parameter>
+    <parameter name="OutputPFOsWithoutIsoLepCollection" type="string" lcioOutType="ReconstructedParticle">PFOsMinusMuonsElectrons</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+  
+  <!-- ============================================================
+       Lepton pair diagnostic collection for downstream kinfit checks
+       ============================================================ -->
+
+  <processor name="MyLeptonPairing" type="LeptonPairingCombined">
+      <parameter name="PFOsWOIsoLepCollection" type="string" lcioInType="ReconstructedParticle">PFOsMinusMuonsElectrons</parameter>
+      <parameter name="IsoElectronCollection" type="string" lcioInType="ReconstructedParticle">ISOElectrons</parameter>
+      <parameter name="IsoMuonCollection" type="string" lcioInType="ReconstructedParticle">ISOMuons</parameter>
+      <parameter name="IsoTauCollection" type="string" lcioInType="ReconstructedParticle">ISOTaus</parameter>
+
+      <parameter name="LeptonPair" type="string" lcioOutType="ReconstructedParticle">LeptonPair</parameter>
+      <parameter name="PFOsWOLepPairCollection" type="string" lcioOutType="ReconstructedParticle">PandoraPFOsWithoutLepPair</parameter>
+      <parameter name="fillRootTree" type="bool">true</parameter>
+
+      <!-- empty to write to AIDA -->
+      <parameter name="RootFile" type="string"></parameter>
+      <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+<!-- ============================================================
+       4-jet clustering + vertex refinement + Weaver
+       ============================================================ -->
+  <processor name="JC4FT" type="LcfiplusProcessor">
+    <parameter name="Algorithms" type="stringVec"> JetClustering JetVertexRefiner MLInferenceWeaver </parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+
+    <parameter name="PFOCollection" type="string" value="PFOsMinusMuonsElectrons" />
+    <parameter name="UseMCP" type="int" value="0" />
+    <parameter name="MCPCollection" type="string" value="" />
+    <parameter name="MCPFORelation" type="string" value="" />
+    <parameter name="ReadSubdetectorEnergies" type="int" value="1"/>
+    <parameter name="UpdateVertexRPDaughters" type="int" value="0"/>
+    <parameter name="TrackHitOrdering" type="int" value="1"/>
+    <parameter name="PrintEventNumber" type="int" value="0"/>
+
+    <parameter name="JetClustering.PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="JetClustering.InputVertexCollectionName" type="string" value="BuildUpVertex" />
+    <parameter name="JetClustering.OutputJetCollectionName" type="stringVec" value="VertexJets4" />
+    <parameter name="JetClustering.NJetsRequested" type="intVec">4</parameter>
+    <parameter name="JetClustering.YCut" type="doubleVec" value="0." />
+    <parameter name="JetClustering.JetAlgorithm" type="string" value="DurhamVertex" />
+    <parameter name="JetClustering.UseBeamJets" type="int" value="0" />
+
+    <parameter name="JetClustering.UseMuonID" type="int" value="1" />
+    <parameter name="JetClustering.MuonIDExternal" type="int" value="0" />
+    <parameter name="JetClustering.MuonIDMinimumD0Significance" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMinimumZ0Significance" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMaximum3DImpactParameter" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMinimumProbability" type="double" value="0.5" />
+
+    <parameter name="JetClustering.VertexSelectionMinimumDistance" type="double" value="0.3" />
+    <parameter name="JetClustering.VertexSelectionMaximumDistance" type="double" value="30." />
+    <parameter name="JetClustering.VertexSelectionK0MassWidth" type="double" value="0.02" />
+    <parameter name="JetClustering.YAddedForJetVertexVertex" type="double" value="100"/>
+    <parameter name="JetClustering.YAddedForJetLeptonVertex" type="double" value="100"/>
+    <parameter name="JetClustering.YAddedForJetLeptonLepton" type="double" value="100"/>
+
+    <parameter name="JetVertexRefiner.InputJetCollectionName" type="string" value="VertexJets4" />
+    <parameter name="JetVertexRefiner.OutputJetCollectionName" type="string" value="RefinedJets4" />
+    <parameter name="JetVertexRefiner.PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="JetVertexRefiner.InputVertexCollectionName" type="string" value="BuildUpVertex" />
+    <parameter name="JetVertexRefiner.V0VertexCollectionName" type="string" value="BuildUpVertex_V0" />
+    <parameter name="JetVertexRefiner.OutputVertexCollectionName" type="string" value="RefinedVertex4" />
+
+    <parameter name="JetVertexRefiner.MinPosSingle" type="double" value="0.3" />
+    <parameter name="JetVertexRefiner.MaxPosSingle" type="double" value="30." />
+    <parameter name="JetVertexRefiner.MinEnergySingle" type="double" value="1." />
+    <parameter name="JetVertexRefiner.MaxAngleSingle" type="double" value="0.5" />
+    <parameter name="JetVertexRefiner.MaxSeparationPerPosSingle" type="double" value="0.1" />
+    <parameter name="JetVertexRefiner.mind0sigSingle" type="double" value="5." />
+    <parameter name="JetVertexRefiner.minz0sigSingle" type="double" value="5." />
+    <parameter name="JetVertexRefiner.OneVertexProbThreshold" type="double" value="0.001" />
+    <parameter name="JetVertexRefiner.MaxCharmFlightLengthPerJetEnergy" type="double" value="0.1" />
+
+    <parameter name="PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="MakeNtuple.AuxiliaryInfo" type="int" value="-1" />
+
+
+
+
+
+
+    <parameter name="MLInferenceWeaver.JetCollectionName" type="string" value="RefinedJets4" />
+    <parameter name="MLInferenceWeaver.OutputParameterName" type="string" value="weaver" />
+    <parameter name="MLInferenceWeaver.JsonFileName" type="string" value="${LCFIPlusML_JSON}" />
+    <parameter name="MLInferenceWeaver.OnnxFileName" type="string" value="${LCFIPlusML_ONNX}" />
+  </processor>
+
+  
+  <!-- ============================================================
+       4-jet semi-leptonic decay correction + ErrorFlow covariance
+       ============================================================ -->
+
+      <processor name="MySLDCorrection4J" type="SLDCorrection">
+  		<!--Name of the Input MCParticle Collection-->
+  		<parameter name="MCParticleCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+  		<!--Name of the Input PFO Collection-->
+  		<parameter name="PfoCollection" type="string" lcioInType="ReconstructedParticle">PandoraPFOsWithoutLepPair</parameter>
+  		<!--Name of the Input isolated lepton collection-->
+  		<parameter name="isoLeptonsCollection" type="string" lcioInType="ReconstructedParticle">ISOLeptons</parameter>
+  		<!--Name of the Input Jet Collection-->
+  		<parameter name="JetCollection" type="string" lcioInType="RECONSTRUCTEDPARTICLE">RefinedJets4</parameter>
+  		<!--Name of Primary Vertex Collection-->
+  		<parameter name="PrimaryVertex" type="string" lcioInType="VERTEX">PrimaryVertex</parameter>
+  		<!--Name of Primary BuildUp Collection-->
+  		<parameter name="BuildUpVertex" type="string" lcioInType="VERTEX">BuildUpVertex</parameter>
+  		<!--Name of input RecoMCTruthLink Collection-->
+  		<parameter name="RecoMCTruthLinkCollection" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+  		<!--Name of input MCTruthRecoLink Collection-->
+  		<parameter name="MCTruthRecoLinkCollection" type="string" lcioInType="LCRelation">MCTruthRecoLink</parameter>
+  		<!--Name of semi-leptonic Neutrino collection-->
+  		<parameter name="SemiLeptonicDecayVertex" type="string" lcioOutType="VERTEX">SemiLeptonicDecayVertex4</parameter>
+  		<!--Name of semi-leptonic Neutrino collection-->
+  		<parameter name="SemiLeptonicDecayVertexRP" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">SemiLeptonicDecay_RP4</parameter>
+  		<!--Name of Reconstructed Neutrino collection-->
+  		<parameter name="ReconstructedNeutrino" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">recoNeutrinos4</parameter>
+  		<!--Name of the JetSemiLeptonicDecayLinkName output collection-->
+  		<parameter name="JetSLDLinkName" type="string" lcioOutType="LCRelation">JetSLDLink4</parameter>
+  		<!--Name of the SemiLeptonicDecayJetLinkName output collection-->
+  		<parameter name="SLDJetLinkName" type="string" lcioOutType="LCRelation">SLDJetLink4</parameter>
+  		<!--Name of the trueNeutrino-reconstructedNeutrino output Link collection-->
+  		<parameter name="mcNurecoNuLinkName" type="string" lcioOutType="LCRelation">mcNurecoNuLink4</parameter>
+  		<!--Name of the trueNeutrino-reconstructedNeutrino output Link collection-->
+  		<parameter name="recoNumcNuLinkName" type="string" lcioOutType="LCRelation">recoNumcNuLink4</parameter>
+  		<!--Name of the SemiLeptonicDecayNeutrinoLinkName output collection-->
+  		<parameter name="NuSLDLinkName" type="string" lcioOutType="LCRelation">NuSLDLink4</parameter>
+  		<!--Name of the NeutrinoSemiLeptonicDecayLinkName output collection-->
+  		<parameter name="SLDNuLinkName" type="string" lcioOutType="LCRelation">SLDNuLink4</parameter>
+  		<!--do correction for semi-leptonic decays of B-Hadrons? YES: true , NO: false-->
+          <parameter name="includeBSLD" type="bool">true</parameter>
+  		<!--do correction for semi-leptonic decays of C-Hadrons? YES: true , NO: false-->
+          <parameter name="includeCSLD" type="bool">false</parameter>
+  		<!--do correction for semi-leptonic decays of Tau-Leptons? YES: true , NO: false-->
+          <parameter name="includeTSLD" type="bool">false</parameter>
+  		<!--Cheat semi-leptonic decays lepton from MCTruth-->
+          <parameter name="cheatSLDLeptons" type="bool">true</parameter>
+  		<!--Cheat FourMomentum of lepton in semi-leptonic decays-->
+          <parameter name="cheatLepton4momentum" type="bool">false</parameter>
+  		<!--Cheat Flight direction of mother hadron-->
+          <parameter name="cheatFlightDirection" type="bool">false</parameter>
+  		<!--Scenario for finding flight direction of mother hadron: 1 = default , 2 = assign jet axis , 3 = assign flight direction of leading particle in the jet-->
+          <parameter name="vertexingScenario" type="int">4</parameter>
+  		<!--Number of iterations for correcting flight direction of CHARGED parent hadron-->
+          <parameter name="nIterFlightDirCorrection" type="int">1</parameter>
+  		<!--Cheat Particle ID for Charged Decay Products-->
+          <parameter name="cheatPVAcharged" type="bool">false</parameter>
+  		<!--Cosine of Acceptance angle for charged PFOs to be assigned to the semi-leptonic decay when lepton is in 2nd vertex-->
+          <parameter name="chargedCosAcceptanceAngleSLD4" type="float">0.5</parameter>
+  		<!--Cosine of Acceptance angle for charged PFOs to be assigned to the semi-leptonic decay when lepton is with 3rd vertex-->
+          <parameter name="chargedCosAcceptanceAngleSLD5" type="float">0.5</parameter>
+  		<!--Cheat FourMomentum of charged visibles in semi-leptonic decays-->
+          <parameter name="cheatCharged4momentum" type="bool">false</parameter>
+  		<!--Cheat Particle ID for Neutral Decay Products-->
+          <parameter name="cheatPVAneutral" type="bool">false</parameter>
+  		<!--Cosine of Acceptance angle for neutral PFOs to be assigned to the semi-leptonic decay -->
+          <parameter name="neutralCosAcceptanceAngle" type="float">0.5</parameter>
+  		<!--Cheat FourMomentum of Neutral visibles in semi-leptonic decays-->
+          <parameter name="cheatNeutral4momentum" type="bool">false</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of B-Hadron when leptin is in 2nd vertex-->
+          <parameter name="BSLDChargedSLD4InvMassCut" type="float">1.80</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of B-Hadron when leptin is with 3rd vertex-->
+          <parameter name="BSLDChargedSLD5InvMassCut" type="float">1.50</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of B-Hadron when leptin is in 2nd vertex-->
+          <parameter name="BSLDNeutralSLD4InvMassCut" type="float">2.80</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of B-Hadron when leptin is with 3rd vertex-->
+          <parameter name="BSLDNeutralSLD5InvMassCut" type="float">2.50</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of C-Hadron when leptin is in 2nd vertex-->
+          <parameter name="CSLDChargedSLD4InvMassCut" type="float">0.00</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of C-Hadron when leptin is with 3rd vertex-->
+          <parameter name="CSLDChargedSLD5InvMassCut" type="float">0.00</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of C-Hadron when leptin is in 2nd vertex-->
+          <parameter name="CSLDNeutralSLD4InvMassCut" type="float">0.00</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of C-Hadron when leptin is with 3rd vertex-->
+          <parameter name="CSLDNeutralSLD5InvMassCut" type="float">0.00</parameter>
+  		<!--0: get 4p from linked track/cluster to MCP, 1: get 4p from PFO with linked track/cluster, 2: get 4p from linked PFO-->
+          <parameter name="recoFourMomentumOfVisibles" type="int">2</parameter>
+  		<!--Angle uncertainty (radian) for semi-leptonic decay of B-Hadron -->
+  		<parameter name="sigmaAlphaNu" type="float">0.100</parameter>
+  		<!--Energy uncertainty (GeV) for semi-leptonic decay of B-Hadron -->
+  		<parameter name="sigmaENu" type="float">4.00</parameter>
+  		<!--Display recoLepton, downstraem vertex and RP and reconstructed secondary vertex in Event Display-->
+  		<parameter name="displayEvent" type="bool">false</parameter>
+  		<!--Whether create root file for new pfo collection or not true:create / false: do not create-->
+          <parameter name="fillRootTree" type="bool">true</parameter>
+
+  		<!--Event selection based on semi-leptonic decays of B-hadrons: (0): without BSLD (1): with >= 0 BSLD(all events) (2): with >= 1 BSLD (3): with correctable BSLD -->
+          <parameter name="BSLDMode" type="int">1</parameter>
+  		<!--Event selection based on semi-leptonic decays of C-hadrons: (0): without CSLD (1): with >= 0 CSLD(all events) (2): with >= 1 CSLD (3): with correctable CSLD -->
+          <parameter name="CSLDMode" type="int">1</parameter>
+  		<!--Event selection based on semi-leptonic decays of T-Leptons: (0): without TSLD (1): with >= 0 TSLD(all events) (2): with >= 1 TSLD (3): with correctable TSLD -->
+          <parameter name="TSLDMode" type="int">1</parameter>
+  		<!--Event selection based on semi-leptonic decays: (0): without SLD (1): with >= 0 SLD(all events) (2): with >= 1 SLD (3): with correctable SLD -->
+          <parameter name="SLDMode" type="int">1</parameter>
+  		<!--verbosity level of this processor ("DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT")-->
+  		<parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  	</processor>
+
+
+  <processor name="MyErrorFlow4J" type="ErrorFlow">
+      <!--PfoAnalysis analyses output of PandoraPFANew-->
+      <!--Names of input jet collection-->
+      <parameter name="InputPFOCollection" type="string" lcioInType="ReconstructedParticle">RefinedJets4</parameter>
+      <!--Names of output collection-->
+      <parameter name="OutputPFOCollection" type="string" lcioOutType="ReconstructedParticle">OutputErrorFlowJets4</parameter>
+      <!--whether use full CovMat for neutral PFOs or use only energy uncertainty-->
+      <parameter name="useFullCovMatforNeutrals" type="bool">true</parameter>
+      <!--Enable/disable confusion term to be added to covariance matrix-->
+      <parameter name="EnableConfusionTerm" type="bool">${errorflowconfusion}</parameter>
+      <!--Enable/disable Propagating uncertainty due to confusion to the Momentum components-->
+      <parameter name="PropagateConfusion2Mom" type="bool">true</parameter>
+      <!-- A correction factor to be multiplied to angular uncertainties of Photons -->
+      <parameter name="CovMatFactorPhotons" type="double">1.3</parameter>
+      <!-- A correction factor to be multiplied to angular uncertainties of Neutral Hadrons -->
+      <parameter name="CovMatFactorNeutralHadrons" type="double">1.8</parameter>
+      <!--verbosity level of this processor ("DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT")-->
+      <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+<!-- ============================================================
+       5-jet clustering + vertex refinement + Weaver
+       ============================================================ -->
+  <processor name="JC5FT" type="LcfiplusProcessor">
+    <parameter name="Algorithms" type="stringVec"> JetClustering JetVertexRefiner MLInferenceWeaver </parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+
+    <parameter name="PFOCollection" type="string" value="PFOsMinusMuonsElectrons" />
+    <parameter name="UseMCP" type="int" value="0" />
+    <parameter name="MCPCollection" type="string" value="" />
+    <parameter name="MCPFORelation" type="string" value="" />
+    <parameter name="ReadSubdetectorEnergies" type="int" value="1"/>
+    <parameter name="UpdateVertexRPDaughters" type="int" value="0"/>
+    <parameter name="TrackHitOrdering" type="int" value="1"/>
+    <parameter name="PrintEventNumber" type="int" value="0"/>
+
+    <parameter name="JetClustering.PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="JetClustering.InputVertexCollectionName" type="string" value="BuildUpVertex" />
+    <parameter name="JetClustering.OutputJetCollectionName" type="stringVec" value="VertexJets5" />
+    <parameter name="JetClustering.NJetsRequested" type="intVec">5</parameter>
+    <parameter name="JetClustering.YCut" type="doubleVec" value="0." />
+    <parameter name="JetClustering.JetAlgorithm" type="string" value="DurhamVertex" />
+    <parameter name="JetClustering.UseBeamJets" type="int" value="0" />
+
+    <parameter name="JetClustering.UseMuonID" type="int" value="1" />
+    <parameter name="JetClustering.MuonIDExternal" type="int" value="0" />
+    <parameter name="JetClustering.MuonIDMinimumD0Significance" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMinimumZ0Significance" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMaximum3DImpactParameter" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMinimumProbability" type="double" value="0.5" />
+
+    <parameter name="JetClustering.VertexSelectionMinimumDistance" type="double" value="0.3" />
+    <parameter name="JetClustering.VertexSelectionMaximumDistance" type="double" value="30." />
+    <parameter name="JetClustering.VertexSelectionK0MassWidth" type="double" value="0.02" />
+    <parameter name="JetClustering.YAddedForJetVertexVertex" type="double" value="100"/>
+    <parameter name="JetClustering.YAddedForJetLeptonVertex" type="double" value="100"/>
+    <parameter name="JetClustering.YAddedForJetLeptonLepton" type="double" value="100"/>
+
+    <parameter name="JetVertexRefiner.InputJetCollectionName" type="string" value="VertexJets5" />
+    <parameter name="JetVertexRefiner.OutputJetCollectionName" type="string" value="RefinedJets5" />
+    <parameter name="JetVertexRefiner.PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="JetVertexRefiner.InputVertexCollectionName" type="string" value="BuildUpVertex" />
+    <parameter name="JetVertexRefiner.V0VertexCollectionName" type="string" value="BuildUpVertex_V0" />
+    <parameter name="JetVertexRefiner.OutputVertexCollectionName" type="string" value="RefinedVertex5" />
+
+    <parameter name="JetVertexRefiner.MinPosSingle" type="double" value="0.3" />
+    <parameter name="JetVertexRefiner.MaxPosSingle" type="double" value="30." />
+    <parameter name="JetVertexRefiner.MinEnergySingle" type="double" value="1." />
+    <parameter name="JetVertexRefiner.MaxAngleSingle" type="double" value="0.5" />
+    <parameter name="JetVertexRefiner.MaxSeparationPerPosSingle" type="double" value="0.1" />
+    <parameter name="JetVertexRefiner.mind0sigSingle" type="double" value="5." />
+    <parameter name="JetVertexRefiner.minz0sigSingle" type="double" value="5." />
+    <parameter name="JetVertexRefiner.OneVertexProbThreshold" type="double" value="0.001" />
+    <parameter name="JetVertexRefiner.MaxCharmFlightLengthPerJetEnergy" type="double" value="0.1" />
+
+    <parameter name="PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="MakeNtuple.AuxiliaryInfo" type="int" value="-1" />
+
+
+
+
+
+
+    <parameter name="MLInferenceWeaver.JetCollectionName" type="string" value="RefinedJets5" />
+    <parameter name="MLInferenceWeaver.OutputParameterName" type="string" value="weaver" />
+    <parameter name="MLInferenceWeaver.JsonFileName" type="string" value="${LCFIPlusML_JSON}" />
+    <parameter name="MLInferenceWeaver.OnnxFileName" type="string" value="${LCFIPlusML_ONNX}" />
+  </processor>
+
+  
+  <!-- ============================================================
+       5-jet semi-leptonic decay correction + ErrorFlow covariance
+       ============================================================ -->
+
+      <processor name="MySLDCorrection5J" type="SLDCorrection">
+  		<!--Name of the Input MCParticle Collection-->
+  		<parameter name="MCParticleCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+  		<!--Name of the Input PFO Collection-->
+  		<parameter name="PfoCollection" type="string" lcioInType="ReconstructedParticle">PandoraPFOsWithoutLepPair</parameter>
+  		<!--Name of the Input isolated lepton collection-->
+  		<parameter name="isoLeptonsCollection" type="string" lcioInType="ReconstructedParticle">ISOLeptons</parameter>
+  		<!--Name of the Input Jet Collection-->
+  		<parameter name="JetCollection" type="string" lcioInType="RECONSTRUCTEDPARTICLE">RefinedJets5</parameter>
+  		<!--Name of Primary Vertex Collection-->
+  		<parameter name="PrimaryVertex" type="string" lcioInType="VERTEX">PrimaryVertex</parameter>
+  		<!--Name of Primary BuildUp Collection-->
+  		<parameter name="BuildUpVertex" type="string" lcioInType="VERTEX">BuildUpVertex</parameter>
+  		<!--Name of input RecoMCTruthLink Collection-->
+  		<parameter name="RecoMCTruthLinkCollection" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+  		<!--Name of input MCTruthRecoLink Collection-->
+  		<parameter name="MCTruthRecoLinkCollection" type="string" lcioInType="LCRelation">MCTruthRecoLink</parameter>
+  		<!--Name of semi-leptonic Neutrino collection-->
+  		<parameter name="SemiLeptonicDecayVertex" type="string" lcioOutType="VERTEX">SemiLeptonicDecayVertex5</parameter>
+  		<!--Name of semi-leptonic Neutrino collection-->
+  		<parameter name="SemiLeptonicDecayVertexRP" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">SemiLeptonicDecay_RP5</parameter>
+  		<!--Name of Reconstructed Neutrino collection-->
+  		<parameter name="ReconstructedNeutrino" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">recoNeutrinos5</parameter>
+  		<!--Name of the JetSemiLeptonicDecayLinkName output collection-->
+  		<parameter name="JetSLDLinkName" type="string" lcioOutType="LCRelation">JetSLDLink5</parameter>
+  		<!--Name of the SemiLeptonicDecayJetLinkName output collection-->
+  		<parameter name="SLDJetLinkName" type="string" lcioOutType="LCRelation">SLDJetLink5</parameter>
+  		<!--Name of the trueNeutrino-reconstructedNeutrino output Link collection-->
+  		<parameter name="mcNurecoNuLinkName" type="string" lcioOutType="LCRelation">mcNurecoNuLink5</parameter>
+  		<!--Name of the trueNeutrino-reconstructedNeutrino output Link collection-->
+  		<parameter name="recoNumcNuLinkName" type="string" lcioOutType="LCRelation">recoNumcNuLink5</parameter>
+  		<!--Name of the SemiLeptonicDecayNeutrinoLinkName output collection-->
+  		<parameter name="NuSLDLinkName" type="string" lcioOutType="LCRelation">NuSLDLink5</parameter>
+  		<!--Name of the NeutrinoSemiLeptonicDecayLinkName output collection-->
+  		<parameter name="SLDNuLinkName" type="string" lcioOutType="LCRelation">SLDNuLink5</parameter>
+  		<!--do correction for semi-leptonic decays of B-Hadrons? YES: true , NO: false-->
+          <parameter name="includeBSLD" type="bool">true</parameter>
+  		<!--do correction for semi-leptonic decays of C-Hadrons? YES: true , NO: false-->
+          <parameter name="includeCSLD" type="bool">false</parameter>
+  		<!--do correction for semi-leptonic decays of Tau-Leptons? YES: true , NO: false-->
+          <parameter name="includeTSLD" type="bool">false</parameter>
+  		<!--Cheat semi-leptonic decays lepton from MCTruth-->
+          <parameter name="cheatSLDLeptons" type="bool">true</parameter>
+  		<!--Cheat FourMomentum of lepton in semi-leptonic decays-->
+          <parameter name="cheatLepton4momentum" type="bool">false</parameter>
+  		<!--Cheat Flight direction of mother hadron-->
+          <parameter name="cheatFlightDirection" type="bool">false</parameter>
+  		<!--Scenario for finding flight direction of mother hadron: 1 = default , 2 = assign jet axis , 3 = assign flight direction of leading particle in the jet-->
+          <parameter name="vertexingScenario" type="int">4</parameter>
+  		<!--Number of iterations for correcting flight direction of CHARGED parent hadron-->
+          <parameter name="nIterFlightDirCorrection" type="int">1</parameter>
+  		<!--Cheat Particle ID for Charged Decay Products-->
+          <parameter name="cheatPVAcharged" type="bool">false</parameter>
+  		<!--Cosine of Acceptance angle for charged PFOs to be assigned to the semi-leptonic decay when lepton is in 2nd vertex-->
+          <parameter name="chargedCosAcceptanceAngleSLD4" type="float">0.5</parameter>
+  		<!--Cosine of Acceptance angle for charged PFOs to be assigned to the semi-leptonic decay when lepton is with 3rd vertex-->
+          <parameter name="chargedCosAcceptanceAngleSLD5" type="float">0.5</parameter>
+  		<!--Cheat FourMomentum of charged visibles in semi-leptonic decays-->
+          <parameter name="cheatCharged4momentum" type="bool">false</parameter>
+  		<!--Cheat Particle ID for Neutral Decay Products-->
+          <parameter name="cheatPVAneutral" type="bool">false</parameter>
+  		<!--Cosine of Acceptance angle for neutral PFOs to be assigned to the semi-leptonic decay -->
+          <parameter name="neutralCosAcceptanceAngle" type="float">0.5</parameter>
+  		<!--Cheat FourMomentum of Neutral visibles in semi-leptonic decays-->
+          <parameter name="cheatNeutral4momentum" type="bool">false</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of B-Hadron when leptin is in 2nd vertex-->
+          <parameter name="BSLDChargedSLD4InvMassCut" type="float">1.80</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of B-Hadron when leptin is with 3rd vertex-->
+          <parameter name="BSLDChargedSLD5InvMassCut" type="float">1.50</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of B-Hadron when leptin is in 2nd vertex-->
+          <parameter name="BSLDNeutralSLD4InvMassCut" type="float">2.80</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of B-Hadron when leptin is with 3rd vertex-->
+          <parameter name="BSLDNeutralSLD5InvMassCut" type="float">2.50</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of C-Hadron when leptin is in 2nd vertex-->
+          <parameter name="CSLDChargedSLD4InvMassCut" type="float">0.00</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of C-Hadron when leptin is with 3rd vertex-->
+          <parameter name="CSLDChargedSLD5InvMassCut" type="float">0.00</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of C-Hadron when leptin is in 2nd vertex-->
+          <parameter name="CSLDNeutralSLD4InvMassCut" type="float">0.00</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of C-Hadron when leptin is with 3rd vertex-->
+          <parameter name="CSLDNeutralSLD5InvMassCut" type="float">0.00</parameter>
+  		<!--0: get 4p from linked track/cluster to MCP, 1: get 4p from PFO with linked track/cluster, 2: get 4p from linked PFO-->
+          <parameter name="recoFourMomentumOfVisibles" type="int">2</parameter>
+  		<!--Angle uncertainty (radian) for semi-leptonic decay of B-Hadron -->
+  		<parameter name="sigmaAlphaNu" type="float">0.100</parameter>
+  		<!--Energy uncertainty (GeV) for semi-leptonic decay of B-Hadron -->
+  		<parameter name="sigmaENu" type="float">4.00</parameter>
+  		<!--Display recoLepton, downstraem vertex and RP and reconstructed secondary vertex in Event Display-->
+  		<parameter name="displayEvent" type="bool">false</parameter>
+  		<!--Whether create root file for new pfo collection or not true:create / false: do not create-->
+          <parameter name="fillRootTree" type="bool">true</parameter>
+
+  		<!--Event selection based on semi-leptonic decays of B-hadrons: (0): without BSLD (1): with >= 0 BSLD(all events) (2): with >= 1 BSLD (3): with correctable BSLD -->
+          <parameter name="BSLDMode" type="int">1</parameter>
+  		<!--Event selection based on semi-leptonic decays of C-hadrons: (0): without CSLD (1): with >= 0 CSLD(all events) (2): with >= 1 CSLD (3): with correctable CSLD -->
+          <parameter name="CSLDMode" type="int">1</parameter>
+  		<!--Event selection based on semi-leptonic decays of T-Leptons: (0): without TSLD (1): with >= 0 TSLD(all events) (2): with >= 1 TSLD (3): with correctable TSLD -->
+          <parameter name="TSLDMode" type="int">1</parameter>
+  		<!--Event selection based on semi-leptonic decays: (0): without SLD (1): with >= 0 SLD(all events) (2): with >= 1 SLD (3): with correctable SLD -->
+          <parameter name="SLDMode" type="int">1</parameter>
+  		<!--verbosity level of this processor ("DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT")-->
+  		<parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  	</processor>
+
+
+  <processor name="MyErrorFlow5J" type="ErrorFlow">
+      <!--PfoAnalysis analyses output of PandoraPFANew-->
+      <!--Names of input jet collection-->
+      <parameter name="InputPFOCollection" type="string" lcioInType="ReconstructedParticle">RefinedJets5</parameter>
+      <!--Names of output collection-->
+      <parameter name="OutputPFOCollection" type="string" lcioOutType="ReconstructedParticle">OutputErrorFlowJets5</parameter>
+      <!--whether use full CovMat for neutral PFOs or use only energy uncertainty-->
+      <parameter name="useFullCovMatforNeutrals" type="bool">true</parameter>
+      <!--Enable/disable confusion term to be added to covariance matrix-->
+      <parameter name="EnableConfusionTerm" type="bool">${errorflowconfusion}</parameter>
+      <!--Enable/disable Propagating uncertainty due to confusion to the Momentum components-->
+      <parameter name="PropagateConfusion2Mom" type="bool">true</parameter>
+      <!-- A correction factor to be multiplied to angular uncertainties of Photons -->
+      <parameter name="CovMatFactorPhotons" type="double">1.3</parameter>
+      <!-- A correction factor to be multiplied to angular uncertainties of Neutral Hadrons -->
+      <parameter name="CovMatFactorNeutralHadrons" type="double">1.8</parameter>
+      <!--verbosity level of this processor ("DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT")-->
+      <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+<!-- ============================================================
+       6-jet clustering + vertex refinement + Weaver
+       ============================================================ -->
+  <processor name="JC6FT" type="LcfiplusProcessor">
+    <parameter name="Algorithms" type="stringVec"> JetClustering JetVertexRefiner MLInferenceWeaver </parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+
+    <parameter name="PFOCollection" type="string" value="PFOsMinusMuonsElectrons" />
+    <parameter name="UseMCP" type="int" value="0" />
+    <parameter name="MCPCollection" type="string" value="" />
+    <parameter name="MCPFORelation" type="string" value="" />
+    <parameter name="ReadSubdetectorEnergies" type="int" value="1"/>
+    <parameter name="UpdateVertexRPDaughters" type="int" value="0"/>
+    <parameter name="TrackHitOrdering" type="int" value="1"/>
+    <parameter name="PrintEventNumber" type="int" value="0"/>
+
+    <parameter name="JetClustering.PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="JetClustering.InputVertexCollectionName" type="string" value="BuildUpVertex" />
+    <parameter name="JetClustering.OutputJetCollectionName" type="stringVec" value="VertexJets6" />
+    <parameter name="JetClustering.NJetsRequested" type="intVec">6</parameter>
+    <parameter name="JetClustering.YCut" type="doubleVec" value="0." />
+    <parameter name="JetClustering.JetAlgorithm" type="string" value="DurhamVertex" />
+    <parameter name="JetClustering.UseBeamJets" type="int" value="0" />
+
+    <parameter name="JetClustering.UseMuonID" type="int" value="1" />
+    <parameter name="JetClustering.MuonIDExternal" type="int" value="0" />
+    <parameter name="JetClustering.MuonIDMinimumD0Significance" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMinimumZ0Significance" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMaximum3DImpactParameter" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMinimumProbability" type="double" value="0.5" />
+
+    <parameter name="JetClustering.VertexSelectionMinimumDistance" type="double" value="0.3" />
+    <parameter name="JetClustering.VertexSelectionMaximumDistance" type="double" value="30." />
+    <parameter name="JetClustering.VertexSelectionK0MassWidth" type="double" value="0.02" />
+    <parameter name="JetClustering.YAddedForJetVertexVertex" type="double" value="100"/>
+    <parameter name="JetClustering.YAddedForJetLeptonVertex" type="double" value="100"/>
+    <parameter name="JetClustering.YAddedForJetLeptonLepton" type="double" value="100"/>
+
+    <parameter name="JetVertexRefiner.InputJetCollectionName" type="string" value="VertexJets6" />
+    <parameter name="JetVertexRefiner.OutputJetCollectionName" type="string" value="RefinedJets6" />
+    <parameter name="JetVertexRefiner.PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="JetVertexRefiner.InputVertexCollectionName" type="string" value="BuildUpVertex" />
+    <parameter name="JetVertexRefiner.V0VertexCollectionName" type="string" value="BuildUpVertex_V0" />
+    <parameter name="JetVertexRefiner.OutputVertexCollectionName" type="string" value="RefinedVertex6" />
+
+    <parameter name="JetVertexRefiner.MinPosSingle" type="double" value="0.3" />
+    <parameter name="JetVertexRefiner.MaxPosSingle" type="double" value="30." />
+    <parameter name="JetVertexRefiner.MinEnergySingle" type="double" value="1." />
+    <parameter name="JetVertexRefiner.MaxAngleSingle" type="double" value="0.5" />
+    <parameter name="JetVertexRefiner.MaxSeparationPerPosSingle" type="double" value="0.1" />
+    <parameter name="JetVertexRefiner.mind0sigSingle" type="double" value="5." />
+    <parameter name="JetVertexRefiner.minz0sigSingle" type="double" value="5." />
+    <parameter name="JetVertexRefiner.OneVertexProbThreshold" type="double" value="0.001" />
+    <parameter name="JetVertexRefiner.MaxCharmFlightLengthPerJetEnergy" type="double" value="0.1" />
+
+    <parameter name="PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="MakeNtuple.AuxiliaryInfo" type="int" value="-1" />
+
+
+
+
+
+
+    <parameter name="MLInferenceWeaver.JetCollectionName" type="string" value="RefinedJets6" />
+    <parameter name="MLInferenceWeaver.OutputParameterName" type="string" value="weaver" />
+    <parameter name="MLInferenceWeaver.JsonFileName" type="string" value="${LCFIPlusML_JSON}" />
+    <parameter name="MLInferenceWeaver.OnnxFileName" type="string" value="${LCFIPlusML_ONNX}" />
+  </processor>
+
+  
+  <!-- ============================================================
+       6-jet semi-leptonic decay correction + ErrorFlow covariance
+       ============================================================ -->
+
+      <processor name="MySLDCorrection6J" type="SLDCorrection">
+  		<!--Name of the Input MCParticle Collection-->
+  		<parameter name="MCParticleCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+  		<!--Name of the Input PFO Collection-->
+  		<parameter name="PfoCollection" type="string" lcioInType="ReconstructedParticle">PandoraPFOsWithoutLepPair</parameter>
+  		<!--Name of the Input isolated lepton collection-->
+  		<parameter name="isoLeptonsCollection" type="string" lcioInType="ReconstructedParticle">ISOLeptons</parameter>
+  		<!--Name of the Input Jet Collection-->
+  		<parameter name="JetCollection" type="string" lcioInType="RECONSTRUCTEDPARTICLE">RefinedJets6</parameter>
+  		<!--Name of Primary Vertex Collection-->
+  		<parameter name="PrimaryVertex" type="string" lcioInType="VERTEX">PrimaryVertex</parameter>
+  		<!--Name of Primary BuildUp Collection-->
+  		<parameter name="BuildUpVertex" type="string" lcioInType="VERTEX">BuildUpVertex</parameter>
+  		<!--Name of input RecoMCTruthLink Collection-->
+  		<parameter name="RecoMCTruthLinkCollection" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+  		<!--Name of input MCTruthRecoLink Collection-->
+  		<parameter name="MCTruthRecoLinkCollection" type="string" lcioInType="LCRelation">MCTruthRecoLink</parameter>
+  		<!--Name of semi-leptonic Neutrino collection-->
+  		<parameter name="SemiLeptonicDecayVertex" type="string" lcioOutType="VERTEX">SemiLeptonicDecayVertex6</parameter>
+  		<!--Name of semi-leptonic Neutrino collection-->
+  		<parameter name="SemiLeptonicDecayVertexRP" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">SemiLeptonicDecay_RP6</parameter>
+  		<!--Name of Reconstructed Neutrino collection-->
+  		<parameter name="ReconstructedNeutrino" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">recoNeutrinos6</parameter>
+  		<!--Name of the JetSemiLeptonicDecayLinkName output collection-->
+  		<parameter name="JetSLDLinkName" type="string" lcioOutType="LCRelation">JetSLDLink6</parameter>
+  		<!--Name of the SemiLeptonicDecayJetLinkName output collection-->
+  		<parameter name="SLDJetLinkName" type="string" lcioOutType="LCRelation">SLDJetLink6</parameter>
+  		<!--Name of the trueNeutrino-reconstructedNeutrino output Link collection-->
+  		<parameter name="mcNurecoNuLinkName" type="string" lcioOutType="LCRelation">mcNurecoNuLink6</parameter>
+  		<!--Name of the trueNeutrino-reconstructedNeutrino output Link collection-->
+  		<parameter name="recoNumcNuLinkName" type="string" lcioOutType="LCRelation">recoNumcNuLink6</parameter>
+  		<!--Name of the SemiLeptonicDecayNeutrinoLinkName output collection-->
+  		<parameter name="NuSLDLinkName" type="string" lcioOutType="LCRelation">NuSLDLink6</parameter>
+  		<!--Name of the NeutrinoSemiLeptonicDecayLinkName output collection-->
+  		<parameter name="SLDNuLinkName" type="string" lcioOutType="LCRelation">SLDNuLink6</parameter>
+  		<!--do correction for semi-leptonic decays of B-Hadrons? YES: true , NO: false-->
+          <parameter name="includeBSLD" type="bool">true</parameter>
+  		<!--do correction for semi-leptonic decays of C-Hadrons? YES: true , NO: false-->
+          <parameter name="includeCSLD" type="bool">false</parameter>
+  		<!--do correction for semi-leptonic decays of Tau-Leptons? YES: true , NO: false-->
+          <parameter name="includeTSLD" type="bool">false</parameter>
+  		<!--Cheat semi-leptonic decays lepton from MCTruth-->
+          <parameter name="cheatSLDLeptons" type="bool">true</parameter>
+  		<!--Cheat FourMomentum of lepton in semi-leptonic decays-->
+          <parameter name="cheatLepton4momentum" type="bool">false</parameter>
+  		<!--Cheat Flight direction of mother hadron-->
+          <parameter name="cheatFlightDirection" type="bool">false</parameter>
+  		<!--Scenario for finding flight direction of mother hadron: 1 = default , 2 = assign jet axis , 3 = assign flight direction of leading particle in the jet-->
+          <parameter name="vertexingScenario" type="int">4</parameter>
+  		<!--Number of iterations for correcting flight direction of CHARGED parent hadron-->
+          <parameter name="nIterFlightDirCorrection" type="int">1</parameter>
+  		<!--Cheat Particle ID for Charged Decay Products-->
+          <parameter name="cheatPVAcharged" type="bool">false</parameter>
+  		<!--Cosine of Acceptance angle for charged PFOs to be assigned to the semi-leptonic decay when lepton is in 2nd vertex-->
+          <parameter name="chargedCosAcceptanceAngleSLD4" type="float">0.5</parameter>
+  		<!--Cosine of Acceptance angle for charged PFOs to be assigned to the semi-leptonic decay when lepton is with 3rd vertex-->
+          <parameter name="chargedCosAcceptanceAngleSLD5" type="float">0.5</parameter>
+  		<!--Cheat FourMomentum of charged visibles in semi-leptonic decays-->
+          <parameter name="cheatCharged4momentum" type="bool">false</parameter>
+  		<!--Cheat Particle ID for Neutral Decay Products-->
+          <parameter name="cheatPVAneutral" type="bool">false</parameter>
+  		<!--Cosine of Acceptance angle for neutral PFOs to be assigned to the semi-leptonic decay -->
+          <parameter name="neutralCosAcceptanceAngle" type="float">0.5</parameter>
+  		<!--Cheat FourMomentum of Neutral visibles in semi-leptonic decays-->
+          <parameter name="cheatNeutral4momentum" type="bool">false</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of B-Hadron when leptin is in 2nd vertex-->
+          <parameter name="BSLDChargedSLD4InvMassCut" type="float">1.80</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of B-Hadron when leptin is with 3rd vertex-->
+          <parameter name="BSLDChargedSLD5InvMassCut" type="float">1.50</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of B-Hadron when leptin is in 2nd vertex-->
+          <parameter name="BSLDNeutralSLD4InvMassCut" type="float">2.80</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of B-Hadron when leptin is with 3rd vertex-->
+          <parameter name="BSLDNeutralSLD5InvMassCut" type="float">2.50</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of C-Hadron when leptin is in 2nd vertex-->
+          <parameter name="CSLDChargedSLD4InvMassCut" type="float">0.00</parameter>
+  		<!--Cut on Invariant mass of visible charged decay products for semi-leptonic decay of C-Hadron when leptin is with 3rd vertex-->
+          <parameter name="CSLDChargedSLD5InvMassCut" type="float">0.00</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of C-Hadron when leptin is in 2nd vertex-->
+          <parameter name="CSLDNeutralSLD4InvMassCut" type="float">0.00</parameter>
+  		<!--Cut on Invariant mass of visible neutral decay products for semi-leptonic decay of C-Hadron when leptin is with 3rd vertex-->
+          <parameter name="CSLDNeutralSLD5InvMassCut" type="float">0.00</parameter>
+  		<!--0: get 4p from linked track/cluster to MCP, 1: get 4p from PFO with linked track/cluster, 2: get 4p from linked PFO-->
+          <parameter name="recoFourMomentumOfVisibles" type="int">2</parameter>
+  		<!--Angle uncertainty (radian) for semi-leptonic decay of B-Hadron -->
+  		<parameter name="sigmaAlphaNu" type="float">0.100</parameter>
+  		<!--Energy uncertainty (GeV) for semi-leptonic decay of B-Hadron -->
+  		<parameter name="sigmaENu" type="float">4.00</parameter>
+  		<!--Display recoLepton, downstraem vertex and RP and reconstructed secondary vertex in Event Display-->
+  		<parameter name="displayEvent" type="bool">false</parameter>
+  		<!--Whether create root file for new pfo collection or not true:create / false: do not create-->
+          <parameter name="fillRootTree" type="bool">true</parameter>
+
+  		<!--Event selection based on semi-leptonic decays of B-hadrons: (0): without BSLD (1): with >= 0 BSLD(all events) (2): with >= 1 BSLD (3): with correctable BSLD -->
+          <parameter name="BSLDMode" type="int">1</parameter>
+  		<!--Event selection based on semi-leptonic decays of C-hadrons: (0): without CSLD (1): with >= 0 CSLD(all events) (2): with >= 1 CSLD (3): with correctable CSLD -->
+          <parameter name="CSLDMode" type="int">1</parameter>
+  		<!--Event selection based on semi-leptonic decays of T-Leptons: (0): without TSLD (1): with >= 0 TSLD(all events) (2): with >= 1 TSLD (3): with correctable TSLD -->
+          <parameter name="TSLDMode" type="int">1</parameter>
+  		<!--Event selection based on semi-leptonic decays: (0): without SLD (1): with >= 0 SLD(all events) (2): with >= 1 SLD (3): with correctable SLD -->
+          <parameter name="SLDMode" type="int">1</parameter>
+  		<!--verbosity level of this processor ("DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT")-->
+  		<parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  	</processor>
+
+
+  <processor name="MyErrorFlow6J" type="ErrorFlow">
+      <!--PfoAnalysis analyses output of PandoraPFANew-->
+      <!--Names of input jet collection-->
+      <parameter name="InputPFOCollection" type="string" lcioInType="ReconstructedParticle">RefinedJets6</parameter>
+      <!--Names of output collection-->
+      <parameter name="OutputPFOCollection" type="string" lcioOutType="ReconstructedParticle">OutputErrorFlowJets6</parameter>
+      <!--whether use full CovMat for neutral PFOs or use only energy uncertainty-->
+      <parameter name="useFullCovMatforNeutrals" type="bool">true</parameter>
+      <!--Enable/disable confusion term to be added to covariance matrix-->
+      <parameter name="EnableConfusionTerm" type="bool">${errorflowconfusion}</parameter>
+      <!--Enable/disable Propagating uncertainty due to confusion to the Momentum components-->
+      <parameter name="PropagateConfusion2Mom" type="bool">true</parameter>
+      <!-- A correction factor to be multiplied to angular uncertainties of Photons -->
+      <parameter name="CovMatFactorPhotons" type="double">1.3</parameter>
+      <!-- A correction factor to be multiplied to angular uncertainties of Neutral Hadrons -->
+      <parameter name="CovMatFactorNeutralHadrons" type="double">1.8</parameter>
+      <!--verbosity level of this processor ("DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT")-->
+      <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+<!-- ============================================================
+       7-jet clustering + vertex refinement + Weaver
+       ============================================================ -->
+  <processor name="JC7FT" type="LcfiplusProcessor">
+    <parameter name="Algorithms" type="stringVec"> JetClustering JetVertexRefiner MLInferenceWeaver </parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+
+    <parameter name="PFOCollection" type="string" value="PFOsMinusMuonsElectrons" />
+    <parameter name="UseMCP" type="int" value="0" />
+    <parameter name="MCPCollection" type="string" value="" />
+    <parameter name="MCPFORelation" type="string" value="" />
+    <parameter name="ReadSubdetectorEnergies" type="int" value="1"/>
+    <parameter name="UpdateVertexRPDaughters" type="int" value="0"/>
+    <parameter name="TrackHitOrdering" type="int" value="1"/>
+    <parameter name="PrintEventNumber" type="int" value="0"/>
+
+    <parameter name="JetClustering.PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="JetClustering.InputVertexCollectionName" type="string" value="BuildUpVertex" />
+    <parameter name="JetClustering.OutputJetCollectionName" type="stringVec" value="VertexJets7" />
+    <parameter name="JetClustering.NJetsRequested" type="intVec">7</parameter>
+    <parameter name="JetClustering.YCut" type="doubleVec" value="0." />
+    <parameter name="JetClustering.JetAlgorithm" type="string" value="DurhamVertex" />
+    <parameter name="JetClustering.UseBeamJets" type="int" value="0" />
+
+    <parameter name="JetClustering.UseMuonID" type="int" value="1" />
+    <parameter name="JetClustering.MuonIDExternal" type="int" value="0" />
+    <parameter name="JetClustering.MuonIDMinimumD0Significance" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMinimumZ0Significance" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMaximum3DImpactParameter" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMinimumProbability" type="double" value="0.5" />
+
+    <parameter name="JetClustering.VertexSelectionMinimumDistance" type="double" value="0.3" />
+    <parameter name="JetClustering.VertexSelectionMaximumDistance" type="double" value="30." />
+    <parameter name="JetClustering.VertexSelectionK0MassWidth" type="double" value="0.02" />
+    <parameter name="JetClustering.YAddedForJetVertexVertex" type="double" value="100"/>
+    <parameter name="JetClustering.YAddedForJetLeptonVertex" type="double" value="100"/>
+    <parameter name="JetClustering.YAddedForJetLeptonLepton" type="double" value="100"/>
+
+    <parameter name="JetVertexRefiner.InputJetCollectionName" type="string" value="VertexJets7" />
+    <parameter name="JetVertexRefiner.OutputJetCollectionName" type="string" value="RefinedJets7" />
+    <parameter name="JetVertexRefiner.PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="JetVertexRefiner.InputVertexCollectionName" type="string" value="BuildUpVertex" />
+    <parameter name="JetVertexRefiner.V0VertexCollectionName" type="string" value="BuildUpVertex_V0" />
+    <parameter name="JetVertexRefiner.OutputVertexCollectionName" type="string" value="RefinedVertex7" />
+
+    <parameter name="JetVertexRefiner.MinPosSingle" type="double" value="0.3" />
+    <parameter name="JetVertexRefiner.MaxPosSingle" type="double" value="30." />
+    <parameter name="JetVertexRefiner.MinEnergySingle" type="double" value="1." />
+    <parameter name="JetVertexRefiner.MaxAngleSingle" type="double" value="0.5" />
+    <parameter name="JetVertexRefiner.MaxSeparationPerPosSingle" type="double" value="0.1" />
+    <parameter name="JetVertexRefiner.mind0sigSingle" type="double" value="5." />
+    <parameter name="JetVertexRefiner.minz0sigSingle" type="double" value="5." />
+    <parameter name="JetVertexRefiner.OneVertexProbThreshold" type="double" value="0.001" />
+    <parameter name="JetVertexRefiner.MaxCharmFlightLengthPerJetEnergy" type="double" value="0.1" />
+
+    <parameter name="PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="MakeNtuple.AuxiliaryInfo" type="int" value="-1" />
+
+
+
+
+
+
+    <parameter name="MLInferenceWeaver.JetCollectionName" type="string" value="RefinedJets7" />
+    <parameter name="MLInferenceWeaver.OutputParameterName" type="string" value="weaver" />
+    <parameter name="MLInferenceWeaver.JsonFileName" type="string" value="${LCFIPlusML_JSON}" />
+    <parameter name="MLInferenceWeaver.OnnxFileName" type="string" value="${LCFIPlusML_ONNX}" />
+  </processor>
+
+  
+  <!-- ============================================================
+       7-jet semi-leptonic decay correction + ErrorFlow covariance
+       ============================================================ -->
+  <processor name="MySLDCorrection7J" type="SLDCorrection">
+    <parameter name="MCParticleCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+    <parameter name="PfoCollection" type="string" lcioInType="ReconstructedParticle">PandoraPFOsWithoutLepPair</parameter>
+    <parameter name="isoLeptonsCollection" type="string" lcioInType="ReconstructedParticle">ISOLeptons</parameter>
+    <parameter name="JetCollection" type="string" lcioInType="RECONSTRUCTEDPARTICLE">RefinedJets7</parameter>
+    <parameter name="PrimaryVertex" type="string" lcioInType="VERTEX">PrimaryVertex</parameter>
+    <parameter name="BuildUpVertex" type="string" lcioInType="VERTEX">BuildUpVertex</parameter>
+    <parameter name="RecoMCTruthLinkCollection" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+    <parameter name="MCTruthRecoLinkCollection" type="string" lcioInType="LCRelation">MCTruthRecoLink</parameter>
+
+    <parameter name="SemiLeptonicDecayVertex" type="string" lcioOutType="VERTEX">SemiLeptonicDecayVertex7</parameter>
+    <parameter name="SemiLeptonicDecayVertexRP" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">SemiLeptonicDecay_RP7</parameter>
+    <parameter name="ReconstructedNeutrino" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">recoNeutrinos7</parameter>
+
+    <parameter name="JetSLDLinkName" type="string" lcioOutType="LCRelation">JetSLDLink7</parameter>
+    <parameter name="SLDJetLinkName" type="string" lcioOutType="LCRelation">SLDJetLink7</parameter>
+    <parameter name="mcNurecoNuLinkName" type="string" lcioOutType="LCRelation">mcNurecoNuLink7</parameter>
+    <parameter name="recoNumcNuLinkName" type="string" lcioOutType="LCRelation">recoNumcNuLink7</parameter>
+    <parameter name="NuSLDLinkName" type="string" lcioOutType="LCRelation">NuSLDLink7</parameter>
+    <parameter name="SLDNuLinkName" type="string" lcioOutType="LCRelation">SLDNuLink7</parameter>
+
+    <parameter name="includeBSLD" type="bool">true</parameter>
+    <parameter name="includeCSLD" type="bool">false</parameter>
+    <parameter name="includeTSLD" type="bool">false</parameter>
+    <parameter name="cheatSLDLeptons" type="bool">true</parameter>
+    <parameter name="cheatLepton4momentum" type="bool">false</parameter>
+    <parameter name="cheatFlightDirection" type="bool">false</parameter>
+    <parameter name="vertexingScenario" type="int">4</parameter>
+    <parameter name="nIterFlightDirCorrection" type="int">1</parameter>
+    <parameter name="cheatPVAcharged" type="bool">false</parameter>
+    <parameter name="chargedCosAcceptanceAngleSLD4" type="float">0.5</parameter>
+    <parameter name="chargedCosAcceptanceAngleSLD5" type="float">0.5</parameter>
+    <parameter name="cheatCharged4momentum" type="bool">false</parameter>
+    <parameter name="cheatPVAneutral" type="bool">false</parameter>
+    <parameter name="neutralCosAcceptanceAngle" type="float">0.5</parameter>
+    <parameter name="cheatNeutral4momentum" type="bool">false</parameter>
+    <parameter name="BSLDChargedSLD4InvMassCut" type="float">1.80</parameter>
+    <parameter name="BSLDChargedSLD5InvMassCut" type="float">1.50</parameter>
+    <parameter name="BSLDNeutralSLD4InvMassCut" type="float">2.80</parameter>
+    <parameter name="BSLDNeutralSLD5InvMassCut" type="float">2.50</parameter>
+    <parameter name="CSLDChargedSLD4InvMassCut" type="float">0.00</parameter>
+    <parameter name="CSLDChargedSLD5InvMassCut" type="float">0.00</parameter>
+    <parameter name="CSLDNeutralSLD4InvMassCut" type="float">0.00</parameter>
+    <parameter name="CSLDNeutralSLD5InvMassCut" type="float">0.00</parameter>
+    <parameter name="recoFourMomentumOfVisibles" type="int">2</parameter>
+    <parameter name="sigmaAlphaNu" type="float">0.100</parameter>
+    <parameter name="sigmaENu" type="float">4.00</parameter>
+    <parameter name="displayEvent" type="bool">false</parameter>
+    <parameter name="fillRootTree" type="bool">true</parameter>
+
+    <parameter name="BSLDMode" type="int">1</parameter>
+    <parameter name="CSLDMode" type="int">1</parameter>
+    <parameter name="TSLDMode" type="int">1</parameter>
+    <parameter name="SLDMode" type="int">1</parameter>
+
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+  <processor name="MyErrorFlow7J" type="ErrorFlow">
+    <parameter name="InputPFOCollection" type="string" lcioInType="ReconstructedParticle">RefinedJets7</parameter>
+    <parameter name="OutputPFOCollection" type="string" lcioOutType="ReconstructedParticle">OutputErrorFlowJets7</parameter>
+    <parameter name="useFullCovMatforNeutrals" type="bool">true</parameter>
+    <parameter name="EnableConfusionTerm" type="bool">${errorflowconfusion}</parameter>
+    <parameter name="PropagateConfusion2Mom" type="bool">true</parameter>
+    <parameter name="CovMatFactorPhotons" type="double">1.3</parameter>
+    <parameter name="CovMatFactorNeutralHadrons" type="double">1.8</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+<!-- ============================================================
+       8-jet clustering + vertex refinement + Weaver
+       ============================================================ -->
+  <processor name="JC8FT" type="LcfiplusProcessor">
+    <parameter name="Algorithms" type="stringVec"> JetClustering JetVertexRefiner MLInferenceWeaver </parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+
+    <parameter name="PFOCollection" type="string" value="PFOsMinusMuonsElectrons" />
+    <parameter name="UseMCP" type="int" value="0" />
+    <parameter name="MCPCollection" type="string" value="" />
+    <parameter name="MCPFORelation" type="string" value="" />
+    <parameter name="ReadSubdetectorEnergies" type="int" value="1"/>
+    <parameter name="UpdateVertexRPDaughters" type="int" value="0"/>
+    <parameter name="TrackHitOrdering" type="int" value="1"/>
+    <parameter name="PrintEventNumber" type="int" value="0"/>
+
+    <parameter name="JetClustering.PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="JetClustering.InputVertexCollectionName" type="string" value="BuildUpVertex" />
+    <parameter name="JetClustering.OutputJetCollectionName" type="stringVec" value="VertexJets8" />
+    <parameter name="JetClustering.NJetsRequested" type="intVec">8</parameter>
+    <parameter name="JetClustering.YCut" type="doubleVec" value="0." />
+    <parameter name="JetClustering.SaveYMergeScales" type="int">1</parameter>
+    <parameter name="JetClustering.YMergeParameterPrefix" type="string">y_</parameter>
+    <parameter name="JetClustering.JetAlgorithm" type="string" value="DurhamVertex" />
+    <parameter name="JetClustering.UseBeamJets" type="int" value="0" />
+
+    <parameter name="JetClustering.UseMuonID" type="int" value="1" />
+    <parameter name="JetClustering.MuonIDExternal" type="int" value="0" />
+    <parameter name="JetClustering.MuonIDMinimumD0Significance" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMinimumZ0Significance" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMaximum3DImpactParameter" type="double" value="5." />
+    <parameter name="JetClustering.MuonIDMinimumProbability" type="double" value="0.5" />
+
+    <parameter name="JetClustering.VertexSelectionMinimumDistance" type="double" value="0.3" />
+    <parameter name="JetClustering.VertexSelectionMaximumDistance" type="double" value="30." />
+    <parameter name="JetClustering.VertexSelectionK0MassWidth" type="double" value="0.02" />
+    <parameter name="JetClustering.YAddedForJetVertexVertex" type="double" value="100"/>
+    <parameter name="JetClustering.YAddedForJetLeptonVertex" type="double" value="100"/>
+    <parameter name="JetClustering.YAddedForJetLeptonLepton" type="double" value="100"/>
+
+    <parameter name="JetVertexRefiner.InputJetCollectionName" type="string" value="VertexJets8" />
+    <parameter name="JetVertexRefiner.OutputJetCollectionName" type="string" value="RefinedJets8" />
+    <parameter name="JetVertexRefiner.PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="JetVertexRefiner.InputVertexCollectionName" type="string" value="BuildUpVertex" />
+    <parameter name="JetVertexRefiner.V0VertexCollectionName" type="string" value="BuildUpVertex_V0" />
+    <parameter name="JetVertexRefiner.OutputVertexCollectionName" type="string" value="RefinedVertex8" />
+
+    <parameter name="JetVertexRefiner.MinPosSingle" type="double" value="0.3" />
+    <parameter name="JetVertexRefiner.MaxPosSingle" type="double" value="30." />
+    <parameter name="JetVertexRefiner.MinEnergySingle" type="double" value="1." />
+    <parameter name="JetVertexRefiner.MaxAngleSingle" type="double" value="0.5" />
+    <parameter name="JetVertexRefiner.MaxSeparationPerPosSingle" type="double" value="0.1" />
+    <parameter name="JetVertexRefiner.mind0sigSingle" type="double" value="5." />
+    <parameter name="JetVertexRefiner.minz0sigSingle" type="double" value="5." />
+    <parameter name="JetVertexRefiner.OneVertexProbThreshold" type="double" value="0.001" />
+    <parameter name="JetVertexRefiner.MaxCharmFlightLengthPerJetEnergy" type="double" value="0.1" />
+
+    <parameter name="PrimaryVertexCollectionName" type="string" value="PrimaryVertex" />
+    <parameter name="MakeNtuple.AuxiliaryInfo" type="int" value="-1" />
+
+
+
+
+
+
+    <parameter name="MLInferenceWeaver.JetCollectionName" type="string" value="RefinedJets8" />
+    <parameter name="MLInferenceWeaver.OutputParameterName" type="string" value="weaver" />
+    <parameter name="MLInferenceWeaver.JsonFileName" type="string" value="${LCFIPlusML_JSON}" />
+    <parameter name="MLInferenceWeaver.OnnxFileName" type="string" value="${LCFIPlusML_ONNX}" />
+  </processor>
+
+  
+  <!-- ============================================================
+       8-jet semi-leptonic decay correction + ErrorFlow covariance
+       ============================================================ -->
+
+  <processor name="MySLDCorrection8J" type="SLDCorrection">
+    <parameter name="MCParticleCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+    <parameter name="PfoCollection" type="string" lcioInType="ReconstructedParticle">PandoraPFOsWithoutLepPair</parameter>
+    <parameter name="isoLeptonsCollection" type="string" lcioInType="ReconstructedParticle">ISOLeptons</parameter>
+    <parameter name="JetCollection" type="string" lcioInType="RECONSTRUCTEDPARTICLE">RefinedJets8</parameter>
+    <parameter name="PrimaryVertex" type="string" lcioInType="VERTEX">PrimaryVertex</parameter>
+    <parameter name="BuildUpVertex" type="string" lcioInType="VERTEX">BuildUpVertex</parameter>
+    <parameter name="RecoMCTruthLinkCollection" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+    <parameter name="MCTruthRecoLinkCollection" type="string" lcioInType="LCRelation">MCTruthRecoLink</parameter>
+
+    <parameter name="SemiLeptonicDecayVertex" type="string" lcioOutType="VERTEX">SemiLeptonicDecayVertex8</parameter>
+    <parameter name="SemiLeptonicDecayVertexRP" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">SemiLeptonicDecay_RP8</parameter>
+    <parameter name="ReconstructedNeutrino" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">recoNeutrinos8</parameter>
+
+    <parameter name="JetSLDLinkName" type="string" lcioOutType="LCRelation">JetSLDLink8</parameter>
+    <parameter name="SLDJetLinkName" type="string" lcioOutType="LCRelation">SLDJetLink8</parameter>
+    <parameter name="mcNurecoNuLinkName" type="string" lcioOutType="LCRelation">mcNurecoNuLink8</parameter>
+    <parameter name="recoNumcNuLinkName" type="string" lcioOutType="LCRelation">recoNumcNuLink8</parameter>
+    <parameter name="NuSLDLinkName" type="string" lcioOutType="LCRelation">NuSLDLink8</parameter>
+    <parameter name="SLDNuLinkName" type="string" lcioOutType="LCRelation">SLDNuLink8</parameter>
+
+    <!-- 物理开关与阈值：与 4/6 喷注完全一致 -->
+    <parameter name="includeBSLD" type="bool">true</parameter>
+    <parameter name="includeCSLD" type="bool">false</parameter>
+    <parameter name="includeTSLD" type="bool">false</parameter>
+    <parameter name="cheatSLDLeptons" type="bool">true</parameter>
+    <parameter name="cheatLepton4momentum" type="bool">false</parameter>
+    <parameter name="cheatFlightDirection" type="bool">false</parameter>
+    <parameter name="vertexingScenario" type="int">4</parameter>
+    <parameter name="nIterFlightDirCorrection" type="int">1</parameter>
+    <parameter name="cheatPVAcharged" type="bool">false</parameter>
+    <parameter name="chargedCosAcceptanceAngleSLD4" type="float">0.5</parameter>
+    <parameter name="chargedCosAcceptanceAngleSLD5" type="float">0.5</parameter>
+    <parameter name="cheatCharged4momentum" type="bool">false</parameter>
+    <parameter name="cheatPVAneutral" type="bool">false</parameter>
+    <parameter name="neutralCosAcceptanceAngle" type="float">0.5</parameter>
+    <parameter name="cheatNeutral4momentum" type="bool">false</parameter>
+    <parameter name="BSLDChargedSLD4InvMassCut" type="float">1.80</parameter>
+    <parameter name="BSLDChargedSLD5InvMassCut" type="float">1.50</parameter>
+    <parameter name="BSLDNeutralSLD4InvMassCut" type="float">2.80</parameter>
+    <parameter name="BSLDNeutralSLD5InvMassCut" type="float">2.50</parameter>
+    <parameter name="CSLDChargedSLD4InvMassCut" type="float">0.00</parameter>
+    <parameter name="CSLDChargedSLD5InvMassCut" type="float">0.00</parameter>
+    <parameter name="CSLDNeutralSLD4InvMassCut" type="float">0.00</parameter>
+    <parameter name="CSLDNeutralSLD5InvMassCut" type="float">0.00</parameter>
+    <parameter name="recoFourMomentumOfVisibles" type="int">2</parameter>
+    <parameter name="sigmaAlphaNu" type="float">0.100</parameter>
+    <parameter name="sigmaENu" type="float">4.00</parameter>
+    <parameter name="displayEvent" type="bool">false</parameter>
+    <parameter name="fillRootTree" type="bool">true</parameter>
+
+    <parameter name="BSLDMode" type="int">1</parameter>
+    <parameter name="CSLDMode" type="int">1</parameter>
+    <parameter name="TSLDMode" type="int">1</parameter>
+    <parameter name="SLDMode" type="int">1</parameter>
+
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+
+  <processor name="MyErrorFlow8J" type="ErrorFlow">
+    <parameter name="InputPFOCollection" type="string" lcioInType="ReconstructedParticle">RefinedJets8</parameter>
+    <parameter name="OutputPFOCollection" type="string" lcioOutType="ReconstructedParticle">OutputErrorFlowJets8</parameter>
+    <parameter name="useFullCovMatforNeutrals" type="bool">true</parameter>
+    <parameter name="EnableConfusionTerm" type="bool">${errorflowconfusion}</parameter>
+    <parameter name="PropagateConfusion2Mom" type="bool">true</parameter>
+    <parameter name="CovMatFactorPhotons" type="double">1.3</parameter>
+    <parameter name="CovMatFactorNeutralHadrons" type="double">1.8</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+<!-- ============================================================
+       Output: the event is written with all current collections,
+       including MC truth links, isolated lepton collections,
+       and RefinedJets{4,5,6,7,8} carrying Weaver info.
+       ============================================================ -->
+  <processor name="LCIOOutput" type="LCIOOutputProcessor">
+    <parameter name="LCIOOutputFile" type="string">${OutputDirectory}/${OutputBaseName}.slcio</parameter>
+    <parameter name="LCIOWriteMode" type="string">WRITE_NEW</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+
+</marlin>

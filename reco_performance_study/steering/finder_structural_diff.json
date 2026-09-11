@@ -1,0 +1,41 @@
+{
+  "current_prefix_source": "reference/complete_reco_kinfit_ready.xml",
+  "current_prefix_processors_preserved": [
+    "MyAIDAProcessor",
+    "InitDD4hep",
+    "MyStatusmonitor",
+    "MyAddNeutralPFOCovMatLite",
+    "MyChargedPFOCorrection",
+    "MySwitchCovMat",
+    "MyPatchCollections",
+    "MyCheatedMCOverlayRemoval",
+    "MyTrueJet"
+  ],
+  "legacy_processor_source": "reference/lepton_reco.xml",
+  "legacy_processors_copied_without_parameter_changes": [
+    "MyFastJetProcessor",
+    "MyIsolatedLeptonFinderProcessor"
+  ],
+  "current_suffix_not_executed": [
+    "IsolatedMuonTagging",
+    "IsolatedElectronTagging",
+    "MyLeptonPairing",
+    "JC4FT",
+    "MySLDCorrection4J",
+    "MyErrorFlow4J",
+    "JC5FT",
+    "MySLDCorrection5J",
+    "MyErrorFlow5J",
+    "JC6FT",
+    "MySLDCorrection6J",
+    "MyErrorFlow6J",
+    "JC7FT",
+    "MySLDCorrection7J",
+    "MyErrorFlow7J",
+    "JC8FT",
+    "MySLDCorrection8J",
+    "MyErrorFlow8J"
+  ],
+  "render_tokens": ["__INPUT_FILE__", "__OUTPUT_FILE__", "__MAX_RECORDS__", "__SKIP_EVENTS__"],
+  "output_write_mode": "WRITE_NEW"
+}

@@ -1,0 +1,156 @@
+<?xml version='1.0' encoding='utf-8'?>
+<marlin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ilcsoft.desy.de/marlin/marlin.xsd">
+  <library path="/data/dust/user/zhangyuy/analysis/tth/ZHH/source/build/lib/libZHHProcessors.so" />
+  <constants>
+    <constant name="ILDConfigDir" value="/data/dust/user/zhangyuy/analysis/tth/ZHH/dependencies/ILDConfig" />
+    <constant name="ZHH_REPO_ROOT" value="/data/dust/user/zhangyuy/analysis/tth/ZHH" />
+    <constant name="MCParticleCollectionName" value="MCParticlesSkimmed" />
+    <constant name="PFOsWithoutOverlayCollection" value="PFOsWithoutOverlayCheated" />
+    <constant name="IsFastSim" value="true" />
+    <constant name="errorflowconfusion" value="true" />
+    <constant name="LCFIPlusML_ONNX" value="${ZHH_REPO_ROOT}/dependencies/LCFIPlusConfig/onnx/ilc_nnqq_sgv1m_11cat/ilc_nnqq_sgv1m_11cat.onnx" />
+    <constant name="LCFIPlusML_JSON" value="${ZHH_REPO_ROOT}/dependencies/LCFIPlusConfig/onnx/ilc_nnqq_sgv1m_11cat/preprocess.json" />
+    <constant name="lcgeo_DIR" value="/cvmfs/sw.hsf.org/key4hep/releases/2024-03-10/x86_64-centos7-gcc12.2.0-opt/k4geo/0.20-e42drs/share/k4geo" />
+    <constant name="DetectorModel" value="ILD_l5_o1_v02" />
+    <constant name="CompactFile" value="${lcgeo_DIR}/ILD/compact/${DetectorModel}/${DetectorModel}.xml" />
+    <constant name="OutputDirectory" value="." />
+    <constant name="OutputBaseName" value="complete_reco_default_sgv" />
+    <constant name="Verbosity" value="SILENT" />
+  </constants>
+  <execute>
+    <processor name="MyAIDAProcessor" />
+    <processor name="InitDD4hep" />
+    <processor name="MyStatusmonitor" />
+    <processor name="MyAddNeutralPFOCovMatLite" />
+    <processor name="MyChargedPFOCorrection" />
+    <if condition="${IsFastSim}">
+      <processor name="MySwitchCovMat" />
+      <processor name="MyPatchCollections" />
+    </if>
+    <processor name="MyCheatedMCOverlayRemoval" />
+    <processor name="MyTrueJet" />
+    <processor name="MyFastJetProcessor" />
+    <processor name="MyIsolatedLeptonFinderProcessor" />
+    <processor name="LCIOOutput" />
+  </execute>
+  <global>
+    <parameter name="LCIOInputFiles">__INPUT_FILE__</parameter>
+    <parameter name="MaxRecordNumber" value="__MAX_RECORDS__" />
+    <parameter name="SkipNEvents" value="__SKIP_EVENTS__" />
+    <parameter name="SupressCheck" value="false" />
+    <parameter name="Verbosity" options="DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT">${Verbosity}</parameter>
+    <parameter name="RandomSeed" value="1234567890" />
+    <parameter name="OutputSteeringFile" value="" />
+    <parameter name="AllowToModifyEvent" value="true" />
+  </global>
+  <processor name="MyAIDAProcessor" type="AIDAProcessor">
+    <parameter name="Compress" type="int">1</parameter>
+    <parameter name="FileName" type="string">${OutputDirectory}/${OutputBaseName}_AIDA</parameter>
+    <parameter name="FileType" type="string">root</parameter>
+  </processor>
+  <processor name="InitDD4hep" type="InitializeDD4hep">
+    <parameter name="DD4hepXMLFile" type="string">${CompactFile}</parameter>
+    <parameter name="Verbosity" type="string">SILENT</parameter>
+  </processor>
+  <processor name="MyStatusmonitor" type="Statusmonitor">
+    <parameter name="HowOften" type="int">100</parameter>
+    <parameter name="Verbosity" type="string">MESSAGE</parameter>
+  </processor>
+  <processor name="MyAddNeutralPFOCovMatLite" type="AddNeutralPFOCovMat">
+    <parameter name="inputPfoCollection" type="string" lcioInType="RECONSTRUCTEDPARTICLE">PandoraPFOs</parameter>
+    <parameter name="AssumeNeutralPFOMassive" type="bool">true</parameter>
+    <parameter name="isClusterEnergyKinEnergy" type="bool">false</parameter>
+    <parameter name="updatePFO4Momentum" type="bool">true</parameter>
+    <parameter name="useTrueJacobian" type="bool">false</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+  <processor name="MyChargedPFOCorrection" type="ChargedPFOCorrection">
+    <parameter name="PfoCollection" type="string" lcioInType="RECONSTRUCTEDPARTICLE">PandoraPFOs</parameter>
+    <parameter name="MarlinTrkTracksCollection" type="string" lcioInType="Track">MarlinTrkTracks</parameter>
+    <parameter name="MarlinTrkTracksCollectionKaon" type="string" lcioInType="Track">MarlinTrkTracks</parameter>
+    <parameter name="MarlinTrkTracksCollectionProton" type="string" lcioInType="Track">MarlinTrkTracks</parameter>
+    <parameter name="TrackMCTruthLinkCollection" type="string" lcioInType="LCRelation">TrackMCTruthLink</parameter>
+    <parameter name="MCTruthTrackLinkCollection" type="string" lcioInType="LCRelation">MCTruthTrackLink</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+  <processor name="MySwitchCovMat" type="SwitchCovMat">
+    <parameter name="inputPfoCollection" type="string" lcioInType="RECONSTRUCTEDPARTICLE">PandoraPFOs</parameter>
+    <parameter name="outputPfoCollection" type="string" lcioOutType="RECONSTRUCTEDPARTICLE">PandoraPFO_switchcovmat</parameter>
+    <parameter name="AssumeNeutralPFOMassive" type="bool">true</parameter>
+    <parameter name="isClusterEnergyKinEnergy" type="bool">false</parameter>
+    <parameter name="updatePFO4Momentum" type="bool">false</parameter>
+    <parameter name="useTrueJacobian" type="bool">false</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+  <processor name="MyPatchCollections" type="PatchCollections">
+    <parameter name="PatchCollections" type="string">
+      BuildUpVertex_V0 Vertex
+    </parameter>
+  </processor>
+  <processor name="MyCheatedMCOverlayRemoval" type="CheatedMCOverlayRemoval">
+    <parameter name="RecoParticleCollection" type="string" lcioInType="ReconstructedParticle">PandoraPFOs</parameter>
+    <parameter name="MCParticleCollection" type="string" lcioInType="MCParticle">${MCParticleCollectionName}</parameter>
+    <parameter name="RecoMCTruthLink" type="string" lcioInType="LCRelation">RecoMCTruthLink</parameter>
+    <parameter name="MCTruthRecoLink" type="string" lcioInType="LCRelation">MCTruthRecoLink</parameter>
+    <parameter name="OutputPfoCollection" type="string" lcioOutType="ReconstructedParticle">${PFOsWithoutOverlayCollection}</parameter>
+    <parameter name="PIDAlgoSync" type="bool">false</parameter>
+    <parameter name="PIDAlgosToKeep" type="StringVec" />
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+  <processor name="MyTrueJet" type="TrueJet">
+    <parameter name="MCParticleCollection" type="string" lcioInType="MCParticle">
+      ${MCParticleCollectionName}
+    </parameter>
+    <parameter name="RecoParticleCollection" type="string" lcioInType="ReconstructedParticle">
+      ${PFOsWithoutOverlayCollection}
+    </parameter>
+    <parameter name="RecoMCTruthLink" type="string" lcioInType="LCRelation">
+      RecoMCTruthLink
+    </parameter>
+  </processor>
+  <processor name="MyFastJetProcessor" type="FastJetProcessor">
+    <parameter name="algorithm" type="StringVec">ee_kt_algorithm</parameter>
+    <parameter name="clusteringMode" type="StringVec">ExclusiveNJets 8</parameter>
+    <parameter name="recombinationScheme" type="string">E_scheme</parameter>
+    <parameter name="recParticleIn" type="string" lcioInType="ReconstructedParticle">${PFOsWithoutOverlayCollection}</parameter>
+    <parameter name="jetOut" type="string" lcioOutType="ReconstructedParticle">JetsForIsolep</parameter>
+  </processor>
+  <processor name="MyIsolatedLeptonFinderProcessor" type="IsolatedLeptonFinderProcessor">
+    <parameter name="InputCollection" type="string" lcioInType="ReconstructedParticle">${PFOsWithoutOverlayCollection} </parameter>
+    <parameter name="OutputCollectionIsolatedLeptons" type="string" lcioOutType="ReconstructedParticle">Isolep </parameter>
+    <parameter name="OutputCollectionWithoutIsolatedLepton" type="string" lcioOutType="ReconstructedParticle">PFOsAfterIso </parameter>
+    <parameter name="CosConeAngle" type="float">0.98 </parameter>
+    <parameter name="UseRectangularIsolation" type="bool">false </parameter>
+    <parameter name="UsePolynomialIsolation" type="bool">true </parameter>
+    <parameter name="IsolationPolynomialCutA" type="float">0 </parameter>
+    <parameter name="IsolationPolynomialCutB" type="float">6 </parameter>
+    <parameter name="IsolationPolynomialCutC" type="float">-90 </parameter>
+    <parameter name="IsolationMinimumConeEnergy" type="float">0 </parameter>
+    <parameter name="IsolationMaximumConeEnergy" type="float">1e+20 </parameter>
+    <parameter name="IsolationMinimumTrackEnergy" type="float">15 </parameter>
+    <parameter name="IsolationMaximumTrackEnergy" type="float">1e+20 </parameter>
+    <parameter name="UseJetIsolation" type="bool">true </parameter>
+    <parameter name="UsePID" type="bool">false </parameter>
+    <parameter name="ElectronMinEcalToHcalFraction" type="float">0.9 </parameter>
+    <parameter name="ElectronMaxEcalToHcalFraction" type="float">1.0 </parameter>
+    <parameter name="ElectronMinEnergyDepositByMomentum" type="float">0.7 </parameter>
+    <parameter name="ElectronMaxEnergyDepositByMomentum" type="float">1.4 </parameter>
+    <parameter name="MuonMinEcalToHcalFraction" type="float">0.05 </parameter>
+    <parameter name="MuonMaxEcalToHcalFraction" type="float">0.3 </parameter>
+    <parameter name="MuonMinEnergyDepositByMomentum" type="float">0 </parameter>
+    <parameter name="MuonMaxEnergyDepositByMomentum" type="float">0.3 </parameter>
+    <parameter name="UseImpactParameter" type="bool">true </parameter>
+    <parameter name="ImpactParameterMinD0" type="float">0 </parameter>
+    <parameter name="ImpactParameterMaxD0" type="float">0.05 </parameter>
+    <parameter name="ImpactParameterMinZ0" type="float">0 </parameter>
+    <parameter name="ImpactParameterMaxZ0" type="float">0.05 </parameter>
+    <parameter name="ImpactParameterMin3D" type="float">0 </parameter>
+    <parameter name="ImpactParameterMax3D" type="float">0.05 </parameter>
+    <parameter name="UseImpactParameterSignificance" type="bool">false </parameter>
+  </processor>
+  <processor name="LCIOOutput" type="LCIOOutputProcessor">
+    <parameter name="LCIOOutputFile" type="string">__OUTPUT_FILE__</parameter>
+    <parameter name="LCIOWriteMode" type="string">WRITE_NEW</parameter>
+    <parameter name="Verbosity" type="string">${Verbosity}</parameter>
+  </processor>
+</marlin>

@@ -56,6 +56,8 @@
     "truth_role_source": "truejet_direct"
   },
   "runtime": {
+    "analysis_setup": {"path": "/data/dust/user/zhangyuy/analysis/tth/ZHH/setup.sh", "sha256": "ca4cec37a5ebca0e20873b71e282c505be52efc987a70413a8b09f7eb241c5f0"},
+    "analysis_zhh_processor": {"path": "/data/dust/user/zhangyuy/analysis/tth/ZHH/source/lib/libZHHProcessors.so", "sha256": "d50ef394d7cda39e5304fd6a89d0f7e677e29556c12213c6405c4520ed6120cd"},
     "sgv_claim": "current_controlled_variant_not_exact_historical_reproduction",
     "sgv_executable": {"path": "/data/dust/user/zhangyuy/ZHH/mysgv_new/usesgvlcio.exe", "sha256": "1c22cdc27e403eb1b3c451096591956e800501a3605f9e5f029919dbfdba1a5c"},
     "sgv_steer": {"path": "/data/dust/user/zhangyuy/ZHH/mysgv_new/sgv.steer", "sha256": "669a4ac517b40d6d74f5aedf258542272932fff4453aa8aa7839c9ca515980e9"},
