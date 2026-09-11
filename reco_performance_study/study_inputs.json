@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "study_name": "reco_performance",
+  "generator_mtt": {
+    "binning": {"bins": 50, "maximum_gev": 425.0, "minimum_gev": 340.0},
+    "hard_particle_rule": "pdg_exact_no_same_pdg_parent_prefer_parents_minus11_plus11_then_daughters_then_first",
+    "physsim": {
+      "chunks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "cross_section_fb": 2.96055314955,
+      "cross_section_uncertainty_fb": 0.00581374326,
+      "format": "stdhep",
+      "path_template": "/data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_tth/eL.pR/I01234_0/generator/stdhep/E550-Test.Ptth.Gphyssim.eL.pR.I01234_0.{chunk}.stdhep",
+      "reader": "pyLCIO.UTIL.LCStdHepRdr",
+      "status_filter": null
+    },
+    "whizard": {
+      "collection": "MCParticle",
+      "cross_section_fb": 2.206536,
+      "files": [
+        "/pnfs/desy.de/ilc/prod/ilc/mc-2025/generated/550-TDR_ws/8f/E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_0.0.slcio",
+        "/pnfs/desy.de/ilc/prod/ilc/mc-2025/generated/550-TDR_ws/8f/E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_1.0.slcio",
+        "/pnfs/desy.de/ilc/prod/ilc/mc-2025/generated/550-TDR_ws/8f/E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_2.0.slcio",
+        "/pnfs/desy.de/ilc/prod/ilc/mc-2025/generated/550-TDR_ws/8f/E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_3.0.slcio"
+      ],
+      "independent_physical_samples": 4
+    }
+  },
+  "physsim_leptons": {
+    "chunks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "complete_reco_event_counts": [12498, 12499, 12498, 12499, 12498, 12498, 12499, 12499, 12499, 12495],
+    "complete_reco_path_template": "/data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_tth/eL.pR/I01234_0/complete_reco/complete_reco_kinfit_ready_E550-Test.Ptth.Gphyssim.eL.pR.I01234_0.{chunk}_sgv.slcio",
+    "expected_total_events": 124982,
+    "finder_branch_source_path_template": "/data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_tth/eL.pR/I01234_0/sgv/E550-Test.Ptth.Gphyssim.eL.pR.I01234_0.{chunk}_sgv.slcio",
+    "join_key": ["source_file_id", "run", "event"],
+    "required_complete_reco_collections": ["MCParticlesSkimmed", "ISOElectrons", "ISOMuons"],
+    "required_finder_collections": ["MCParticlesSkimmed", "Isolep"],
+    "upstream_finder_contract": {
+      "fastjet": {"algorithm": "ee_kt", "input": "PFOsWithoutOverlayCheated", "mode": "ExclusiveNJets8", "output": "JetsForIsolep"},
+      "finder": {"input": "PFOsWithoutOverlayCheated", "jet_collection": "JetsForIsolep", "output_isolated": "Isolep", "output_remainder": "PFOsAfterIso"},
+      "overlay": {"input": "PandoraPFOs", "mc": "MCParticlesSkimmed", "reco_mc_link": "RecoMCTruthLink", "mc_reco_link": "MCTruthRecoLink", "output": "PFOsWithoutOverlayCheated"}
+    },
+    "truth_semantics": "four_frozen_scripts_remain_separate"
+  },
+  "whizard_jet_flavor": {
+    "collections": ["MCParticlesSkimmed", "RefinedJets6", "TrueJets", "TrueJetPFOLink"],
+    "matrix_orientation": "predicted_rows_true_columns",
+    "normalization": "each_true_column",
+    "truth_channel": "H_to_bb_and_ttbar_semileptonic"
+  },
+  "whizard_jet_assignment": {
+    "candidate_pool": "TopN180_base_combo_ids_before_SLD_neutrino_enumeration",
+    "collections": ["OutputErrorFlowJets6", "RefinedJets6", "ISOElectrons", "ISOMuons", "JetSLDLink6", "SLDNuLink6"],
+    "denominator": "common_event_pool_kinfit_fit_success_and_truejet_direct_truth_matched",
+    "fit": {"constraint_mode": "fullMass4C", "energy_scale": 1.6, "angle_scale": 3.6, "invpt_scale": 1.1, "isr": true, "isr_pz_max_gev": 125.6, "off_diagonal": false, "require_converged": false, "sld_enumeration": true, "soft_mass": true},
+    "score": "log1p(max(0,chi2))+0.3*flavor_charge_prior_total",
+    "truth_role_source": "truejet_direct"
+  },
+  "runtime": {
+    "sgv_claim": "current_controlled_variant_not_exact_historical_reproduction",
+    "sgv_executable": {"path": "/data/dust/user/zhangyuy/ZHH/mysgv_new/usesgvlcio.exe", "sha256": "1c22cdc27e403eb1b3c451096591956e800501a3605f9e5f029919dbfdba1a5c"},
+    "sgv_steer": {"path": "/data/dust/user/zhangyuy/ZHH/mysgv_new/sgv.steer", "sha256": "669a4ac517b40d6d74f5aedf258542272932fff4453aa8aa7839c9ca515980e9"},
+    "zhh_setup": {"path": "/data/dust/user/zhangyuy/ZHH/setup.sh", "sha256": "bb2d254aae0c032496a0bcafc83f01b956c23b62af0150c4a3b0fa44c15f1090"},
+    "sgv_updater": {"path": "/data/dust/user/zhangyuy/analysis/AI_PIPELINES/update_sgv_steering.py", "sha256": "5a75516522c1367bcd29aaeeec5b201f8021ef885e14ba750050309974bc2e13"},
+    "kinfit_library": "/data/dust/user/zhangyuy/analysis/tth/ZHH/source/lib/libZHHProcessors.so"
+  },
+  "frozen_sources": {
+    "generator_reference": {"path": "/data/dust/user/zhangyuy/analysis/tth/generator_study/compare_mtt_from_two_slcio_xsec.py", "sha256": "130b3e961d3e53b5c408a7587fa8dd65bcea1733661b7529d77d932d9502eb1c"},
+    "jet_flavor": {"path": "/data/dust/user/zhangyuy/analysis/tth/jet_study/plot_tth_truejet_weaver_cm10.py", "sha256": "e54d3103c5e1dbb9edcf060b65b87923cab53dd54762f035d5ec57409f2555dd"},
+    "kinfit_rerank": {"path": "/data/dust/user/zhangyuy/analysis/tth/chi2_clustering/rerank_tth_semilep_kinfit_with_flavor.py", "sha256": "e3ee6146ec3b9eb8b0f9628cf8f66fcacca0611c3dffb5eb17ea4c50e3e42dd3"},
+    "lepton_tagger_purity": {"path": "/data/dust/user/zhangyuy/analysis/tth/isolepton_check/isolepton_eff_purity_v2077.py", "sha256": "6b82297ed0b3218bd925f1c44b63ca0c20cb98c182223b080134633cc0cb7918"},
+    "lepton_finder_purity": {"path": "/data/dust/user/zhangyuy/analysis/tth/isolepton_check/isolepton_finder_eff_purity_v2077.py", "sha256": "84f0a0440aab76ec8498f0474b5e6851b5251bbde20045cc2b3a1daa738c72b7"},
+    "lepton_semileptonic_multiplicity": {"path": "/data/dust/user/zhangyuy/analysis/tth/isolepton_check/count_hbb_ttbar_had_iso_pass.py", "sha256": "93ecaaf863890d73ce6741cc97946451904b3dc0cc7f254ac104a62a2374d7e2"},
+    "lepton_dileptonic_multiplicity": {"path": "/data/dust/user/zhangyuy/analysis/tth/isolepton_check/count_hbb_ttbar_dilep_pass.py", "sha256": "a25bda572f8e933c82547aec732f303f5c38c45ffb8df890d62e516a42a13f23"}
+  }
+}
