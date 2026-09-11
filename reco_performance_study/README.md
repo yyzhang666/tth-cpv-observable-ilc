@@ -65,8 +65,11 @@ XML and loaded `MARLIN_DLL` hashes, and refuses existing outputs.  With the
 Python 3.11 venv, the directory returned by `root-config --libdir` must be
 prepended to `PYTHONPATH`, followed by this repository's `src`, while retaining
 the setup-provided path.  Before the long-run gate the wrapper permits at most
-20 events unless the caller explicitly records and supplies the long-run
-override.
+20 expected readable output events unless the caller explicitly records and
+supplies the long-run override.  The XML boundary and validation denominator
+are separate required arguments: the observed Marlin contract is
+`max-records=N+1, expected-output-events=N` (smoke 11/10; full production
+12499/12498 for canonical chunk 1).
 
 The post-run validator checks every required collection for each bounded event
 and compares a deterministic numeric/object-count fingerprint of
@@ -115,3 +118,6 @@ candidate tree contains at least one `fit_success==1` row.
   adopting current TopN10 or angle-scale 2.6 production settings.
 - NECESSITY: validated exit-134 handling prevents treating a crashed or empty
   kinfit ROOT file as a successful shard.
+- NECESSITY: separating the XML maximum from expected readable events prevents
+  the observed one-event boundary loss from invalidating exact-set joins while
+  retaining a finite, explicit run limit.

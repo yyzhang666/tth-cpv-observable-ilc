@@ -120,8 +120,8 @@ def main():
     try:
         while checked < args.max_events:
             events = [reader.readNextEvent() for reader in readers]
-            if any(event is None for event in events):
-                if not all(event is None for event in events):
+            if any(not event for event in events):
+                if not all(not event for event in events):
                     raise RuntimeError("input branches ended at different bounded event positions")
                 break
             sgv_event, complete_event, finder_event = events

@@ -59,7 +59,7 @@ def validate_finder_output(path: Path, expected_events: int, reader_factory=None
     try:
         while True:
             event = reader.readNextEvent()
-            if event is None:
+            if not event:
                 break
             names = {str(value) for value in event.getCollectionNames()}
             missing = sorted(required - names)
@@ -84,6 +84,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--max-records", type=int, required=True)
+    parser.add_argument("--expected-output-events", type=int, required=True)
     parser.add_argument("--skip-events", type=int, required=True)
     parser.add_argument("--allow-long-run", action="store_true")
     parser.add_argument("--accept-validated-exit-134", action="store_true")
@@ -91,7 +92,11 @@ def main():
     args = parser.parse_args()
     if args.max_records <= 0:
         raise ValueError("max-records must be explicit and positive")
-    if args.max_records > 20 and not args.allow_long_run:
+    if args.expected_output_events <= 0:
+        raise ValueError("expected-output-events must be explicit and positive")
+    if args.max_records != args.expected_output_events + 1:
+        raise ValueError("observed Marlin boundary contract requires max-records = expected-output-events + 1")
+    if args.expected_output_events > 20 and not args.allow_long_run:
         raise RuntimeError("runs above 20 events require --allow-long-run after the recorded gate")
     if args.skip_events < 0:
         raise ValueError("skip-events must be non-negative")
@@ -129,6 +134,7 @@ def main():
         "input": str(input_path),
         "output": str(output),
         "max_records": args.max_records,
+        "expected_output_events": args.expected_output_events,
         "skip_events": args.skip_events,
         **runtime,
     }
@@ -151,7 +157,7 @@ def main():
         raise RuntimeError(f"Marlin failed with exit code {result.returncode}; artifacts retained")
     if not output.is_file():
         raise RuntimeError(f"Marlin returned without creating output: {output}")
-    validation = validate_finder_output(output, args.max_records)
+    validation = validate_finder_output(output, args.expected_output_events)
     payload["output_validation"] = validation
     payload["accepted_exit_134"] = bool(exit_134_allowed)
     runtime_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

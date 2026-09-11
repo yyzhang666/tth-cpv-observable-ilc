@@ -181,6 +181,23 @@ def test_finder_output_validation_requires_exact_count_and_collections(tmp_path)
         runner.validate_finder_output(tmp_path / "out.slcio", 1, lambda: Reader([Event(required - {"Isolep"})]))
 
 
+def test_finder_runner_freezes_observed_marlin_boundary_contract(tmp_path, monkeypatch):
+    input_path = tmp_path / "input.slcio"
+    input_path.write_bytes(b"input")
+    template = ROOT / "reco_performance_study/steering/physsim_finder_branch.xml"
+    monkeypatch.setattr(
+        __import__("sys"),
+        "argv",
+        [
+            "run_finder_branch.py", "--template", str(template), "--input", str(input_path),
+            "--output", str(tmp_path / "output.slcio"), "--run-dir", str(tmp_path / "run"),
+            "--max-records", "10", "--expected-output-events", "10", "--skip-events", "0", "--prepare-only",
+        ],
+    )
+    with pytest.raises(ValueError, match=r"max-records = expected-output-events \+ 1"):
+        runner.main()
+
+
 def test_exit_134_requires_explicit_validation_path():
     assert not runner.accepted_exit_134(134, False)
     assert not runner.accepted_exit_134(-6, False)
