@@ -147,6 +147,7 @@
     <parameter name="ImpactParameterMin3D" type="float">0 </parameter>
     <parameter name="ImpactParameterMax3D" type="float">0.05 </parameter>
     <parameter name="UseImpactParameterSignificance" type="bool">false </parameter>
+    <parameter name="JetCollection" type="string" lcioInType="ReconstructedParticle">JetsForIsolep</parameter>
   </processor>
   <processor name="LCIOOutput" type="LCIOOutputProcessor">
     <parameter name="LCIOOutputFile" type="string">__OUTPUT_FILE__</parameter>

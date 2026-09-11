@@ -49,8 +49,7 @@ def test_generated_finder_xml_matches_builder_and_frozen_processor_definitions()
     legacy = ET.parse(legacy_path).getroot()
     for name in builder.PREFIX_PROCESSORS:
         assert canonical(builder.processor(generated, name)) == canonical(builder.processor(current, name))
-    for name in ("MyFastJetProcessor", "MyIsolatedLeptonFinderProcessor"):
-        assert canonical(builder.processor(generated, name)) == canonical(builder.processor(legacy, name))
+    assert canonical(builder.processor(generated, "MyFastJetProcessor")) == canonical(builder.processor(legacy, "MyFastJetProcessor"))
 
 
 def test_finder_xml_execution_and_output_contract():
@@ -81,6 +80,9 @@ def test_finder_xml_execution_and_output_contract():
     assert values["UsePID"] == "false"
     assert values["UseImpactParameter"] == "true"
     assert values["ImpactParameterMaxD0"] == values["ImpactParameterMaxZ0"] == values["ImpactParameterMax3D"] == "0.05"
+    fastjet = builder.processor(root, "MyFastJetProcessor")
+    jet_output = fastjet.find("./parameter[@name='jetOut']").text.strip()
+    assert jet_output == values["JetCollection"] == "JetsForIsolep"
     output = builder.processor(root, "LCIOOutput")
     assert output.find("./parameter[@name='LCIOOutputFile']").text == "__OUTPUT_FILE__"
     assert output.find("./parameter[@name='LCIOWriteMode']").text == "WRITE_NEW"
@@ -106,3 +108,10 @@ def test_origin_parsers_keep_integer_counts_before_division():
     finder = analysis.parse_finder_origins(finder_text)
     assert tagger[("SEMI", "EL")]["origins"] == {"from_topW": 7, "from_tau": 1, "from_hadron": 1}
     assert finder[("SEMI", "EL")]["origins"] == {"from_topW": 7, "from_tau": 2, "from_hadron": 1}
+
+
+def test_finder_runner_persists_combined_marlin_log():
+    source = (ROOT / "scripts/reco_performance/run_finder_branch.py").read_text()
+    assert 'run_dir / "marlin.log"' in source
+    assert "stderr=subprocess.STDOUT" in source
+    assert '.open("xb")' in source

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<marlin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ilcsoft.desy.de/marlin/marlin.xsd">
+
+  <global>
+    <parameter name="LCIOInputFiles">
+      /data/dust/user/zhangyuy/analysis/tth/events_whizard/complete_reco/complete_reco_kinfit_ready_whizard_tth_PERF_pfofix6000_guarded_20260616a_sgv.slcio
+    </parameter>
+    <parameter name="MaxRecordNumber" value="6000"/>
+    <parameter name="SkipNEvents" value="0"/>
+    <parameter name="SupressCheck" value="false"/>
+    <parameter name="Verbosity">MESSAGE</parameter>
+    <parameter name="AllowToModifyEvent" value="true"/>
+  </global>
+
+  <execute>
+    <processor name="MyTTHSemiLepKinFit"/>
+  </execute>
+
+  <processor name="MyTTHSemiLepKinFit" type="TTHSemiLepKinFit">
+    <parameter name="JetCollectionName" type="string" lcioInType="ReconstructedParticle">OutputErrorFlowJets6</parameter>
+    <parameter name="ElectronCollectionName" type="string" lcioInType="ReconstructedParticle">ISOElectrons</parameter>
+    <parameter name="MuonCollectionName" type="string" lcioInType="ReconstructedParticle">ISOMuons</parameter>
+    <parameter name="JetSLDLinkCollectionName" type="string" lcioInType="LCRelation">JetSLDLink6</parameter>
+    <parameter name="SLDNuLinkCollectionName" type="string" lcioInType="LCRelation">SLDNuLink6</parameter>
+    <parameter name="outputJetCollection" type="string" lcioOutType="ReconstructedParticle">JetsKinFitTTHSemiLep</parameter>
+    <parameter name="outputStartJetCollection" type="string" lcioOutType="ReconstructedParticle">JetsPreFitTTHSemiLep</parameter>
+    <parameter name="outputLeptonCollection" type="string" lcioOutType="ReconstructedParticle">LeptonsKinFitTTHSemiLep</parameter>
+    <parameter name="outputStartLeptonCollection" type="string" lcioOutType="ReconstructedParticle">LeptonsPreFitTTHSemiLep</parameter>
+    <parameter name="TopN" type="int">180</parameter>
+    <parameter name="DryRunRankingOnly" type="bool">false</parameter>
+    <parameter name="WriteCandidateDebugTree" type="bool">true</parameter>
+    <parameter name="EnableSLDNeutrinoEnumeration" type="bool">true</parameter>
+    <parameter name="MaxSLDCombinations" type="int">10000</parameter>
+    <parameter name="WeaverAlgorithmName" type="string">weaver</parameter>
+    <parameter name="BScoreIndex" type="int">0</parameter>
+    <parameter name="BbarScoreIndex" type="int">1</parameter>
+    <parameter name="ECM" type="float">550.0</parameter>
+    <parameter name="ISRPzMax" type="float">125.6</parameter>
+    <parameter name="includeISR" type="bool">true</parameter>
+    <parameter name="ConstraintMode" type="string">fullMass4C</parameter>
+    <parameter name="JetCovarianceScale" type="float">1</parameter>
+    <parameter name="UseJetCovarianceOffDiagonal" type="bool">false</parameter>
+    <parameter name="fitter" type="int">1</parameter>
+    <parameter name="SigmaEnergyScaleFactor" type="float">1.6</parameter>
+    <parameter name="SigmaAnglesScaleFactor" type="float">3.6</parameter>
+    <parameter name="SigmaInvPtScaleFactor" type="float">1.1</parameter>
+    <parameter name="NeutrinoEnergyError" type="float">20</parameter>
+    <parameter name="NeutrinoAngleError" type="float">0.5</parameter>
+    <parameter name="WMass" type="float">80.4</parameter>
+    <parameter name="TopMass" type="float">172.5</parameter>
+    <parameter name="HMass" type="float">125.0</parameter>
+    <parameter name="UseSoftMassConstraints" type="bool">true</parameter>
+    <parameter name="WMassSigma" type="float">19.65</parameter>
+    <parameter name="TopMassSigma" type="float">23.4</parameter>
+    <parameter name="HMassSigma" type="float">20.85</parameter>
+    <parameter name="LepTopMassSigma" type="float">23.4</parameter>
+    <parameter name="outputFilename" type="string">/data/dust/user/zhangyuy/analysis/tth/chi2_clustering/outputs/workflow_runs/kinfit_softmass_sld_on_full6000_20260618/fits/OutputErrorFlowJets6_fullMass4C_k1_isr1_se1p6_sa3p6_sld1_softm1/OutputErrorFlowJets6_fullMass4C_k1_isr1_se1p6_sa3p6_sld1_softm1.root</parameter>
+    <parameter name="treeName" type="string">TTHSemiLepKinFit</parameter>
+    <parameter name="Verbosity" type="string">MESSAGE</parameter>
+  </processor>
+
+</marlin>

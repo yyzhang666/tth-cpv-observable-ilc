@@ -12,10 +12,8 @@
     "MyTrueJet"
   ],
   "legacy_processor_source": "reference/lepton_reco.xml",
-  "legacy_processors_copied_without_parameter_changes": [
-    "MyFastJetProcessor",
-    "MyIsolatedLeptonFinderProcessor"
-  ],
+  "legacy_processors_copied_without_parameter_changes": ["MyFastJetProcessor"],
+  "legacy_finder_adapter": {"parameter": "JetCollection", "value": "JetsForIsolep", "reason": "bounded event-0 smoke failed with DataNotAvailableException for JetsForIsolation; historical runner 09b37f1d explicitly injected this binding and both debug XMLs bind jetOut and JetCollection to JetsForIsolep"},
   "current_suffix_not_executed": [
     "IsolatedMuonTagging",
     "IsolatedElectronTagging",

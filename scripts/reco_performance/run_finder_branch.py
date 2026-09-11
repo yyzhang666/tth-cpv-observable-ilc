@@ -72,7 +72,8 @@ def main():
         raise RuntimeError(f"refusing to overwrite output: {output}")
     run_xml = run_dir / "finder_branch_as_run.xml"
     runtime_json = run_dir / "runtime_manifest.json"
-    for path in (run_xml, runtime_json):
+    log_path = run_dir / "marlin.log"
+    for path in (run_xml, runtime_json, log_path):
         if path.exists() or path.is_symlink():
             raise RuntimeError(f"refusing to overwrite run record: {path}")
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -104,12 +105,15 @@ def main():
     if args.prepare_only:
         return
     shell = 'source "$1" >/dev/null 2>&1; export PYTHONPATH="$2:${PYTHONPATH:-}"; exec Marlin "$3"'
-    subprocess.run(
-        ["bash", "-lc", shell, "bash", str(SETUP), env["PYTHONPATH"], str(run_xml)],
-        check=True,
-        cwd=run_dir,
-        env=env,
-    )
+    with log_path.open("xb") as log_stream:
+        subprocess.run(
+            ["bash", "-lc", shell, "bash", str(SETUP), env["PYTHONPATH"], str(run_xml)],
+            check=True,
+            cwd=run_dir,
+            env=env,
+            stdout=log_stream,
+            stderr=subprocess.STDOUT,
+        )
     if not output.is_file():
         raise RuntimeError(f"Marlin returned without creating output: {output}")
 

@@ -1,0 +1,438 @@
+
+! In this example, all keys know by default by SGV are shown.
+! The commented value is the default.
+!
+!    This file is for events externally generated in stdhep format,
+!    and output in LCIO format: the particularities are in the
+!    in the " Event generator steering" and "analysis steering" sections)
+!
+
+! ========== General steerings : ============
+&global_steering
+! LIST = 0
+ LIST = 2
+
+!  Max # of events
+!
+!         MAXEV = 999999
+         MAXEV = 12500
+
+!  Max # of events to list
+!
+!         MAXPR = 100
+
+
+!  Run-number. Not used by SGV. Can be accesses eg. by analysis code
+!  before data output for book-keeping.
+!
+!  RUN_NUMBER = 0
+
+!  Number of the first event. Not used by SGV. Can eg. be added to the
+!  SGV event-number in analysis code before data output for book-keeping.
+!
+! FIRST_EVENT = 0
+
+!  Unit to list events on
+!
+!         LUNPR = 6
+
+!          Starting seed for detector simulation random number generator.
+!          On VMS, setting ISEED to 0 yields new seeds
+!          each run (the seed will be calculated from the
+!          wall-clock
+!
+!         DSEED = 123345678
+
+!          Starting seed for Lund evet generator random number generator.
+!          Same comment. Note that other generators might or might not
+!          care about this value...
+!
+!         GSEED = 19780503
+
+!  Save random-number generator seeds on file ( to be able to
+!  restart after a crash. Only the most current set will be saved)
+!
+!         SEED_BACKUP = .TRUE.
+
+!  Frequency of seed-backups. Don't put it much less than this default:
+!  I/O take time !!!
+!
+!         BACKUP_FREQ  = 100
+
+!  Should the analysing code do initialisation ? (normally not, but if
+!  You saved simulated events on a file and are reading them back, it
+!  should.
+!
+!         NEED_ANA_INI  = .FALSE.
+
+!  Skip the event and continue with next on errors (TRUE) or stop
+!  execution ?
+!
+!         SKIP = .TRUE.
+
+!  Number of generated events to skip before starting to run detector-simulation
+!
+         N_SKIP = 0
+
+
+!  Should histograms read in be updated (1) or reset (0) ?
+!
+!         UPDF = 1
+
+!  Use column-wise ntuples ? If this is set to .FALSE. SGV will open the
+!  root file on unit 99, and fill the histograms defined therin. Hence,
+!  this file *must* exist and be a legal root file if CWN = .FALSE.
+!
+!  Here we set to .TRUE. meaning that the creation of the root-objects
+!  is entirly mad inside SGV.
+!
+!         CWN = .FALSE.
+         CWN = .TRUE.
+
+!  Use any external histogram-file (hbook or root) file at all ?
+!
+!         USE_HISTOS = .TRUE.
+
+!  I/O generated and simulated events :
+!           RZ   : output to RZ file
+!           FZUT : output to FZ file
+!           FZIN : input from FZ file
+!           NO   : No I/O (normally what You want)
+!  (if 'FZIN' is selected NEED_ANA_INI is set to TRUE)
+!
+!         IOMODE = 'NO  '
+
+
+! select interesting events at different stages:
+!  Directly after the event generation, after detector
+!  simulation, or just before analysis (the difference
+!  between the two latter is that the event has been transformed
+!  to the user-type, rather than the comact internal format.
+!  The user format is required to run various tools.
+
+!  For each of the cases, user-supplied routines are required when
+!  the flag is set to TRUE. If not, the dummy routines are called . 
+!  They will issue a warning, and reset the flag to FALSE.
+
+!  GENERATOR_SELECT = .FALSE.
+!  SIMULATION_SELECT = .FALSE.
+!  ANALYSIS_SELECT = .FALSE.
+
+/
+
+!========= General Event generator steering ======
+
+&global_generation_steering
+
+!  CMS energy (GeV).
+!
+!          CMS_ENE = 92.0
+
+         CMS_ENE = 550.0
+
+! Average interaction point
+!
+!    MEAN_VERTEX = 0.0 0.0 0.0
+
+! Beam-spot size (default is LEP values)
+!
+!   VERTEX_SPREAD   = 0.015 0.0010 1.000
+
+!   ILC values:
+
+ VERTEX_SPREAD   = 0.00005 0.0000005 0.03
+
+! Simulate interaction point ? (by default it will be a 0,0,0)
+!
+!   PRIMARY_VERTEX_SIM = .FALSE.
+
+! Wanted crossing angle of the incomming beams, if events are
+! generated with head-on beams. Give the angle in radians.
+! The event will be boosted according to this angle before any
+! other processing.
+!
+! CROSSING_ANGLE = 0.0
+  CROSSING_ANGLE = 0.007
+
+! Wanted logitudinal boost incoming system, if events are
+! generated with energ-symmetric beams. Give it as the beta (with
+! sign) of the wanted system in the lab. The event will be boosted
+! according to this other processing.
+
+
+! LONGITUDINAL_BOOST = 0.0
+
+! (base-line HALHF value:)
+!   LONGITUDINAL_BOOST = 0.882
+
+!  Nature of beam 1 and 2 (pdg-code polarisation). Not used by SGV, but is
+!  availabe to the analysis code for addition to the output.
+!
+! BEAM1 = 0 0
+! BEAM2 = 0 0
+
+ BEAM1 = 11 -1
+ BEAM2 = -11 1
+
+!  Cross-section of the selected process. Not used by SGV, but is
+!  availabe to the analysis code for addition to the output.
+
+! CROSS_SECTION = 0.0
+  CROSS_SECTION = 296.0
+!  Name of the selected channel.  Not used by SGV, but is
+!  availabe to the analysis code for addition to the output.
+
+! CHANNEL = ''
+ CHANNEL = 'tth_whizard'
+ 
+
+!  Output generated events 
+!      Output format: '    ','PYJ ', 'GPIG', 'STDH', 'LCIO'  or 'HEPMCxxx' for no output, 
+!      pyjets-dump,  GuineaPig-pairs, stdhep, LCIO or HEPMC output (latter three only if
+!      supported. 'xxx' for HEPMC is (nothing), _2, _ROOT, or _ROOTTREE, for different the
+!      flavours of HEPMC - (nothing) is the current ASCII format,  _2 the old one.)
+!
+!  This is the steering-file for generated events from external file, so these options
+!  only make sense if either some filtering has been set up above, or if you want
+!  to transform the input format to some other one.
+
+!     GENERATOR_OUTPUT_TYPE = '    '
+
+!      The following only have effect if GENERATOR_OUTPUT_TYPE /= '    '
+
+!      Unit to output to. 0 -> no output (so both unit and the type
+!      must be set for output to be done !)
+
+!       GENERATOR_OUTPUT_UNIT = 0
+
+!      Skimming of generated events: -1,0 = no skimming, 1 = skimm in
+!      generator, 2 = skimm in detector simulation (and pre-skim
+!      in generator, if implemented). Note that 2 only skimms the event
+!      output, not the internal SGV structure, while 1 (if implemented)
+!      skimms both. To reduce the SGV internal size, use SAVE_PARTICLES
+
+
+!     GENERATOR_SKIM = -1
+
+!      Where to output generated events: 0 = after all selections (if any)
+!       (skimmed, if skimming active), 1 = all events, before skimming
+!       2 = all events, but only skimmed particles. NB: no output
+!       GENERATOR_OUTPUT_UNIT not set.
+
+!     GENERATOR_OUTPUT_SELECT = 0
+
+/
+
+! =========  External read steering ==========
+
+&external_read_generation_steering
+
+!  Input file(s): Either just link the input file in the shell to the fortran unit
+!  given here:
+
+!    GENERATOR_INPUT_UNIT = 90
+
+!  Or, give the name of the file(s) here. Shell wild-cards (=*,?,{, or }) are allowed, 
+!  and will generate a list of files to be read, one after the other. An explicit list
+!  is also allowed, separather by spaces. (NB: dont't, I mean really DON'T, use spaces in the
+!  file names!!). The list is excatly what 'ls (the value input here)' would give.
+!
+!  INPUT_FILENAMES = (no default)
+
+ INPUT_FILENAMES = '/data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_ttz/eL.pR/I01234_0/generator/stdhep/E550-Test.Pttz.Gphyssim.eL.pR.I01234_0.0.stdhep'
+
+
+!    Format of generated events: 'PYJ ', 'GPIG', 'STDH', 'LCIO'  or 'HEPMCxxx' for  
+!      pyjets-dump,  GuineaPig-pairs, stdhep, LCIO or HEPMC (latter three only if
+!      supported. 'xxx' for HEPMC is (nothing), _2, _ROOT, or _ROOTTREE, for different the
+!      flavours of HEPMC - (nothing) is the current ASCII format,  _2 the old one.
+
+!     GENERATOR_INPUT_TYPE = 'STDH'
+     GENERATOR_INPUT_TYPE = 'STDH'
+
+!  If any relevant pythia parameters were changed in generation of
+!  the input generator file, the following card can be used to
+!  propagate them to SGV. The only parameters that are expected
+!  to have relevance for SGV are the pdg (pole) masses of 
+!  particles. The example here shows how to set the chargino_1
+!  and neutralino_1 masses. If SGV is normally set up, the command 
+!  "pycomp (pdg-code)" can be used to find the index in pmas for any 
+!  pdg-code
+!  (If you need to set many masses, see the comment in 
+!  sgv_pristine_whizard.tit on how to enter very long strings !)
+!
+!  PYTHIA_PARAMS =
+!    'PMAS(312,1)=206.16369; PMAS(310,1)=204.50529'
+
+
+/
+
+!========= Detector simulation steering ======
+
+&simulation_steering
+
+!  Make full set of track parameters with Error matrix, or just
+!  3-momentum and production vertex ? If You write the event
+!  to a file, putting MTKR to FALSE might be interesting: The size
+!  of the file is much reduced. The parameters can the be reconstructed
+!  by the analysing code. If You're not writing events out, putting
+!  MTKR = false is just a waste of CPU-cycles (the same thing will be
+!  done both in the simulation and the analysis)
+!
+!         MTKR = .TRUE.
+
+!  Number of detectors (MAX=3, linked to units 51, 52, 53)
+!  Doubtful if anything but NDETS=1 works with lcio DST output,
+!  and the ILD geometry...
+!
+!         NDETS  = 1
+
+!  OR: for an asymmetric detector:
+!
+!         NDETS  = -2
+!
+!   (forward (positive z) detector should be on unit 51, the backward on unit 52)
+
+!  Generate showers in calorimeters also for charged
+!  particles (else only for neutrals).
+!
+!         CHSHOW = .TRUE.
+
+!          Generate brems and photon conversions in the detector
+!          material
+!        GENBC  = .FALSE.
+
+
+!          Minimum electron momentum to generate brems.
+!        PMINBR  = 0.3
+
+!          Minimum photon momentum to generate pair-production.
+!        PMINPA  = 0.0
+
+!          Minimum fraction of pt after to pt before the brems for the
+!          original electron to be kept for the tracking
+!        PTLOSLIM  = 0.9
+
+!          Send particles with these codes to analysis
+!          By default, all particles with non-zero lifetime
+!          are sent and need not be specified here.
+!          Use the LUND partcle codes.
+!          example: save pi, k, nucleons, hyperons, electrons an muons only:
+!  SAVE_PARTICLES = -211 211 11 -11 13 -13 22 321 -321 310 -310 130 -130 
+!                  3222 -3222 3122 -3122 2112 -2112 2212 -2212 3312 -3312
+
+!          Special value: -1 -> save all generated particles
+
+!        SAVE_PARTICLES
+        SAVE_PARTICLES = -1
+
+
+!          Print the geometry of the dectector after loading.
+!         PRDET = .FALSE.
+
+!          Print the geometry of the dectector after loading, in a
+!          way usefull for displaying the detector with SHOWDET.KUMAC
+!          (if true, will also set PRDET to TRUE)
+!         PLDET = .FALSE.
+
+/
+!========= Analysis steering ======
+&analysis_steering
+
+!  Make primary vertex by adding tracks until the Xi^2 of the vertex
+!  gets bad (DOWNUP TRUE) or by by removing tracks until it gets good
+!  (DOWNUP = FALSE)
+!
+!         DOWNUP = .FALSE.
+
+!  Calorimter treatment: Perfect (PERF), ie. each particle creates one
+!  cluster and that cluster is always correctly assigned, Merge and 
+!  associate (MA), ie. true clusters can be merged, and can be wrongly
+!  assigned to charged tracks or Particle Flow (PFL), which is like MA,
+!  but in addition clusters might split. This option will do the same as
+!  PERF by default, but the user can overload the routine ZACCON to do
+!  something useful.
+!
+   CALO_TREATMENT = 'PERF '
+
+
+!   The following two relevant only if CALO_TREATMENT = 'MA  ' !
+
+!  Limiting probability for two showers in the calorimeter to be
+!  separated.
+!  If the separartion of the two showers is such that the
+!  probability >= SHOW_SEP_LIM that two independent meassuerments
+!  of the SAME shower would give that same observed separartion (or
+!  less), the showers are merged. Hence, big SHOW_SEP_LIM -> many
+!  showers merged, and v.v. In particular: SHOW_SEP_LIM=0. means
+!  no showers are merged, and the cluster-information will essentially
+!  be a copy of the calorimeter information in ZATRS.
+!  NB. This parameter only takes effect if ZAUSHO is called as in
+!  the example ZAUSER!
+!
+!         SHOW_SEP_LIM = 0.9995
+
+!  Lowest distance between shower start-point and track extrapolation
+!  to the calorimeter at which the shower will not be attached
+!  to the track (in cm).
+!  NB. This parameter only takes effect if ZAUSHO is called as in
+!  the example ZAUSER!
+!
+!         MIN_SEP_CLU_TRK = 5.0
+
+! Mapping between SGV layer-numbers and LCIO subdetector numbers
+! for tracking-system and calorimeters. 
+
+!  LCIO ILD tracker codes:
+!     1  Vertex
+!     2  FTD
+!     3  SIT
+!     4  TPC
+!     5  SET
+!     6  ETD
+
+
+!  TRACKER_CODES = 0
+  TRACKER_CODES = 32   
+   0 1 0 1 0 1 0 1 0 0 0 3 3 0 4 0 5 0 0 0 
+   0 2 0 6 
+   0 0 0 0  0 0 0 0
+
+!  LCIO ILD Calorimeter codes
+!     1  ECAL
+!     2  HCAL
+!     3   -
+!     4  LCAL
+!     5  LHCAL
+!     
+
+!  CALORIMETER_CODES = 0
+  CALORIMETER_CODES = 10 4 5 2 1 2 4 1 5 2 6
+
+! 
+!  Number of degrees of freedom a SGV hit in a layer corresponds to
+!  in the full detector description
+!
+!   TRACKER_NDF_PER_LAYER = 0
+  TRACKER_NDF_PER_LAYER = 2 2 2 18 2 2
+
+!   Detector name, will be written to LCIO header/
+!
+!  DETECTOR = 'ILD_00'
+
+!   Output lcio or not
+! 
+!  OUTPUT_LCIO = TRUE
+
+!   lcio file name
+!
+  FILENAME = '/data/dust/user/zhangyuy/ZHH/mysgv_new/E550-Test.Pttz.Gphyssim.eL.pR.I01234_0.0_sgv.tmp.20260709_151617.2117652.slcio'
+
+!
+!   Simplified weights in the RecoMCTruthLink map (Marlin default),
+!   or full information for both tracks and clusters
+
+  FULL_TRUTHLINK = .TRUE.
+/
+/
+

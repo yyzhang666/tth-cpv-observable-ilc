@@ -65,7 +65,15 @@ def build(current_path: Path, legacy_path: Path) -> ET.Element:
     for name in PREFIX_PROCESSORS:
         root.append(copy.deepcopy(processor(current, name)))
     root.append(copy.deepcopy(processor(legacy, "MyFastJetProcessor")))
-    root.append(copy.deepcopy(processor(legacy, "MyIsolatedLeptonFinderProcessor")))
+    finder = copy.deepcopy(processor(legacy, "MyIsolatedLeptonFinderProcessor"))
+    if finder.find("./parameter[@name='JetCollection']") is not None:
+        raise RuntimeError("legacy Finder unexpectedly already defines JetCollection")
+    ET.SubElement(
+        finder,
+        "parameter",
+        {"name": "JetCollection", "type": "string", "lcioInType": "ReconstructedParticle"},
+    ).text = "JetsForIsolep"
+    root.append(finder)
     output = copy.deepcopy(processor(current, "LCIOOutput"))
     output_file = output.find("./parameter[@name='LCIOOutputFile']")
     write_mode = output.find("./parameter[@name='LCIOWriteMode']")

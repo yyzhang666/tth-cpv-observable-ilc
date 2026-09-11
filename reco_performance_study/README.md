@@ -51,7 +51,11 @@ all runs above 1000 events remain pending explicit gate review.
 `steering/physsim_finder_branch.xml` is generated from the byte-identical
 reference snapshots.  It preserves the current complete-reco prefix through
 PFO corrections, overlay removal, and TrueJet; it then uses the old
-`MyFastJetProcessor` and `MyIsolatedLeptonFinderProcessor` definitions.  Its
+`MyFastJetProcessor` and `MyIsolatedLeptonFinderProcessor` definitions.  A
+bounded smoke exposed that the legacy Finder omitted `JetCollection` and thus
+requested its unavailable default `JetsForIsolation`; the generated XML adds
+the single explicit producer/consumer adapter `JetCollection=JetsForIsolep`.
+Its
 input, output, maximum-record, and skip values are mandatory render tokens;
 the output mode is `WRITE_NEW`.
 
@@ -71,6 +75,24 @@ branches only by `(source_file_id, run, event)`, invokes the four frozen legacy
 truth/counting implementations separately, accumulates integer counts, and
 only then calculates table percentages.
 
+## Whizard replay scaffold
+
+The Whizard replay uses the four complete physical files
+`I410213_{0,1,2,3}.0`.  SGV runs one whole file at a time with `N_SKIP=0`, its
+actual full count, the unchanged default RNG settings, a copied local steer and
+local `fort.17`, a unique working directory, and a serial lock.  It is labelled
+`current-SGV controlled variant`; it is not an exact reproduction of the
+irrecoverable historical SGV runtime.
+
+Complete reco is rendered only from the frozen 2026-06-16 XML and split as
+`skip=0,max=6000` plus `skip=6000,max=actual_count-6000`.  Kinfit is rendered
+only from the frozen 2026-06-18 XML and keeps TopN180, fullMass4C, ISR 125.6,
+SLD enumeration, soft mass, diagonal covariance, and scale factors 1.6/3.6/1.1.
+Each replay uses a new job-local directory, XML, log, runtime manifest, and
+output.  A kinfit exit 134 can only be accepted when the explicit override is
+present, both required ROOT trees exist with nonzero counters, and the
+candidate tree contains at least one `fit_success==1` row.
+
 ## Necessity statements
 
 - NECESSITY: immutable steering snapshots prevent a later shared-XML edit from
@@ -85,3 +107,11 @@ only then calculates table percentages.
   variant from becoming a production Marlin run.
 - NECESSITY: event-key and upstream-PFO equality checks prevent combining
   Finder and Tagger values from different events or preprocessing branches.
+- NECESSITY: explicitly binding Finder `JetCollection` to the FastJet output
+  prevents the observed `DataNotAvailableException` for `JetsForIsolation`.
+- NECESSITY: whole-file SGV plus a serial job-local steer prevents shared-steer
+  races and RNG restarts caused by splitting a physical input.
+- NECESSITY: allowed-diff XML rendering prevents a replay shard from silently
+  adopting current TopN10 or angle-scale 2.6 production settings.
+- NECESSITY: validated exit-134 handling prevents treating a crashed or empty
+  kinfit ROOT file as a successful shard.

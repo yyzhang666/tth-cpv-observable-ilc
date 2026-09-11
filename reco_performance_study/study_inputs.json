@@ -47,6 +47,17 @@
     "normalization": "each_true_column",
     "truth_channel": "H_to_bb_and_ttbar_semileptonic"
   },
+  "whizard_replay": {
+    "event_counts": [12500, 12500, 12500, 12500],
+    "reco_authority_sha256": "478f5c1da7faaba2925eda30fb4576b1cf11533ed3b89b3ac7f7ef8a1d996fc8",
+    "reco_shards_per_file": [
+      {"index": 0, "max_records": 6000, "skip_events": 0},
+      {"index": 1, "max_records": "actual_event_count_minus_6000", "skip_events": 6000}
+    ],
+    "sgv_jobs": "four_whole_physical_files_only_N_SKIP_0_full_actual_count",
+    "sgv_variant_label": "current-SGV controlled variant",
+    "kinfit_authority_sha256": "71b1c4e96284b3a6f0d119e5e6a518207241081d2e40712c25d1def90b9634a3"
+  },
   "whizard_jet_assignment": {
     "candidate_pool": "TopN180_base_combo_ids_before_SLD_neutrino_enumeration",
     "collections": ["OutputErrorFlowJets6", "RefinedJets6", "ISOElectrons", "ISOMuons", "JetSLDLink6", "SLDNuLink6"],
