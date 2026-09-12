@@ -3,6 +3,7 @@
 import copy
 import importlib.util
 import sys
+import types
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -21,6 +22,7 @@ def load(name, path):
 
 sgv = load("whizard_sgv", ROOT / "scripts/reco_performance/run_whizard_sgv.py")
 marlin = load("whizard_marlin", ROOT / "scripts/reco_performance/run_whizard_marlin.py")
+generator_mtt = load("generator_mtt", ROOT / "scripts/reco_performance/compare_generator_mtt.py")
 
 
 def canonical(element):
@@ -30,6 +32,52 @@ def canonical(element):
         if node.text is not None and not node.text.strip():
             node.text = None
     return ET.tostring(element)
+
+
+def test_stdhep_false_null_proxy_terminates_before_dereference(monkeypatch):
+    class FalseNullProxy:
+        def __bool__(self):
+            return False
+
+        def getNumberOfElements(self):
+            raise AssertionError("EOF proxy must not be dereferenced")
+
+    events = iter((types.SimpleNamespace(getNumberOfElements=lambda: 0), FalseNullProxy()))
+    reader = types.SimpleNamespace(readEvent=lambda: next(events))
+    fills = []
+    histogram = types.SimpleNamespace(Fill=fills.append)
+    monkeypatch.setitem(
+        sys.modules,
+        "pyLCIO",
+        types.SimpleNamespace(UTIL=types.SimpleNamespace(LCStdHepRdr=lambda path: reader)),
+    )
+    monkeypatch.setattr(generator_mtt, "event_mtt", lambda particles: 350.0)
+
+    records = generator_mtt.fill_stdhep(["input.stdhep"], histogram, -1)
+
+    assert records == [{"path": "input.stdhep", "events_processed": 1, "events_with_mtt": 1}]
+    assert fills == [350.0]
+
+
+def test_stdhep_read_event_exception_propagates(monkeypatch):
+    class ReadError(RuntimeError):
+        pass
+
+    def fail_read():
+        raise ReadError("read failed")
+
+    monkeypatch.setitem(
+        sys.modules,
+        "pyLCIO",
+        types.SimpleNamespace(
+            UTIL=types.SimpleNamespace(
+                LCStdHepRdr=lambda path: types.SimpleNamespace(readEvent=fail_read)
+            )
+        ),
+    )
+
+    with pytest.raises(ReadError, match="read failed"):
+        generator_mtt.fill_stdhep(["input.stdhep"], object(), -1)
 
 
 def test_sgv_accepts_only_four_whole_physical_files_and_labels_variant():

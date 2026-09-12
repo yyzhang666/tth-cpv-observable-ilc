@@ -37,7 +37,7 @@ def fill_stdhep(paths, histogram, max_events_per_file):
         processed = selected = 0
         while max_events_per_file < 0 or processed < max_events_per_file:
             collection = reader.readEvent()
-            if collection is None:
+            if collection is None or not collection:
                 break
             processed += 1
             mass = event_mtt(collection_items(collection))
