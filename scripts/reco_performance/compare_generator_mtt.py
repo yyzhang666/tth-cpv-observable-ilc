@@ -59,7 +59,7 @@ def fill_whizard(paths, histogram, max_events_per_file):
         try:
             while max_events_per_file < 0 or processed < max_events_per_file:
                 event = reader.readNextEvent()
-                if event is None:
+                if event is None or not event:
                     break
                 processed += 1
                 # Deliberately no fallback: the contract fixes Whizard to MCParticle.

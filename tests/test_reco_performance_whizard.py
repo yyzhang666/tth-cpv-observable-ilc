@@ -80,6 +80,72 @@ def test_stdhep_read_event_exception_propagates(monkeypatch):
         generator_mtt.fill_stdhep(["input.stdhep"], object(), -1)
 
 
+def test_whizard_false_null_proxy_terminates_before_dereference(monkeypatch):
+    class FalseNullProxy:
+        def __bool__(self):
+            return False
+
+        def getCollection(self, name):
+            raise AssertionError("EOF proxy must not be dereferenced")
+
+    class Reader:
+        def __init__(self):
+            collection = types.SimpleNamespace(getNumberOfElements=lambda: 0)
+            event = types.SimpleNamespace(getCollection=lambda name: collection)
+            self.events = iter((event, FalseNullProxy()))
+            self.closed = False
+
+        def open(self, path):
+            pass
+
+        def readNextEvent(self):
+            return next(self.events)
+
+        def close(self):
+            self.closed = True
+
+    reader = Reader()
+    factory = types.SimpleNamespace(createLCReader=lambda: reader)
+    ioimpl = types.SimpleNamespace(
+        LCFactory=types.SimpleNamespace(getInstance=lambda: factory)
+    )
+    monkeypatch.setitem(sys.modules, "pyLCIO", types.SimpleNamespace(IOIMPL=ioimpl))
+    monkeypatch.setattr(generator_mtt, "event_mtt", lambda particles: 350.0)
+    fills = []
+
+    records = generator_mtt.fill_whizard(
+        ["input.slcio"], types.SimpleNamespace(Fill=fills.append), -1
+    )
+
+    assert records == [{"path": "input.slcio", "events_processed": 1, "events_with_mtt": 1}]
+    assert fills == [350.0]
+    assert reader.closed
+
+
+def test_whizard_read_event_exception_propagates(monkeypatch):
+    class ReadError(RuntimeError):
+        pass
+
+    class Reader:
+        def open(self, path):
+            pass
+
+        def readNextEvent(self):
+            raise ReadError("read failed")
+
+        def close(self):
+            pass
+
+    factory = types.SimpleNamespace(createLCReader=Reader)
+    ioimpl = types.SimpleNamespace(
+        LCFactory=types.SimpleNamespace(getInstance=lambda: factory)
+    )
+    monkeypatch.setitem(sys.modules, "pyLCIO", types.SimpleNamespace(IOIMPL=ioimpl))
+
+    with pytest.raises(ReadError, match="read failed"):
+        generator_mtt.fill_whizard(["input.slcio"], object(), -1)
+
+
 def test_sgv_accepts_only_four_whole_physical_files_and_labels_variant():
     for index in range(4):
         path = f"E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_{index}.0.slcio"
