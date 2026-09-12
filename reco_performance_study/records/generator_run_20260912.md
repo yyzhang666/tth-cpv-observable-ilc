@@ -1,6 +1,6 @@
 # Generator $m_{t\bar t}$ run record — 2026-09-12
 
-Status: **completed diagnostic; immutable output recorded**. This record
+Status: **completed diagnostic; immutable output recorded; lepton-finder outputs recorded**. This record
 captures the externally verifiable framework and supplied results of the
 generator comparison run. It is not a production or formal physics-result
 claim beyond the checks listed here.
@@ -54,6 +54,23 @@ This display-only follow-up does not
 change the full-precision normalization or regenerate the immutable r3
 artifacts above.
 
+### Final generator MC-error plot
+
+The final MC-error plot is recorded at
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/generator_mtt/20260912_physsim_chunk1_whizard_chunk0_mc_errors_r2`
+with local mirror
+`/Users/tdbrylf/Documents/NAF_tth/naf_outputs/reco_performance_study/outputs/generator_mtt/20260912_physsim_chunk1_whizard_chunk0_mc_errors_r2`.
+Visual QA passed. Labels render with TLatex `#pm` as
+`Physsim (2.9606 ± 0.0058 fb)` and `Whizard (2.20654 ± 0.00092 fb)`.
+The full-precision areas remain 2.96055314955 fb and 2.206536 fb, with
+processed counts 12498 and 12500. Source evidence is
+`configs/mva_normalization_sources.yaml` (Physsim 2.96055 ± 0.00581374;
+source `/data/dust/user/zhangyuy/analysis/physsim/run/canonical_sm_tth/bases.root`)
+and first-event metadata in `I410213_0.0.slcio` (Whizard
+`crossSection=2.206536054611206`,
+`crossSectionError=0.0009175807936117053`). The relevant code commits are
+`1da8488` and `a3236ab`.
+
 ## Failed attempts and correction
 
 Two immutable attempts were empty: the original `20260911` output path failed
@@ -83,3 +100,49 @@ reproduced with substituted samples or changed normalization semantics.
 NECESSITY: Recording the EOF/null-proxy correction and focused-test counts
 prevents the two empty immutable attempts from being mistaken for valid zero-
 event results.
+
+## Lepton Finder Condor
+
+Source-confirmed run: Condor cluster `5109135`, 10 jobs, submitted at commit
+`546bf2d`, with run root
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/physsim_leptons/20260912_finder_chunks1_10`.
+All Marlin runtime manifests report exit `-6` (known accepted tail abort),
+while physical LCIO outputs exist with exact event counts for chunks 1..10:
+`12498, 12499, 12498, 12499, 12498, 12498, 12499, 12499, 12499, 12495`.
+Each chunk passed a separate
+`validate_lepton_branch.py --max-events 20` check for exact event keys,
+required collections, and PFO fingerprints; records are at
+`finder_chunk_i_run/pfo_validation_20.json`. Condor history exit `1` was from
+the post-Marlin in-process validator failing to import pyLCIO under
+`getenv=false`; this is not classified as reconstruction failure. Runtime
+manifest `output_validation` fields are absent, so external counts plus the
+20-event semantic checks are the available output evidence.
+
+## Whizard reconstruction smoke
+
+The retained log `/tmp/reco_perf_whizard_reco_smoke_20260911/run_0/marlin.log`
+shows SIGSEGV at `SLDCorrection::end()` line 3711 after processing/output,
+not mid-event. The output contains 4 events for `max_records=5`, consistent
+with the observed N→N−1 boundary. `source/build/lib` and `source/lib` ZHH
+processor hashes are both `d50ef394...`, ruling out library divergence for
+this run. `AI_PIPELINES/RUNNING_STACK.md` already records the same
+post-output tail crash (`corrupted size` / segmentation) on the accepted
+lepton workflow; the previous summary calling this an unexplained new bug
+was incorrect because that record was not consulted in time. The current-SGV
+input differs from the irrecoverable historical SGV, but the observed stack
+point is the already-recorded finalizer crash. No Marlin rerun is required for
+the accepted files.
+
+## Delivery state
+
+The terminal was intentionally left open during delivery. No further job
+monitoring was done after the completion checks.
+
+Known doubts: runtime manifests lack `output_validation`; the current-SGV
+Whizard input is not the irrecoverable historical SGV; exact command
+transcripts/file hashes are not retained in this record.
+
+Optional review directions: source the ZHH environment before launching the
+Python validator in future Condor submissions; teach the Whizard wrapper to
+accept `-11` only after explicit output/event/collection validation. No review
+is required for this record, and no further direction applies.
