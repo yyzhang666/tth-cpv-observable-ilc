@@ -1,0 +1,24 @@
+universe = vanilla
+executable = /usr/bin/env
+arguments = python3 $(REPO_ROOT)/scripts/reco_performance/run_finder_branch.py --template $(REPO_ROOT)/reco_performance_study/steering/physsim_finder_branch.xml --input /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_tth/eL.pR/I01234_0/sgv/E550-Test.Ptth.Gphyssim.eL.pR.I01234_0.$(chunk)_sgv.slcio --output $(RUN_ROOT)/finder_chunk_$(chunk).slcio --run-dir $(RUN_ROOT)/finder_chunk_$(chunk)_run --max-records $(max_records) --expected-output-events $(expected) --skip-events 0 --allow-long-run --accept-validated-exit-134
+
+getenv = false
+should_transfer_files = NO
+on_exit_remove = true
+
+output = $(RUN_ROOT)/condor/chunk_$(chunk).out
+error = $(RUN_ROOT)/condor/chunk_$(chunk).err
+log = $(RUN_ROOT)/condor/chunk_$(chunk).log
+
+queue chunk,max_records,expected from (
+1,12499,12498
+2,12500,12499
+3,12499,12498
+4,12500,12499
+5,12499,12498
+6,12499,12498
+7,12500,12499
+8,12500,12499
+9,12500,12499
+10,12496,12495
+)

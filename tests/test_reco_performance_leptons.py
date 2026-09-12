@@ -121,6 +121,37 @@ def test_finder_runner_persists_combined_marlin_log():
     assert '.open("xb")' in source
 
 
+def test_finder_condor_submit_freezes_canonical_chunk_boundaries():
+    submit = (
+        ROOT / "condor/reco_performance/physsim_finder_branch.sub"
+    ).read_text(encoding="utf-8")
+    arguments = next(line for line in submit.splitlines() if line.startswith("arguments = "))
+    assert "$(REPO_ROOT)/scripts/reco_performance/run_finder_branch.py" in arguments
+    assert "$(REPO_ROOT)/reco_performance_study/steering/physsim_finder_branch.xml" in arguments
+    assert "--input /data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_tth/eL.pR/I01234_0/sgv/E550-Test.Ptth.Gphyssim.eL.pR.I01234_0.$(chunk)_sgv.slcio" in arguments
+    assert "--output $(RUN_ROOT)/finder_chunk_$(chunk).slcio" in arguments
+    assert "--run-dir $(RUN_ROOT)/finder_chunk_$(chunk)_run" in arguments
+    assert "--max-records $(max_records) --expected-output-events $(expected)" in arguments
+    assert "--skip-events 0 --allow-long-run --accept-validated-exit-134" in arguments
+    assert "should_transfer_files = NO" in submit
+    assert "on_exit_remove = true" in submit
+    for stream in ("out", "err", "log"):
+        assert f"$(RUN_ROOT)/condor/chunk_$(chunk).{stream}" in submit
+    queue = submit.split("queue chunk,max_records,expected from (\n", 1)[1].split("\n)", 1)[0]
+    assert [tuple(map(int, row.split(","))) for row in queue.splitlines()] == [
+        (1, 12499, 12498),
+        (2, 12500, 12499),
+        (3, 12499, 12498),
+        (4, 12500, 12499),
+        (5, 12499, 12498),
+        (6, 12499, 12498),
+        (7, 12500, 12499),
+        (8, 12500, 12499),
+        (9, 12500, 12499),
+        (10, 12496, 12495),
+    ]
+
+
 class PointerLike:
     def __init__(self, values, expose_size):
         self.values = values
