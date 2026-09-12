@@ -95,8 +95,10 @@ def joined_multiplicity(complete_paths, finder_paths, source_ids, legacy_dir, ma
             while max_events < 0 or processed < max_events:
                 complete_event = complete_reader.readNextEvent()
                 finder_event = finder_reader.readNextEvent()
-                if complete_event is None or finder_event is None:
-                    if complete_event is not None or finder_event is not None:
+                complete_eof = not complete_event
+                finder_eof = not finder_event
+                if complete_eof or finder_eof:
+                    if complete_eof != finder_eof:
                         raise RuntimeError(f"branch length mismatch for {source_id}")
                     break
                 complete_key = (source_id, int(complete_event.getRunNumber()), int(complete_event.getEventNumber()))

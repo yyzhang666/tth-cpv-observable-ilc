@@ -202,6 +202,36 @@ class Reader:
         self.closed = True
 
 
+def test_joined_multiplicity_handles_false_eof_and_rejects_one_sided_end(monkeypatch):
+    class FalseNullProxy:
+        def __bool__(self):
+            return False
+
+        def getRunNumber(self):
+            raise AssertionError("EOF proxy must not be dereferenced")
+
+    legacy = type("Legacy", (), {"init_stat": staticmethod(dict)})
+    monkeypatch.setattr(analysis, "load_module", lambda name, path: legacy)
+
+    synchronized = [Reader([FalseNullProxy()]), Reader([FalseNullProxy()])]
+    synchronized_readers = iter(synchronized)
+    monkeypatch.setattr(analysis, "open_reader", lambda path: next(synchronized_readers))
+    result = analysis.joined_multiplicity(
+        ["complete.slcio"], ["finder.slcio"], ["chunk1"], Path("legacy"), -1
+    )
+    assert result["events_processed"] == 0
+    assert all(reader.closed for reader in synchronized)
+
+    mismatched = [Reader([FalseNullProxy()]), Reader([object()])]
+    mismatched_readers = iter(mismatched)
+    monkeypatch.setattr(analysis, "open_reader", lambda path: next(mismatched_readers))
+    with pytest.raises(RuntimeError, match="branch length mismatch for chunk1"):
+        analysis.joined_multiplicity(
+            ["complete.slcio"], ["finder.slcio"], ["chunk1"], Path("legacy"), -1
+        )
+    assert all(reader.closed for reader in mismatched)
+
+
 def test_finder_output_validation_requires_exact_count_and_collections(tmp_path):
     required = {"MCParticlesSkimmed", "PFOsWithoutOverlayCheated", "Isolep", "PFOsAfterIso"}
     report = runner.validate_finder_output(tmp_path / "out.slcio", 2, lambda: Reader([Event(required), Event(required)]))
