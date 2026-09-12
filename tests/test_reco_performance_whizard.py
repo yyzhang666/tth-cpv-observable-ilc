@@ -45,10 +45,10 @@ def test_generator_cross_section_uncertainties_and_display_precision():
     assert whizard["cross_section_uncertainty_fb"] == 0.0009175807936117053
     assert generator_mtt.cross_section_label(
         "Physsim", physsim["cross_section_fb"], physsim["cross_section_uncertainty_fb"]
-    ) == "Physsim (2.9606 ± 0.0058 fb)"
+    ) == "Physsim (2.9606 #pm 0.0058 fb)"
     assert generator_mtt.cross_section_label(
         "Whizard", whizard["cross_section_fb"], whizard["cross_section_uncertainty_fb"]
-    ) == "Whizard (2.20654 ± 0.00092 fb)"
+    ) == "Whizard (2.20654 #pm 0.00092 fb)"
 
 
 def test_stdhep_false_null_proxy_terminates_before_dereference(monkeypatch):

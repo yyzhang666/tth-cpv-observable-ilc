@@ -48,8 +48,9 @@ JSON. Visual inspection of the PNG passed. A local mirror is present at:
 The study manifest now also records the Whizard event-metadata integration
 uncertainty, `0.0009175807936117053 fb`. Future plots display both cross
 sections with their MC integration uncertainties and uncertainty-based
-precision: `Physsim (2.9606 ± 0.0058 fb)` and
-`Whizard (2.20654 ± 0.00092 fb)`. This display-only follow-up does not
+precision. The ROOT legend strings use TLatex `#pm` so they render visually as
+`Physsim (2.9606 ± 0.0058 fb)` and `Whizard (2.20654 ± 0.00092 fb)`.
+This display-only follow-up does not
 change the full-precision normalization or regenerate the immutable r3
 artifacts above.
 

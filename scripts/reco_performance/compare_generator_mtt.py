@@ -31,7 +31,7 @@ def event_mtt(particles):
 
 def cross_section_label(sample, value, uncertainty):
     decimal_places = max(0, 1 - math.floor(math.log10(abs(uncertainty))))
-    return f"{sample} ({value:.{decimal_places}f} ± {uncertainty:.{decimal_places}f} fb)"
+    return f"{sample} ({value:.{decimal_places}f} #pm {uncertainty:.{decimal_places}f} fb)"
 
 
 def fill_stdhep(paths, histogram, max_events_per_file):
