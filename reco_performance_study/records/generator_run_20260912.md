@@ -45,6 +45,14 @@ JSON. Visual inspection of the PNG passed. A local mirror is present at:
 
 `/Users/tdbrylf/Documents/NAF_tth/naf_outputs/reco_performance_study/outputs/generator_mtt/20260912_physsim_chunk1_whizard_chunk0_r3`
 
+The study manifest now also records the Whizard event-metadata integration
+uncertainty, `0.0009175807936117053 fb`. Future plots display both cross
+sections with their MC integration uncertainties and uncertainty-based
+precision: `Physsim (2.9606 ± 0.0058 fb)` and
+`Whizard (2.20654 ± 0.00092 fb)`. This display-only follow-up does not
+change the full-precision normalization or regenerate the immutable r3
+artifacts above.
+
 ## Failed attempts and correction
 
 Two immutable attempts were empty: the original `20260911` output path failed

@@ -16,6 +16,7 @@
     "whizard": {
       "collection": "MCParticle",
       "cross_section_fb": 2.206536,
+      "cross_section_uncertainty_fb": 0.0009175807936117053,
       "files": [
         "/pnfs/desy.de/ilc/prod/ilc/mc-2025/generated/550-TDR_ws/8f/E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_0.0.slcio",
         "/pnfs/desy.de/ilc/prod/ilc/mc-2025/generated/550-TDR_ws/8f/E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_1.0.slcio",

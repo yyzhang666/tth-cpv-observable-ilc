@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 from pathlib import Path
 
 from ilc_tth_cpv.reco_performance import find_hard_particle, invariant_mass
@@ -26,6 +27,11 @@ def event_mtt(particles):
     if top is None or antitop is None:
         return None
     return invariant_mass(particle_four_vector(top), particle_four_vector(antitop))
+
+
+def cross_section_label(sample, value, uncertainty):
+    decimal_places = max(0, 1 - math.floor(math.log10(abs(uncertainty))))
+    return f"{sample} ({value:.{decimal_places}f} ± {uncertainty:.{decimal_places}f} fb)"
 
 
 def fill_stdhep(paths, histogram, max_events_per_file):
@@ -165,8 +171,16 @@ def main():
     h_phy.Draw("HIST")
     h_whi.Draw("HIST SAME")
     legend = ROOT.TLegend(0.56, 0.72, 0.88, 0.87)
-    legend.AddEntry(h_phy, f"Physsim ({phy['cross_section_fb']:.6f} fb)", "l")
-    legend.AddEntry(h_whi, f"Whizard ({whi['cross_section_fb']:.6f} fb)", "l")
+    legend.AddEntry(
+        h_phy,
+        cross_section_label("Physsim", phy["cross_section_fb"], phy["cross_section_uncertainty_fb"]),
+        "l",
+    )
+    legend.AddEntry(
+        h_whi,
+        cross_section_label("Whizard", whi["cross_section_fb"], whi["cross_section_uncertainty_fb"]),
+        "l",
+    )
     legend.Draw()
     canvas.SaveAs(str(output / "mtt_comparison.png"))
     canvas.SaveAs(str(output / "mtt_comparison.pdf"))
@@ -175,8 +189,18 @@ def main():
         "manifest": str(args.manifest.resolve()),
         "max_events_per_file": args.max_events_per_file,
         "normalization": "one scaling per physical sample after accumulating all listed files",
-        "physsim": {"cross_section_fb": phy["cross_section_fb"], "files": phy_records, "raw_histogram_integral": h_phy_raw.Integral()},
-        "whizard": {"cross_section_fb": whi["cross_section_fb"], "files": whi_records, "raw_histogram_integral": h_whi_raw.Integral()},
+        "physsim": {
+            "cross_section_fb": phy["cross_section_fb"],
+            "cross_section_uncertainty_fb": phy["cross_section_uncertainty_fb"],
+            "files": phy_records,
+            "raw_histogram_integral": h_phy_raw.Integral(),
+        },
+        "whizard": {
+            "cross_section_fb": whi["cross_section_fb"],
+            "cross_section_uncertainty_fb": whi["cross_section_uncertainty_fb"],
+            "files": whi_records,
+            "raw_histogram_integral": h_whi_raw.Integral(),
+        },
     }
     (output / "mtt_counters.json").write_text(json.dumps(counters, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
