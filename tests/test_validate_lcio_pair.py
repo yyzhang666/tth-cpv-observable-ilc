@@ -114,6 +114,18 @@ class ValidateLcioPairTest(unittest.TestCase):
             PAIR.validate_lcio_pair("left", "right", 1, factory)
         self.assertTrue(all(reader.closed for reader in readers))
 
+    def test_reco_recovery_submit_is_four_whole_chunks_only(self):
+        submit = (
+            ROOT / "condor/reco_performance/whizard_reco_recovery.sub"
+        ).read_text(encoding="utf-8")
+        self.assertIn("$(sgv_root)/sgv/whizard_I410213_$(index)_sgv.slcio", submit)
+        self.assertIn("--event-count 12500", submit)
+        self.assertIn("+RequestRuntime = 36000", submit)
+        self.assertIn("queue index from (\n0\n1\n2\n3\n)", submit)
+        self.assertNotIn("--event-count 6000", submit)
+        self.assertNotIn("--event-count 6500", submit)
+        self.assertNotIn("kinfit", submit.lower())
+
 
 if __name__ == "__main__":
     unittest.main()
