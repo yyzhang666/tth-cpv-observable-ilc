@@ -21,7 +21,7 @@ is `study_inputs.json`.
 - Jet flavor: predicted rows, true columns, energy-Dice one-to-one TrueJet
   matching, and column normalization.  The frozen collections are
   `MCParticlesSkimmed`, `RefinedJets6`, `TrueJets`, and `TrueJetPFOLink`.
-- Jet assignment: preserve the historical TopN180 base-combo pool, SLD/neutrino
+- Jet assignment: use the canonical TopN10 base-combo pool, SLD/neutrino
   enumeration, fullMass4C/ISR/soft-mass settings, `require_converged=False`,
   `truejet_direct` truth, and `log1p(max(0,chi2))+0.3*flavor` score.
 
@@ -87,14 +87,19 @@ local `fort.17`, a unique working directory, and a serial lock.  It is labelled
 `current-SGV controlled variant`; it is not an exact reproduction of the
 irrecoverable historical SGV runtime.
 
-Complete reco is rendered only from the frozen 2026-06-16 XML and split as
-`skip=0,max=6000` plus `skip=6000,max=actual_count-6000`.  Kinfit is rendered
-only from the frozen 2026-06-18 XML and keeps TopN180, fullMass4C, ISR 125.6,
-SLD enumeration, soft mass, diagonal covariance, and scale factors 1.6/3.6/1.1.
-Each replay uses a new job-local directory, XML, log, runtime manifest, and
-output.  A kinfit exit 134 can only be accepted when the explicit override is
-present, both required ROOT trees exist with nonzero counters, and the
-candidate tree contains at least one `fit_success==1` row.
+Complete reco is rendered only from the frozen 2026-06-16 XML as one whole-file
+job per SGV file: `skip=0,max=expected+1`, with exactly 12500 expected readable
+events.  A reco exit `-11` (shell `139`) is accepted only under the explicit
+override when the log tail identifies `SLDCorrection::end()`, the LCIO is
+readable, all 12500 ordered unique input/output event keys match, and every
+event contains the required reco collections.  The runtime manifest hashes the
+actual library path named by the XML.  The current DAG stops after complete
+reco and does not submit kinfit.
+
+Any later kinfit replay must use `steering/tth_semilep_kinfit.xml`; its preflight
+requires `TopN=10`, `FlavorJetCollectionName=RefinedJets6`, and
+`JetCollectionName=OutputErrorFlowJets6`.  The 2026-06-18 TopN180 XML remains a
+historical scan snapshot and is rejected as a production authority.
 
 ## Necessity statements
 
@@ -114,10 +119,13 @@ candidate tree contains at least one `fit_success==1` row.
   prevents the observed `DataNotAvailableException` for `JetsForIsolation`.
 - NECESSITY: whole-file SGV plus a serial job-local steer prevents shared-steer
   races and RNG restarts caused by splitting a physical input.
-- NECESSITY: allowed-diff XML rendering prevents a replay shard from silently
-  adopting current TopN10 or angle-scale 2.6 production settings.
+- NECESSITY: canonical kinfit preflight prevents the historical TopN180 scan
+  XML from being submitted as current production.
 - NECESSITY: validated exit-134 handling prevents treating a crashed or empty
   kinfit ROOT file as a successful shard.
 - NECESSITY: separating the XML maximum from expected readable events prevents
   the observed one-event boundary loss from invalidating exact-set joins while
   retaining a finite, explicit run limit.
+- NECESSITY: the simultaneous tail-signature, exact-count, collection, and
+  ordered-key checks prevent an interrupted or truncated reco output from being
+  accepted under the known finalizer-crash exception.

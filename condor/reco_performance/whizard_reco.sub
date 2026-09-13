@@ -1,0 +1,15 @@
+universe = vanilla
+executable = /usr/bin/env
+arguments = python3 $(repo_root)/scripts/reco_performance/run_whizard_marlin.py reco --authority $(repo_root)/reco_performance_study/steering/reference/whizard_complete_reco_20260616.xml --input $(run_root)/sgv/whizard_I410213_$(index)_sgv.slcio --output $(run_root)/reco/whizard_I410213_$(index)_complete_reco.slcio --run-dir $(run_root)/reco/run_$(index) --event-count 12500 --allow-long-run --accept-validated-reco-tail-segv
+
+getenv = false
+should_transfer_files = NO
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+
+output = $(run_root)/condor/reco_$(index).out
+error = $(run_root)/condor/reco_$(index).err
+log = $(run_root)/condor/reco_$(index).log
+
+request_cpus = 1
+request_memory = 8GB
+queue 1

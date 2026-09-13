@@ -1,0 +1,15 @@
+universe = vanilla
+executable = /usr/bin/env
+arguments = python3 $(repo_root)/scripts/reco_performance/run_whizard_sgv.py --input $(input) --output $(run_root)/sgv/whizard_I410213_$(index)_sgv.slcio --run-dir $(run_root)/sgv/run_$(index) --lock-file $(run_root)/sgv/sgv.lock --event-count 12500 --allow-long-run
+
+getenv = false
+should_transfer_files = NO
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+
+output = $(run_root)/condor/sgv_$(index).out
+error = $(run_root)/condor/sgv_$(index).err
+log = $(run_root)/condor/sgv_$(index).log
+
+request_cpus = 1
+request_memory = 4GB
+queue 1

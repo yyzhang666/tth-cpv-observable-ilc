@@ -51,19 +51,19 @@
   "whizard_replay": {
     "event_counts": [12500, 12500, 12500, 12500],
     "reco_authority_sha256": "478f5c1da7faaba2925eda30fb4576b1cf11533ed3b89b3ac7f7ef8a1d996fc8",
-    "reco_shards_per_file": [
-      {"index": 0, "max_records": 6000, "skip_events": 0},
-      {"index": 1, "max_records": "actual_event_count_minus_6000", "skip_events": 6000}
-    ],
+    "reco_jobs": "four_whole_SGV_files_only_skip_0_max_records_expected_plus_1",
+    "reco_expected_events_per_file": 12500,
     "sgv_jobs": "four_whole_physical_files_only_N_SKIP_0_full_actual_count",
     "sgv_variant_label": "current-SGV controlled variant",
-    "kinfit_authority_sha256": "71b1c4e96284b3a6f0d119e5e6a518207241081d2e40712c25d1def90b9634a3"
+    "kinfit_authority": "steering/tth_semilep_kinfit.xml",
+    "kinfit_authority_sha256": "84cbb7d5f07510484ccf4036d3ada8738c421d5d03469b47a84712d0310fd23a",
+    "kinfit_status": "not_submitted_in_current_SGV_complete_reco_DAG"
   },
   "whizard_jet_assignment": {
-    "candidate_pool": "TopN180_base_combo_ids_before_SLD_neutrino_enumeration",
+    "candidate_pool": "TopN10_base_combo_ids_before_SLD_neutrino_enumeration",
     "collections": ["OutputErrorFlowJets6", "RefinedJets6", "ISOElectrons", "ISOMuons", "JetSLDLink6", "SLDNuLink6"],
     "denominator": "common_event_pool_kinfit_fit_success_and_truejet_direct_truth_matched",
-    "fit": {"constraint_mode": "fullMass4C", "energy_scale": 1.6, "angle_scale": 3.6, "invpt_scale": 1.1, "isr": true, "isr_pz_max_gev": 125.6, "off_diagonal": false, "require_converged": false, "sld_enumeration": true, "soft_mass": true},
+    "fit": {"constraint_mode": "fullMass4C", "energy_scale": 1.6, "angle_scale": 2.6, "invpt_scale": 1.1, "isr": true, "isr_pz_max_gev": 125.6, "off_diagonal": false, "require_converged": false, "sld_enumeration": true, "soft_mass": true},
     "score": "log1p(max(0,chi2))+0.3*flavor_charge_prior_total",
     "truth_role_source": "truejet_direct"
   },

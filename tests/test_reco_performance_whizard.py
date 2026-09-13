@@ -24,6 +24,10 @@ def load(name, path):
 sgv = load("whizard_sgv", ROOT / "scripts/reco_performance/run_whizard_sgv.py")
 marlin = load("whizard_marlin", ROOT / "scripts/reco_performance/run_whizard_marlin.py")
 generator_mtt = load("generator_mtt", ROOT / "scripts/reco_performance/compare_generator_mtt.py")
+dag = load(
+    "whizard_replay_dag",
+    ROOT / "condor/reco_performance/prepare_whizard_replay_dag.py",
+)
 
 
 def canonical(element):
@@ -179,19 +183,17 @@ def test_sgv_accepts_only_four_whole_physical_files_and_labels_variant():
     assert "DSEED" not in source and "GSEED" not in source
 
 
-def test_reco_shards_are_6000_plus_actual_remainder():
-    assert marlin.shard_bounds(12500, 0) == (0, 6000)
-    assert marlin.shard_bounds(12500, 1) == (6000, 6500)
-    assert marlin.shard_bounds(12001, 1) == (6000, 6001)
+def test_reco_is_one_whole_file_with_boundary_record():
+    assert marlin.whole_file_bounds(12500) == (0, 12501)
     with pytest.raises(ValueError):
-        marlin.shard_bounds(5000, 1)
+        marlin.whole_file_bounds(0)
 
 
 def test_reco_render_changes_only_input_output_and_range(tmp_path):
     authority = ROOT / "reco_performance_study/steering/reference/whizard_complete_reco_20260616.xml"
     original = ET.parse(authority).getroot()
-    rendered, skip, maximum = marlin.render_reco(authority, Path("/input.slcio"), tmp_path / "out.slcio", 12500, 1)
-    assert (skip, maximum) == (6000, 6500)
+    rendered, skip, maximum = marlin.render_reco(authority, Path("/input.slcio"), tmp_path / "out.slcio", 12500)
+    assert (skip, maximum) == (0, 12501)
     for xpath in (
         "./global/parameter[@name='LCIOInputFiles']",
         "./global/parameter[@name='MaxRecordNumber']",
@@ -208,7 +210,7 @@ def test_reco_render_changes_only_input_output_and_range(tmp_path):
 
 
 def test_kinfit_render_changes_only_input_output_and_range(tmp_path):
-    authority = ROOT / "reco_performance_study/steering/reference/whizard_kinfit_20260618.xml"
+    authority = ROOT / "steering/tth_semilep_kinfit.xml"
     original = ET.parse(authority).getroot()
     rendered, skip, maximum = marlin.render_kinfit(authority, Path("/reco.slcio"), tmp_path / "fit.root", 6500)
     assert (skip, maximum) == (0, 6500)
@@ -226,22 +228,151 @@ def test_kinfit_render_changes_only_input_output_and_range(tmp_path):
     assert canonical(rendered) == canonical(original)
 
 
-def test_kinfit_authority_keeps_frozen_physics_settings():
-    root = ET.parse(ROOT / "reco_performance_study/steering/reference/whizard_kinfit_20260618.xml").getroot()
+def test_kinfit_authority_is_current_canonical_top10():
+    root = ET.parse(ROOT / "steering/tth_semilep_kinfit.xml").getroot()
     processor = marlin.one(root, "./processor[@name='MyTTHSemiLepKinFit']")
     values = {item.get("name"): (item.text or "").strip() for item in processor.findall("./parameter")}
     assert values["JetCollectionName"] == "OutputErrorFlowJets6"
+    assert values["FlavorJetCollectionName"] == "RefinedJets6"
     assert values["ElectronCollectionName"] == "ISOElectrons"
     assert values["MuonCollectionName"] == "ISOMuons"
     assert values["JetSLDLinkCollectionName"] == "JetSLDLink6"
     assert values["SLDNuLinkCollectionName"] == "SLDNuLink6"
-    assert values["TopN"] == "180"
+    assert values["TopN"] == "10"
     assert values["ConstraintMode"] == "fullMass4C"
     assert values["includeISR"] == "true" and values["ISRPzMax"] == "125.6"
     assert values["EnableSLDNeutrinoEnumeration"] == "true"
     assert values["UseSoftMassConstraints"] == "true"
     assert values["UseJetCovarianceOffDiagonal"] == "false"
-    assert (values["SigmaEnergyScaleFactor"], values["SigmaAnglesScaleFactor"], values["SigmaInvPtScaleFactor"]) == ("1.6", "3.6", "1.1")
+    assert (values["SigmaEnergyScaleFactor"], values["SigmaAnglesScaleFactor"], values["SigmaInvPtScaleFactor"]) == ("1.6", "2.6", "1.1")
+
+
+def test_historical_top180_kinfit_authority_is_rejected(tmp_path):
+    authority = ROOT / "reco_performance_study/steering/reference/whizard_kinfit_20260618.xml"
+    with pytest.raises(RuntimeError, match="non-canonical kinfit authority"):
+        marlin.render_kinfit(authority, Path("/reco.slcio"), tmp_path / "fit.root", 20)
+
+
+class FakeEvent:
+    def __init__(self, key, collections=marlin.REQUIRED_RECO_COLLECTIONS):
+        self.key = key
+        self.collections = collections
+
+    def getRunNumber(self):
+        return self.key[0]
+
+    def getEventNumber(self):
+        return self.key[1]
+
+    def getCollectionNames(self):
+        return self.collections
+
+
+class FakeReader:
+    def __init__(self, events):
+        self.events = iter(events)
+
+    def open(self, path):
+        pass
+
+    def readNextEvent(self):
+        return next(self.events, None)
+
+    def close(self):
+        pass
+
+
+def reader_factory_pair(input_events, output_events):
+    readers = iter((FakeReader(input_events), FakeReader(output_events)))
+    return lambda: next(readers)
+
+
+def test_reco_validation_requires_exact_count_collections_and_ordered_unique_keys():
+    events = [FakeEvent((1, 7)), FakeEvent((1, 8))]
+    result = marlin.validate_reco_output(
+        "input.slcio", "output.slcio", 2, reader_factory_pair(events, events)
+    )
+    assert result["events"] == 2
+    assert result["ordered_event_keys_match"] is True
+    assert result["unique_event_keys"] is True
+
+
+@pytest.mark.parametrize(
+    "input_events,output_events,expected,message",
+    [
+        ([FakeEvent((1, 7))], [], 1, "different event counts"),
+        ([FakeEvent((1, 7))], [FakeEvent((1, 8))], 1, "ordered event-key mismatch"),
+        ([FakeEvent((1, 7)), FakeEvent((1, 7))], [FakeEvent((1, 7)), FakeEvent((1, 7))], 2, "duplicate SGV input"),
+        ([FakeEvent((1, 7))], [FakeEvent((1, 7), ())], 1, "missing collections"),
+        ([FakeEvent((1, 7))], [FakeEvent((1, 7))], 2, "event count 1 != expected 2"),
+    ],
+)
+def test_reco_validation_rejects_incomplete_or_mismatched_outputs(
+    input_events, output_events, expected, message
+):
+    with pytest.raises(RuntimeError, match=message):
+        marlin.validate_reco_output(
+            "input.slcio",
+            "output.slcio",
+            expected,
+            reader_factory_pair(input_events, output_events),
+        )
+
+
+def test_tail_segv_signature_is_specific_to_sldcorrection_end(tmp_path):
+    good = tmp_path / "good.log"
+    good.write_text(
+        "*** Break *** segmentation violation\n"
+        "#6 in SLDCorrection::end (this=x) at /src/SLDCorrection/src/SLDCorrection.cc:3711\n"
+        "#8 in marlin::ProcessorMgr::end()\n"
+    )
+    bad = tmp_path / "bad.log"
+    bad.write_text(
+        "*** Break *** segmentation violation\n"
+        "#6 in SLDCorrection::processEvent at /src/SLDCorrection/src/SLDCorrection.cc:1200\n"
+        "#8 in marlin::ProcessorMgr::processEvent()\n"
+    )
+    assert marlin.has_sldcorrection_end_signature(good)
+    assert not marlin.has_sldcorrection_end_signature(bad)
+    assert marlin.accepted_reco_tail_segv(139, True, good)
+    assert marlin.accepted_reco_tail_segv(-11, True, good)
+    assert not marlin.accepted_reco_tail_segv(139, False, good)
+    assert not marlin.accepted_reco_tail_segv(1, True, good)
+    assert not marlin.accepted_reco_tail_segv(139, True, bad)
+
+
+def test_xml_library_hashes_actual_library_path(tmp_path):
+    library = tmp_path / "libProcessor.so"
+    library.write_bytes(b"actual runtime library")
+    root = ET.fromstring(f'<marlin><execute><library path="{library}"/></execute></marlin>')
+    assert marlin.xml_library_hashes(root) == [
+        {"path": str(library), "sha256": marlin.sha256(library)}
+    ]
+
+
+def test_runtime_validator_uses_prefixed_json_amid_pylcio_banner(monkeypatch):
+    validation = {"events": 19, "ordered_event_keys_match": True}
+    completed = types.SimpleNamespace(
+        stdout=(
+            "Loading LCIO ROOT dictionaries ...\n"
+            + marlin.VALIDATION_JSON_PREFIX
+            + json.dumps(validation)
+            + "\n"
+        )
+    )
+    monkeypatch.setattr(marlin.subprocess, "run", lambda *args, **kwargs: completed)
+    assert marlin.runtime_validate_reco(
+        ROOT, {"pythonpath_prefix": "/runtime"}, "/input", "/output", 19
+    ) == validation
+
+
+def test_condor_dag_is_four_whole_sgv_then_reco_jobs_without_kinfit():
+    rendered = dag.render_dag(Path("/repo"), Path("/run"))
+    assert rendered.count("JOB SGV") == 4
+    assert rendered.count("JOB RECO") == 4
+    assert rendered.count("PARENT SGV") == 4
+    assert "KINFIT" not in rendered.upper()
+    assert "6000" not in rendered and "6500" not in rendered
 
 
 def test_wrappers_refuse_existing_output_before_runtime(tmp_path, monkeypatch):
@@ -253,6 +384,6 @@ def test_wrappers_refuse_existing_output_before_runtime(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="refusing to overwrite"):
         sgv.main()
     authority = ROOT / "reco_performance_study/steering/reference/whizard_complete_reco_20260616.xml"
-    monkeypatch.setattr(sys, "argv", ["run_whizard_marlin.py", "reco", "--authority", str(authority), "--input", str(input_path), "--output", str(output), "--run-dir", str(tmp_path / "reco_run"), "--event-count", "20", "--shard-index", "0", "--prepare-only"])
+    monkeypatch.setattr(sys, "argv", ["run_whizard_marlin.py", "reco", "--authority", str(authority), "--input", str(input_path), "--output", str(output), "--run-dir", str(tmp_path / "reco_run"), "--event-count", "20", "--prepare-only"])
     with pytest.raises(RuntimeError, match="refusing to overwrite"):
         marlin.main()
