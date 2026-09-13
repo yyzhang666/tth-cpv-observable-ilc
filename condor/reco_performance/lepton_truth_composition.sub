@@ -1,0 +1,15 @@
+universe = vanilla
+executable = $(REPO_ROOT)/condor/reco_performance/run_lepton_truth_composition.sh
+arguments = $(REPO_ROOT) $(RUN_ROOT) $(COUNTS_JSON)
+
+getenv = false
+should_transfer_files = NO
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+
+output = $(RUN_ROOT)/condor/job.out
+error = $(RUN_ROOT)/condor/job.err
+log = $(RUN_ROOT)/condor/job.log
+
+request_cpus = 1
+request_memory = 4GB
+queue 1
