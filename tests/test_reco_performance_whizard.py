@@ -375,6 +375,23 @@ def test_condor_dag_is_four_whole_sgv_then_reco_jobs_without_kinfit():
     assert "6000" not in rendered and "6500" not in rendered
 
 
+def test_direct_condor_chain_runs_whole_sgv_then_reco_without_kinfit():
+    wrapper = (
+        ROOT / "condor/reco_performance/run_whizard_chain.sh"
+    ).read_text(encoding="utf-8")
+    submit = (
+        ROOT / "condor/reco_performance/whizard_direct_chain.sub"
+    ).read_text(encoding="utf-8")
+    assert wrapper.index("run_whizard_sgv.py") < wrapper.index("run_whizard_marlin.py")
+    assert wrapper.count("--event-count 12500") == 2
+    assert "--accept-validated-reco-tail-segv" in wrapper
+    assert "6000" not in wrapper and "6500" not in wrapper
+    assert "kinfit" not in wrapper.lower()
+    assert submit.count("I410213_") == 4
+    assert "queue index,input from" in submit
+    assert "DAG" not in submit
+
+
 def test_wrappers_refuse_existing_output_before_runtime(tmp_path, monkeypatch):
     input_path = tmp_path / "E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_0.0.slcio"
     input_path.write_bytes(b"input")

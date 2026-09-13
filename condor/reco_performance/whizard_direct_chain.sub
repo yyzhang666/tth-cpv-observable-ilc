@@ -1,0 +1,21 @@
+universe = vanilla
+executable = $(repo_root)/condor/reco_performance/run_whizard_chain.sh
+arguments = $(repo_root) $(run_root) $(index) $(input)
+
+getenv = false
+should_transfer_files = NO
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+
+output = $(run_root)/condor/chain_$(index).out
+error = $(run_root)/condor/chain_$(index).err
+log = $(run_root)/condor/chain_$(index).log
+
+request_cpus = 1
+request_memory = 8GB
+
+queue index,input from (
+0,/pnfs/desy.de/ilc/prod/ilc/mc-2025/generated/550-TDR_ws/8f/E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_0.0.slcio
+1,/pnfs/desy.de/ilc/prod/ilc/mc-2025/generated/550-TDR_ws/8f/E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_1.0.slcio
+2,/pnfs/desy.de/ilc/prod/ilc/mc-2025/generated/550-TDR_ws/8f/E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_2.0.slcio
+3,/pnfs/desy.de/ilc/prod/ilc/mc-2025/generated/550-TDR_ws/8f/E550-Test.Ptth.Gwhizard-3_1_5.eL.pR.I410213_3.0.slcio
+)
