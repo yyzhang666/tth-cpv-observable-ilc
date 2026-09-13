@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -eo pipefail
 
 if [[ $# -ne 3 ]]; then
   echo "usage: $0 REPO_ROOT RUN_ROOT COUNTS_JSON" >&2

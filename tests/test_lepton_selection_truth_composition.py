@@ -134,5 +134,7 @@ def test_condor_wrapper_scans_only_ten_complete_reco_inputs():
     assert "complete_reco_kinfit_ready_" in wrapper
     assert "finder_chunk" not in wrapper
     assert "source /data/dust/user/zhangyuy/analysis/tth/ZHH/setup.sh" in wrapper
+    assert "set -eo pipefail" in wrapper
+    assert "set -euo pipefail" not in wrapper
     assert "report_lepton_selection_truth_composition.py" in wrapper
     assert "queue 1" in submit
