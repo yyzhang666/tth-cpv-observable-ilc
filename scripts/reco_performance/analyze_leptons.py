@@ -55,11 +55,13 @@ def parse_finder_origins(text):
             channel = match.group(1)
             current = None
             continue
-        match = re.match(r"^-- PID =\s+(e_like|mu_like)\s+entries=(\d+)", line)
-        if channel and match:
-            flavor = "EL" if match.group(1) == "e_like" else "MU"
-            current = (channel, flavor)
-            output[current] = {"entries": int(match.group(2)), "denominator": int(match.group(2)), "origins": {}}
+        match = re.match(r"^-- PID =\s+(\S+)\s+entries=(\d+)", line)
+        if match:
+            current = None
+            if channel and match.group(1) in ("e_like", "mu_like"):
+                flavor = "EL" if match.group(1) == "e_like" else "MU"
+                current = (channel, flavor)
+                output[current] = {"entries": int(match.group(2)), "denominator": int(match.group(2)), "origins": {}}
             continue
         match = re.match(r"^\s+(from_topW|from_tau|from_hadron)\s*:\s*(\d+)", line)
         if current and match:

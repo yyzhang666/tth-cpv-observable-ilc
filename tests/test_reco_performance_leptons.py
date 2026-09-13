@@ -114,6 +114,35 @@ def test_origin_parsers_keep_integer_counts_before_division():
     assert finder[("SEMI", "EL")]["origins"] == {"from_topW": 7, "from_tau": 2, "from_hadron": 1}
 
 
+def test_finder_parser_ignores_non_target_pid_sections_without_overwriting_mu():
+    finder_text = """
+==================== HBB | SEMI ====================
+-- PID = e_like entries=10 frac_in_block=1
+   from_topW   : 7 frac_in_pid=.7
+   from_tau    : 2 frac_in_pid=.2
+   from_hadron : 1 frac_in_pid=.1
+-- PID = mu_like entries=9 frac_in_block=1
+   from_topW   : 6 frac_in_pid=.6
+   from_tau    : 2 frac_in_pid=.2
+   from_hadron : 1 frac_in_pid=.1
+-- PID = other_pid entries=8 frac_in_block=1
+   from_topW   : 1 frac_in_pid=.1
+   from_tau    : 3 frac_in_pid=.3
+   from_hadron : 4 frac_in_pid=.4
+-- PID = unknown entries=7 frac_in_block=1
+   from_topW   : 0 frac_in_pid=0
+   from_tau    : 1 frac_in_pid=.1
+   from_hadron : 6 frac_in_pid=.6
+"""
+    finder = analysis.parse_finder_origins(finder_text)
+    assert finder[("SEMI", "EL")]["origins"] == {
+        "from_topW": 7, "from_tau": 2, "from_hadron": 1,
+    }
+    assert finder[("SEMI", "MU")]["origins"] == {
+        "from_topW": 6, "from_tau": 2, "from_hadron": 1,
+    }
+
+
 def test_reuse_frozen_stdout_requires_exact_interrupted_state(tmp_path):
     targets = [tmp_path / name for name in (
         "tagger_stdout.txt", "finder_stdout.txt", "lepton_counts.json",
