@@ -136,5 +136,14 @@ def test_condor_wrapper_scans_only_ten_complete_reco_inputs():
     assert "source /data/dust/user/zhangyuy/analysis/tth/ZHH/setup.sh" in wrapper
     assert "set -eo pipefail" in wrapper
     assert "set -euo pipefail" not in wrapper
+    assert "set +e" in wrapper
+    assert 'setup_log="$run_root/condor/setup.log"' in wrapper
+    assert "setup_rc=$?" in wrapper
+    assert "command -v python3" in wrapper
+    assert "-c 'import pyLCIO'" in wrapper
+    assert 'exec "$python_executable"' in wrapper
+    assert '--max-events "$max_events"' in wrapper
+    assert "MAX_EVENTS = -1" in submit
+    assert "$(MAX_EVENTS)" in submit
     assert "report_lepton_selection_truth_composition.py" in wrapper
     assert "queue 1" in submit
