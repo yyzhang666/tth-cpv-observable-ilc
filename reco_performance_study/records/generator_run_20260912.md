@@ -133,6 +133,92 @@ input differs from the irrecoverable historical SGV, but the observed stack
 point is the already-recorded finalizer crash. No Marlin rerun is required for
 the accepted files.
 
+## Physsim lepton efficiency/purity tables — 10 chunks
+
+This is the completed 10-chunk Physsim eL.pR lepton-table run. The contract
+keeps the historical selection and counting semantics unchanged and joins the
+complete-reco and Finder branches by `(source_file_id, run, event)`.
+
+- Complete-reco inputs (chunks 1..10):
+  `/data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_tth/eL.pR/I01234_0/complete_reco/complete_reco_kinfit_ready_E550-Test.Ptth.Gphyssim.eL.pR.I01234_0.{chunk}_sgv.slcio`.
+- Finder inputs (chunks 1..10):
+  `/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/physsim_leptons/20260912_finder_chunks1_10/finder_chunk_{chunk}.slcio`.
+- Source IDs were `physsim_chunk_1` through `physsim_chunk_10`.
+- Tagger collections: `ISOElectrons`, `ISOMuons`; Finder collection:
+  `Isolep`. The four frozen legacy selection/counting implementations were
+  reused unchanged from `reco_performance_study/legacy`:
+  `isolepton_eff_purity_v2077.py`, `isolepton_finder_eff_purity_v2077.py`,
+  `count_hbb_ttbar_had_iso_pass.py`, and
+  `count_hbb_ttbar_dilep_pass.py`.
+- Code-side recovery: commit `4f318bc` explicitly reuses frozen legacy
+  stdout. The first full joined scan reached EOF but produced zero Finder/DI/MU
+  denominators and no derived outputs. Audit showed `other_pid/unknown`
+  overwrote the MU state (and could silently pollute SEMI/MU); commit
+  `445371e` fixes the state parser. Fifteen focused tests passed, and parser
+  smoke matched all four Finder blocks. A second `nohup` recovery (PID
+  `3724125`) completed and generated the formal outputs.
+- Events processed: `124982`.
+
+Raw failed-recovery evidence is at
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/physsim_leptons/20260912_lepton_tables_chunks1_10/recovery_failed_parser.log`;
+successful-recovery evidence is at
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/physsim_leptons/20260912_lepton_tables_chunks1_10/recovery.log`.
+The local mirror contains the corresponding files at
+`/Users/tdbrylf/Documents/NAF_tth/naf_outputs/reco_performance_study/outputs/physsim_leptons/20260912_lepton_tables_chunks1_10/recovery_failed_parser.log`
+and
+`/Users/tdbrylf/Documents/NAF_tth/naf_outputs/reco_performance_study/outputs/physsim_leptons/20260912_lepton_tables_chunks1_10/recovery.log`.
+The attempts remain part of this continuous record, not separate task records.
+
+### Formal outputs
+
+Remote output directory:
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/physsim_leptons/20260912_lepton_tables_chunks1_10`.
+Local mirror:
+`/Users/tdbrylf/Documents/NAF_tth/naf_outputs/reco_performance_study/outputs/physsim_leptons/20260912_lepton_tables_chunks1_10`.
+The seven nonempty formal artifacts are `tagger_stdout.txt`,
+`finder_stdout.txt`, `lepton_counts.json`, `lepton_purity.csv`,
+`lepton_multiplicity.csv`, `semileptonic_lepton_table.png`, and
+`dileptonic_lepton_table.png`; associated recovery logs are kept alongside
+the run outputs.
+
+Purity raw counts/denominators:
+
+| branch/category | denominator | from_topW | from_tau | from_hadron |
+|---|---:|---:|---:|---:|
+| Tagger SEMI EL | 11727 | 10122 | 1432 | 173 |
+| Tagger SEMI MU | 11233 | 9897 | 1143 | 193 |
+| Tagger DI EL | 5514 | 4793 | 668 | 53 |
+| Tagger DI MU | 5485 | 4890 | 533 | 62 |
+| Finder SEMI EL | 10619 | 9693 | 876 | 50 |
+| Finder SEMI MU | 10455 | 9613 | 804 | 38 |
+| Finder DI EL | 5026 | 4623 | 383 | 20 |
+| Finder DI MU | 5152 | 4750 | 387 | 15 |
+
+Multiplicity denominators: `HBB had=32752`, `semileptonic_e=10611`,
+`semileptonic_mu=10569`, `semileptonic_tau=10513`, `DI NO_TAU=3393`, and
+`HAS_TAU=4174`. Derived percentages are in the CSV/PNG outputs; each purity
+category row sums to its denominator.
+
+### Validation and operating policy
+
+- All seven formal targets were present and nonempty; JSON reports
+  `events_processed=124982`.
+- All eight purity denominators were positive and origin sums equal their
+  denominators. Both PNGs were visually readable. Remote-to-local `rsync`
+  completed for the small formal output directory.
+- The parser-overwrite failure did not change physics selections, collections,
+  join key, denominators, or frozen legacy logic in the corrected run.
+- Future large-sample work follows the user's policy: perform only a smoke
+  test, then deliver the script and complete command; do not run large samples
+  without explicit authorization.
+
+NECESSITY: Recording exact inputs, source IDs, collections, join key, frozen
+scripts, and denominators prevents silent branch mixing or changed physics
+definitions.
+
+NECESSITY: Recording the parser-overwrite failure and focused validation
+prevents zero-denominator output from being mistaken for a physical result.
+
 ## Delivery state
 
 The terminal was intentionally left open during delivery. No further job
