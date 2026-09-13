@@ -114,6 +114,35 @@ def test_origin_parsers_keep_integer_counts_before_division():
     assert finder[("SEMI", "EL")]["origins"] == {"from_topW": 7, "from_tau": 2, "from_hadron": 1}
 
 
+def test_reuse_frozen_stdout_requires_exact_interrupted_state(tmp_path):
+    targets = [tmp_path / name for name in (
+        "tagger_stdout.txt", "finder_stdout.txt", "lepton_counts.json",
+        "lepton_purity.csv", "lepton_multiplicity.csv",
+        "semileptonic_lepton_table.png", "dileptonic_lepton_table.png",
+    )]
+    targets[0].write_text("tagger\n", encoding="utf-8")
+    targets[1].write_text("finder\n", encoding="utf-8")
+    assert analysis.prepare_frozen_outputs(targets, True) == ("tagger\n", "finder\n")
+
+    with pytest.raises(RuntimeError, match="refusing to overwrite"):
+        analysis.prepare_frozen_outputs(targets, False)
+
+    targets[2].write_text("partial derived output\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="all five derived outputs absent"):
+        analysis.prepare_frozen_outputs(targets, True)
+
+
+def test_reuse_frozen_stdout_rejects_missing_frozen_log(tmp_path):
+    targets = [tmp_path / name for name in (
+        "tagger_stdout.txt", "finder_stdout.txt", "lepton_counts.json",
+        "lepton_purity.csv", "lepton_multiplicity.csv",
+        "semileptonic_lepton_table.png", "dileptonic_lepton_table.png",
+    )]
+    targets[0].write_text("tagger\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="requires tagger_stdout.txt and finder_stdout.txt"):
+        analysis.prepare_frozen_outputs(targets, True)
+
+
 def test_finder_runner_persists_combined_marlin_log():
     source = (ROOT / "scripts/reco_performance/run_finder_branch.py").read_text()
     assert 'run_dir / "marlin.log"' in source

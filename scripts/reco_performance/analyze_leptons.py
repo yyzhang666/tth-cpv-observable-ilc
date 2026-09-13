@@ -136,6 +136,20 @@ def run_frozen(script, inputs, extra, log_path):
     return result.stdout
 
 
+def prepare_frozen_outputs(targets, reuse_frozen_stdout):
+    existing = [path.exists() or path.is_symlink() for path in targets]
+    if not reuse_frozen_stdout:
+        if any(existing):
+            raise RuntimeError("refusing to overwrite existing lepton analysis outputs")
+        return None
+    if existing[:2] != [True, True] or any(existing[2:]):
+        raise RuntimeError(
+            "--reuse-frozen-stdout requires tagger_stdout.txt and finder_stdout.txt "
+            "to exist, with all five derived outputs absent"
+        )
+    return tuple(path.read_text(encoding="utf-8") for path in targets[:2])
+
+
 def purity_rows(tagger, finder):
     rows = []
     for method, payload in (("Tagger", tagger), ("Finder", finder)):
@@ -215,18 +229,21 @@ def main():
     parser.add_argument("--legacy-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--max-events", type=int, default=-1)
+    parser.add_argument("--reuse-frozen-stdout", action="store_true")
     args = parser.parse_args()
     if not (len(args.complete) == len(args.finder) == len(args.source_file_id)):
         raise ValueError("complete, finder, and source-file-id lists must have equal length")
     output = args.output_dir.resolve(strict=False)
     output.mkdir(parents=True, exist_ok=True)
     targets = [output / name for name in ("tagger_stdout.txt", "finder_stdout.txt", "lepton_counts.json", "lepton_purity.csv", "lepton_multiplicity.csv", "semileptonic_lepton_table.png", "dileptonic_lepton_table.png")]
-    if any(path.exists() or path.is_symlink() for path in targets):
-        raise RuntimeError("refusing to overwrite existing lepton analysis outputs")
+    frozen_stdout = prepare_frozen_outputs(targets, args.reuse_frozen_stdout)
     legacy = args.legacy_dir.resolve(strict=True)
     maximum = str(args.max_events)
-    tagger_text = run_frozen(legacy / "isolepton_eff_purity_v2077.py", args.complete, ["--max-events", maximum], targets[0])
-    finder_text = run_frozen(legacy / "isolepton_finder_eff_purity_v2077.py", args.finder, ["--max-events", maximum, "--rcal-ele-min", "0.90", "--calE-mu-max", "5.0", "--pid-mu-first"], targets[1])
+    if frozen_stdout is None:
+        tagger_text = run_frozen(legacy / "isolepton_eff_purity_v2077.py", args.complete, ["--max-events", maximum], targets[0])
+        finder_text = run_frozen(legacy / "isolepton_finder_eff_purity_v2077.py", args.finder, ["--max-events", maximum, "--rcal-ele-min", "0.90", "--calE-mu-max", "5.0", "--pid-mu-first"], targets[1])
+    else:
+        tagger_text, finder_text = frozen_stdout
     counts = joined_multiplicity(args.complete, args.finder, args.source_file_id, legacy, args.max_events)
     rows = purity_rows(parse_tagger_origins(tagger_text), parse_finder_origins(finder_text))
     targets[2].write_text(json.dumps({"purity": rows, "multiplicity": counts}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
