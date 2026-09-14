@@ -450,6 +450,10 @@ scripts, tests, and the mirrored record.  The Whizard formal products and
 final CM/accuracy/mass figures remain pending until cluster `5121180`
 completes.
 
+The local `reco_performance` branch was pushed non-forcibly to
+`git@github.com:yyzhang666/tth-cpv-observable-ilc.git`; the remote branch
+advanced from `f2821c5` to record commit `a18412f`.
+
 NECESSITY: The four-field key prevents cross-file/local-index collisions in
 the recovered multi-chunk sample.
 
