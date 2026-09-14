@@ -35,6 +35,11 @@ def relation_state(relation, shared_matrix):
 
 
 def relation_context(event, reco_collection_name, legacy):
+    relation = legacy.get_col(event, "TrueJetPFOLink")
+    if relation is None:
+        return "relation_missing", None
+    if int(relation.getNumberOfElements()) == 0:
+        return "relation_empty", None
     reco = legacy.get_col(event, reco_collection_name)
     if reco is None:
         return "missing_reco_jets", None
@@ -46,11 +51,6 @@ def relation_context(event, reco_collection_name, legacy):
     quarks = legacy.collect_truejet_quark_jets(truejets)
     if len(quarks) != 6:
         return "wrong_truejet_multiplicity", None
-    relation = legacy.get_col(event, "TrueJetPFOLink")
-    if relation is None:
-        return "relation_missing", None
-    if int(relation.getNumberOfElements()) == 0:
-        return "relation_empty", None
     navigator = legacy.UTIL.LCRelationNavigator(relation)
     true_map = legacy.build_truejet_pfo_map(quarks, navigator)
     reco_infos = legacy.build_reco_jet_pfo_map(reco)

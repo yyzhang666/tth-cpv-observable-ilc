@@ -41,6 +41,12 @@ class WhizardJetAnalysisTest(unittest.TestCase):
         matrix[2][4] = 1.0
         self.assertEqual(CM.relation_state(Relation(1), matrix), "relation_eligible")
 
+    def test_relation_missing_precedes_jet_multiplicity_checks(self):
+        legacy = types.SimpleNamespace(get_col=lambda event, name: None)
+        state, context = CM.relation_context(object(), "RefinedJets6", legacy)
+        self.assertEqual(state, "relation_missing")
+        self.assertIsNone(context)
+
     def test_source_aware_identity(self):
         event = types.SimpleNamespace(getRunNumber=lambda: 7, getEventNumber=lambda: 9)
         self.assertEqual(CM.source_event_key("chunk0", event), ("chunk0", 7, 9))
