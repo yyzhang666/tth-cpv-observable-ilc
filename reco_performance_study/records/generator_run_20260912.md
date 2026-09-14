@@ -301,4 +301,46 @@ deferred until the new jet figures are available.
 
 NECESSITY: The dedicated entry point prevents the old same-selection pre/post function from being misused for a cross-method/cross-stage diagnostic.
 
+## 2026-09-14 Physsim 1k assignment-mass diagnostic
+
+This follows the historical Whizard-830 overlay. Input was old Physsim chunk0:
+first 1000 events, filtered truth 159, candidate ROOT rows 4380. The initial
+run incorrectly used the assignment truth map as an attach gate, leaving only
+3 common events; it produced no formal plot. NAF failed log:
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/jet_assignment_masses/20260914_physsim1k_price_prefit_vs_kinfit_postfit_truth.run.log`
+(SHA prefix `8d63d5a...6359`).
+
+The frozen recovery used a presence-only assignment map with status
+`not_evaluated_for_mass_plot`, and reused legacy
+`load_price2014/build_flavor_prior_map/attach_scores_and_truth/select_best_by_mode`.
+No `truth_match_*` fields were generated and no assignment-accuracy result is
+claimed. Final NAF output:
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/jet_assignment_masses/20260914_physsim1k_price_prefit_vs_kinfit_postfit_truth`; local mirror:
+`/Users/tdbrylf/Documents/NAF_tth/naf_outputs/reco_performance_study/outputs/jet_assignment_masses/20260914_physsim1k_price_prefit_vs_kinfit_postfit_truth`.
+
+Counts: truth 159; candidates 4380; presence 150 events/1500 pairs; attach
+4380; flavor prior 4380 rows/150 events with ROOT fallback 0; Price selected
+150 (fit success 146, failed 4); kinfit selected 150 (failed 0); common 150;
+combo differs 55. The joined 150 source-aware keys were unique; rerank rows
+300; no truth-match fields. Nine histogram closures were 150/150. Truth
+medians were W=80.4114, top=170.5541, H=125 GeV.
+
+Entry point: `scripts/reco_performance/plot_physsim1k_assignment_masses.py`;
+tests: `tests/test_physsim1k_assignment_masses.py`. Final `run.log` SHA prefix
+`cf374d3...308f`. Five focused tests, `py_compile`, `git diff --check`, and
+PNG visual QA passed.
+
+NECESSITY: Source-aware joining prevents filtered-LCIO/ROOT index drift.
+
+NECESSITY: The truth parent-p4 curve prevents a nominal reference from being
+mislabeled as truth.
+
+NECESSITY: Presence-only assignment removes the irrelevant accuracy gate while
+preserving exact scores and tie-breaking.
+
+Known doubts: this is a historical small sample, not canonical large
+production; assignment truth was intentionally not evaluated. Optional review
+direction: redo this frozen diagnostic on large production candidate outputs
+when available.
+
 Known doubts: the remote NAF original was not rehashed. The large-data version is intentionally deferred. Optional review directions: none.
