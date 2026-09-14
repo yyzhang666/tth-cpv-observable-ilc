@@ -232,3 +232,73 @@ Optional review directions: source the ZHH environment before launching the
 Python validator in future Condor submissions; teach the Whizard wrapper to
 accept `-11` only after explicit output/event/collection validation. No review
 is required for this record, and no further direction applies.
+
+## 2026-09-13 whole-chunk Whizard reco submission and TopN follow-up
+
+The corrected contract uses whole input chunks; the obsolete 6000+6500 split
+is not used. Current production does not run kinfit. The canonical future
+kinfit variant is `steering/tth_semilep_kinfit.xml` with TopN10,
+`RefinedJets6` flavor, and `OutputErrorFlowJets6` fit output; historical
+Top180 is only a later scan control. Local code commits are `7efeb78` and
+`d1a3c56`; remote commits are `bb63e9b` and `8e14626`. Manifest validation
+passed. The 19-event smoke passed SGV/XML/output, nine required collections,
+ordered unique event keys, and runtime XML-library-hash checks. Marlin's
+`-11` occurs at `SLDCorrection::end()` after output and is accepted only after
+content validation. The first validator attempt failed because a pyLCIO banner
+contaminated stdout before JSON parsing; a minimal sentinel fix plus a new run
+ID passed, and the old attempt was rejected.
+
+DAGMan cluster `5111722` failed because `KRB5CCNAME` was not inherited by the
+scheduler universe: four SGV nodes each exhausted six retries, four reco nodes
+were futile, no compute node queued, DAG status was 1, and `rescue001` remains.
+Four authorized direct-chain jobs were submitted as cluster `5111735`; each
+does whole SGV then validated whole reco. At 12:52:48 all four were Running
+(QDate 12:50:37), with zero Idle/Held/Removed and empty stdout/err. Monitoring
+stopped after two minutes as requested. Run root:
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_direct_chain_4x12500_8e14626`.
+
+The TopN figure's original scripts are
+`scripts/run_weekly_ppt_0608_kinfit_controls_20260625.py` and
+`scripts/make_weekly_ppt_0608_assets_20260625.py`, with CSV
+`topn_extended_accuracy_runtime_wide_with_top1_top5_20260626.csv`. It used
+full6000 and accuracy denominator830 (`sa3.6`), so it is a low-statistics
+historical reference. After reco completion, redo it over four chunks with a
+common-event denominator and canonical Top10 settings.
+
+Known doubts: only the two-minute Running checkpoint is recorded; no job
+completion is claimed. Optional review directions: none.
+
+## 2026-09-13 truth composition after one-lepton selection
+
+Completed on the common 124,982-event, 10-chunk Physsim eL.pR complete-reco sample after truth `H_to_bb`. Tagger is `n(ISOElectrons)+n(ISOMuons)==1`; Finder is `Isolep==1` from the existing validated `lepton_counts.json`. Percentages use a separate selected four-class denominator per method.
+
+| method | direct semilep e/μ | semilep τ | fully hadronic | dileptonic | selected total |
+|---|---:|---:|---:|---:|---:|
+| Tagger | 19,798 (76.792987%) | 2,622 (10.170280%) | 380 (1.473954%) | 2,981 (11.562779%) | 25,781 |
+| Finder | 18,696 (70.834281%) | 2,969 (11.248769%) | 1,720 (6.516633%) | 3,009 (11.400318%) | 26,394 |
+
+Inputs are the ten `complete_reco_kinfit_ready_...{1..10}_sgv.slcio` files under `/data/dust/user/zhangyuy/analysis/tth/events_physsim/production/sm_tth/eL.pR/I01234_0/complete_reco/`; Finder counts came from `/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/physsim_leptons/20260912_lepton_tables_chunks1_10/lepton_counts.json` (SHA-256 `cb6d476f5be25e0df42a980bea46d7518faddd37498b6e71fa9846672d5d9fd3`). The frozen truth/counting implementation is `reco_performance_study/legacy/count_hbb_ttbar_had_iso_pass.py` (SHA-256 `93ecaaf863890d73ce6741cc97946451904b3dc0cc7f254ac104a62a2374d7e2`); local code commit is `5fabb29`, remote execution snapshot/output tag is `e45b62f`.
+
+Authoritative NAF output: `/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/physsim_leptons/20260913_lepton_truth_composition_chunks1_10_e45b62f_r2/result/`; local mirror: `/Users/tdbrylf/Documents/NAF_tth/naf_outputs/reco_performance_study/outputs/physsim_leptons/20260913_lepton_truth_composition_chunks1_10_e45b62f_r2/result/`. CSV SHA-256 `a9be5abf4b3fb0ddee118e5c65fd259a9069b4479fe0455cc57e1d1db4ab859e`; JSON SHA-256 `2587eb2a9139ad8791cdb1783c35b8c96266d25bac7bdd746db05d84a571859a`; remote/local hashes agree.
+
+The ≤20-event smoke was Condor cluster `5114852`, output root `/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/physsim_leptons/20260913_lepton_truth_composition_condor_smoke20_e45b62f`, and passed bounded output/JSON checks. Formal Condor cluster `5114858` submitted at 21:52:05, executed at 21:52:27, terminated normally with return value 0 at 21:59:38; `job.err` was empty. Setup-wrapper cluster `5111742` failed before usable output because nounset rejected an environment variable during ZHH setup. The minimal correction was no-nounset setup sourcing, validated in local commit `d95a579`; physics selections, collections, denominators, and truth functions were unchanged.
+
+Validation: `events_processed=124982`; Tagger closure is true and its four counts sum to 25,781; Finder four counts sum to 26,394 and percentages sum to 100%; `semilep_lep=0` in both methods. `unclassified` is not independently recorded by the Finder source JSON. NECESSITY: Separate method denominators and frozen truth functions prevent a selection/provenance change from masquerading as a composition difference.
+
+Known doubts: Finder unclassified selected-event count is not recorded by the source JSON. Optional review directions: none.
+## 2026-09-14 historical assignment-mass overlay
+
+Request: compare `Price2014 + signed flavor` PREFIT with `kinfit + signed
+flavor` POSTFIT in the same W/top/H figure. The large-data version is
+deferred until the new jet figures are available.
+
+- Input: local archived mirror
+  `/Users/tdbrylf/Documents/NAF_tth/TRASH_NONCANONICAL_LOCAL_20260704/local_dirs/naf_outputs/kinfit_softmass_sld_on_full6000_20260618/assignment_accuracy/kinfit_flavor_rerank_selected.csv`, SHA-256 `c58e7e...`. The NAF original was not rehashed because the SSH control socket lacked permission.
+- Entry point: `scripts/reco_performance/plot_historical_assignment_masses.py`; focused tests are in the corresponding `tests/` file. Contract is `source_mode=sld_enumeration`, exactly two methods/columns, strict common `event_index` (830 events), 60 bins, W 40–130, top 100–240, H 40–210, weight `1/830`. This is an offline rerank diagnostic, not canonical Top10; distinct candidate methods are allowed.
+- Output: `/Users/tdbrylf/Documents/NAF_tth/naf_outputs/reco_performance_study/outputs/jet_assignment_masses/20260914_historical830_price_prefit_vs_kinfit_postfit_r2/` (PNG/PDF/summary/manifest). The initial unsuffixed directory is an empty preserved failed attempt caused by missing matplotlib. The final script uses existing gnuplot; no dependency was installed.
+- Validation: common 830/830, all finite, combo differs 325; W under/in/over is 9/815/6 vs 19/800/11; top is 1/829/0 vs 0/830/0; H is 0/830/0 for both; all closure values are 1.0. Three tests, `py_compile`, diff-check, and visual QA passed.
+- Artifact hashes: PNG `79114260...`, PDF `782aae7d...`, summary `17bde26f...`, manifest `a73569bb...`.
+
+NECESSITY: The dedicated entry point prevents the old same-selection pre/post function from being misused for a cross-method/cross-stage diagnostic.
+
+Known doubts: the remote NAF original was not rehashed. The large-data version is intentionally deferred. Optional review directions: none.
