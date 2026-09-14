@@ -20,6 +20,12 @@ ASSIGNMENT_SPEC = importlib.util.spec_from_file_location(
 )
 ASSIGNMENT = importlib.util.module_from_spec(ASSIGNMENT_SPEC)
 ASSIGNMENT_SPEC.loader.exec_module(ASSIGNMENT)
+MASS_SPEC = importlib.util.spec_from_file_location(
+    "plot_whizard_assignment_masses",
+    ROOT / "scripts/reco_performance/plot_whizard_assignment_masses.py",
+)
+MASS = importlib.util.module_from_spec(MASS_SPEC)
+MASS_SPEC.loader.exec_module(MASS)
 
 
 class Relation:
@@ -73,6 +79,23 @@ class WhizardJetAnalysisTest(unittest.TestCase):
             ASSIGNMENT.MODES["mass-constraint-only"], "price2014_prefit"
         )
 
+    def test_assignment_source_root_hash_is_frozen(self):
+        import hashlib
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "input.root"
+            path.write_bytes(b"frozen")
+            source = {
+                "source_file_id": "chunk0",
+                "root": str(path),
+                "root_sha256": hashlib.sha256(b"frozen").hexdigest(),
+            }
+            self.assertEqual(ASSIGNMENT.verify_source_root(source), source["root_sha256"])
+            source["root_sha256"] = "0" * 64
+            with self.assertRaisesRegex(RuntimeError, "ROOT hash mismatch"):
+                ASSIGNMENT.verify_source_root(source)
+
     def test_relation_missing_precedes_jet_multiplicity_checks(self):
         legacy = types.SimpleNamespace(get_col=lambda event, name: None)
         state, context = CM.relation_context(object(), "RefinedJets6", legacy)
@@ -121,6 +144,49 @@ class WhizardJetAnalysisTest(unittest.TestCase):
         bad["kinfit + signed flavor"] = {}
         with self.assertRaisesRegex(RuntimeError, "denominator mismatch"):
             ASSIGNMENT.method_key_sets(bad)
+
+    def test_selected_common_csv_is_wide_and_source_aware(self, tmp_path=None):
+        import tempfile
+
+        key = ("chunk0", 7, 11, 13)
+        mass = {
+            "combo_id": 3,
+            "mW_had_prefit": 80.0,
+            "mt_had_prefit": 171.0,
+            "mH_prefit": 124.0,
+        }
+        kinfit = {
+            "combo_id": 4,
+            "mW_had_postfit": 81.0,
+            "mt_had_postfit": 172.0,
+            "mH_postfit": 125.0,
+        }
+        selected = {method: {key: {}} for method in ASSIGNMENT.MODES}
+        selected["mass-constraint-only + signed flavor"][key] = mass
+        selected["kinfit + signed flavor"][key] = kinfit
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "selected.csv"
+            rows = ASSIGNMENT.write_selected_common(path, selected, {key})
+            self.assertEqual(rows[0]["source_file_id"], "chunk0")
+            self.assertEqual(rows[0]["local_index"], 7)
+            parsed = MASS.read_selected_common(path)
+            self.assertEqual(len(parsed), 1)
+
+    def test_mass_overlay_rejects_duplicate_event_keys(self):
+        import csv
+        import tempfile
+
+        row = {field: "1" for field in MASS.REQUIRED_FIELDS}
+        row["source_file_id"] = "chunk0"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "selected.csv"
+            with path.open("w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, fieldnames=sorted(MASS.REQUIRED_FIELDS))
+                writer.writeheader()
+                writer.writerow(row)
+                writer.writerow(row)
+            with self.assertRaisesRegex(RuntimeError, "duplicate selected-common"):
+                MASS.read_selected_common(path)
 
     def test_cm_condor_job_is_frozen_to_whole_reco_inputs(self):
         submit = (ROOT / "condor/reco_performance/whizard_jet_cm.sub").read_text()

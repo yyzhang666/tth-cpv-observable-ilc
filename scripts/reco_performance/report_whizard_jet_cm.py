@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import hashlib
 import importlib.util
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -23,6 +26,22 @@ def load_module(name, path):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def write_matrix_csv(path, matrix, labels, formatter):
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["predicted\\true", *labels])
+        for index, label in enumerate(labels):
+            writer.writerow([label, *[formatter(matrix[index, column]) for column in range(len(labels))]])
 
 
 def source_event_key(source_file_id, local_index, event):
@@ -139,24 +158,25 @@ def run_cm(sources, legacy, expected_events, selected_indices=None):
                 analyze = wanted is None or local_index in wanted
                 if analyze:
                     add_counter(counters, source_id, "events_analyzed")
-                    probe_state, probe_context = relation_context(event, "RefinedJets6", legacy)
-                    assigned_state = None
-                    assigned_dice = []
-                    if probe_state == "relation_eligible":
-                        assigned_state, _, assigned_dice = positive_dice_assignment(
-                            probe_context, legacy
+                    if wanted is not None:
+                        probe_state, probe_context = relation_context(event, "RefinedJets6", legacy)
+                        assigned_state = None
+                        assigned_dice = []
+                        if probe_state == "relation_eligible":
+                            assigned_state, _, assigned_dice = positive_dice_assignment(
+                                probe_context, legacy
+                            )
+                        probe.append(
+                            {
+                                "source_file_id": source_id,
+                                "local_index": local_index,
+                                "run": key[2],
+                                "event": key[3],
+                                "relation_state": probe_state,
+                                "assigned_dice_state": assigned_state,
+                                "assigned_dice": assigned_dice,
+                            }
                         )
-                    probe.append(
-                        {
-                            "source_file_id": source_id,
-                            "local_index": local_index,
-                            "run": key[2],
-                            "event": key[3],
-                            "relation_state": probe_state,
-                            "assigned_dice_state": assigned_state,
-                            "assigned_dice": assigned_dice,
-                        }
-                    )
                     channel = legacy.truth_ttbar_channel(event, colMC="MCParticlesSkimmed")
                     if channel is not None and legacy.keep_semilep_channel(channel, "all"):
                         hbb = legacy.truth_h_to_bb(event, colMC="MCParticlesSkimmed")
@@ -247,6 +267,10 @@ def main():
     args.output_dir.mkdir(parents=True)
     normalized = legacy.normalize_by_true_columns(counts)
     prefix = args.output_dir / "whizard_truejet_weaver_cm10"
+    raw_csv = args.output_dir / "whizard_truejet_weaver_cm10_raw.csv"
+    normalized_csv = args.output_dir / "whizard_truejet_weaver_cm10_normalized.csv"
+    png = prefix.with_suffix(".png")
+    pdf = prefix.with_suffix(".pdf")
     legacy.np.savez(
         str(prefix) + ".npz",
         counts=counts,
@@ -254,11 +278,19 @@ def main():
         class_order=legacy.np.array(legacy.CLASS_ORDER, dtype=object),
     )
     legacy.save_csv(str(prefix) + ".csv", counts, normalized)
+    write_matrix_csv(raw_csv, counts, legacy.CLASS_ORDER, lambda value: str(int(value)))
+    write_matrix_csv(normalized_csv, normalized, legacy.CLASS_ORDER, lambda value: f"{float(value):.9g}")
     legacy.plot_confusion(
         normalized,
-        str(prefix) + ".png",
+        str(png),
         title=r"$t\bar t H,\ H\to b\bar b,\ \mathrm{semileptonic}$"
-        + "\nTrueJet overlap matched, Weaver 10x10",
+        + "\nRefinedJets6–TrueJets six-positive-Dice matching; Weaver 10x10",
+    )
+    legacy.plot_confusion(
+        normalized,
+        str(pdf),
+        title=r"$t\bar t H,\ H\to b\bar b,\ \mathrm{semileptonic}$"
+        + "\nRefinedJets6–TrueJets six-positive-Dice matching; Weaver 10x10",
     )
     payload = {
         "sources": sources,
@@ -269,6 +301,33 @@ def main():
     }
     (args.output_dir / "summary.json").write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    command = [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]]
+    outputs = (
+        prefix.with_suffix(".npz"),
+        prefix.with_suffix(".csv"),
+        raw_csv,
+        normalized_csv,
+        png,
+        pdf,
+        args.output_dir / "summary.json",
+    )
+    manifest = {
+        "status": "formal full-sample Whizard jet-flavor confusion matrix",
+        "observable": "column-normalized predicted Weaver flavor versus matched TrueJet quark flavor",
+        "collection": "RefinedJets6",
+        "truth_collection": "TrueJets via TrueJetPFOLink",
+        "selection": "truth H->bb and semileptonic ttbar; all six assigned Dice values strictly greater than zero",
+        "denominator": "all selected jets from atomically accepted six-jet events",
+        "sources": sources,
+        "sources_json": {"path": str(args.sources_json.resolve()), "sha256": sha256(args.sources_json)},
+        "legacy": {"path": str(args.legacy.resolve()), "sha256": sha256(args.legacy)},
+        "script": {"path": str(Path(__file__).resolve()), "sha256": sha256(Path(__file__).resolve())},
+        "command": command,
+        "outputs": {path.name: {"path": str(path), "sha256": sha256(path)} for path in outputs},
+    }
+    (args.output_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
 
 

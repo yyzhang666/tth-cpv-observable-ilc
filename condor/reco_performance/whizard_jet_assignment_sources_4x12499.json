@@ -1,0 +1,32 @@
+{
+  "sources": [
+    {
+      "source_file_id": "whizard_I410213_0",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_0_complete_reco.slcio",
+      "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_0_top10.root",
+      "root_sha256": "fc8c6c25a56bfad225e91978cbc1aa75de0c274e5f6e5f6701a6204a047b74e4",
+      "expected_events": 12499
+    },
+    {
+      "source_file_id": "whizard_I410213_1",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_1_complete_reco.slcio",
+      "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_1_top10.root",
+      "root_sha256": "b9af8d31f7ded8c6ae53e32876b1525f659be962c1ed56f9a14c8010400969fd",
+      "expected_events": 12499
+    },
+    {
+      "source_file_id": "whizard_I410213_2",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_2_complete_reco.slcio",
+      "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_2_top10.root",
+      "root_sha256": "eab734d92abd4b01d2f9a922b4abfac557cf9e0026823208958a40df0a2eb9ca",
+      "expected_events": 12499
+    },
+    {
+      "source_file_id": "whizard_I410213_3",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_3_complete_reco.slcio",
+      "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_3_top10.root",
+      "root_sha256": "51edffbadd9a86b818e1c360ee5b6037fbd79998068f519e9441f20713048afe",
+      "expected_events": 12499
+    }
+  ]
+}

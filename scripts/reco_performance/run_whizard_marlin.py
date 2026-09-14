@@ -15,6 +15,9 @@ from pathlib import Path
 
 
 SETUP = Path("/data/dust/user/zhangyuy/analysis/tth/ZHH/setup.sh")
+KINFit_VALIDATION_PYTHON = Path(
+    "/data/dust/user/zhangyuy/.venvs/zhh-catboost-py311/bin/python3"
+)
 PROCESSOR_LIBRARY = Path("/data/dust/user/zhangyuy/analysis/tth/ZHH/source/lib/libZHHProcessors.so")
 REQUIRED_RECO_COLLECTIONS = (
     "MCParticlesSkimmed",
@@ -28,6 +31,35 @@ REQUIRED_RECO_COLLECTIONS = (
     "SLDNuLink6",
 )
 VALIDATION_JSON_PREFIX = "RECO_VALIDATION_JSON="
+KINFIT_VALIDATION_JSON_PREFIX = "KINFIT_VALIDATION_JSON="
+BEST_TREE_REQUIRED_BRANCHES = {
+    "accepted",
+    "best_combo_id",
+    "event_index",
+    "event_number",
+    "fit_success",
+    "mH_postfit",
+    "mW_had_postfit",
+    "mt_had_postfit",
+    "run_number",
+    "top_combo_ids",
+    "top_n",
+}
+CANDIDATE_TREE_REQUIRED_BRANCHES = {
+    "candidate_rank",
+    "combo_id",
+    "event_index",
+    "event_number",
+    "fit_success",
+    "fitchi2",
+    "mH_postfit",
+    "mH_prefit",
+    "mW_had_postfit",
+    "mW_had_prefit",
+    "mt_had_postfit",
+    "mt_had_prefit",
+    "run_number",
+}
 
 
 def sha256(path):
@@ -216,6 +248,44 @@ def runtime_validate_reco(repo, runtime, input_path, output_path, expected_event
     return json.loads(payloads[0])
 
 
+def runtime_validate_kinfit(repo, runtime, output_path, expected_input_events):
+    """Validate ROOT in a clean sourced child pinned to the compatible py311."""
+    shell = (
+        'source "$1" >/dev/null 2>&1; '
+        'export PYTHONPATH="$2:${PYTHONPATH:-}"; '
+        'exec "$3" "$4" _validate-kinfit --output "$5" --expected-input-events "$6"'
+    )
+    result = subprocess.run(
+        [
+            "bash",
+            "-lc",
+            shell,
+            "bash",
+            str(SETUP),
+            runtime["pythonpath_prefix"],
+            str(KINFit_VALIDATION_PYTHON),
+            str(Path(__file__).resolve()),
+            str(output_path),
+            str(expected_input_events),
+        ],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+        env={"HOME": os.environ.get("HOME", ""), "PATH": os.environ.get("PATH", "/usr/bin:/bin")},
+    )
+    payloads = [
+        line[len(KINFIT_VALIDATION_JSON_PREFIX) :]
+        for line in result.stdout.splitlines()
+        if line.startswith(KINFIT_VALIDATION_JSON_PREFIX)
+    ]
+    if len(payloads) != 1:
+        raise RuntimeError(
+            f"expected one kinfit validation JSON sentinel, found {len(payloads)}"
+        )
+    return json.loads(payloads[0])
+
+
 def sourced_runtime(repo):
     shell = 'source "$1" >/dev/null 2>&1; printf "%s\\n" "$(root-config --libdir)" "${MARLIN_DLL:-}"'
     result = subprocess.run(["bash", "-lc", shell, "bash", str(SETUP)], check=True, capture_output=True, text=True)
@@ -236,28 +306,86 @@ def sourced_runtime(repo):
     }
 
 
-def validate_kinfit_root(path, root_python_dir):
-    sys.path.insert(0, root_python_dir)
+def tree_branch_names(tree):
+    return {str(branch.GetName()) for branch in tree.GetListOfBranches()}
+
+
+def validate_kinfit_root(path, expected_input_events):
+    """Check the persisted Top10 schema and best/candidate event alignment."""
     import ROOT
 
     root_file = ROOT.TFile.Open(str(path))
     if not root_file or root_file.IsZombie():
         raise RuntimeError(f"invalid ROOT output: {path}")
     try:
-        counters = {}
-        for name in ("TTHSemiLepKinFit", "TTHSemiLepKinFit_candidates"):
-            tree = root_file.Get(name)
-            if tree is None:
-                raise RuntimeError(f"missing required tree {name}")
-            counters[name] = int(tree.GetEntries())
+        best_tree = root_file.Get("TTHSemiLepKinFit")
+        candidates = root_file.Get("TTHSemiLepKinFit_candidates")
+        if best_tree is None or candidates is None:
+            raise RuntimeError("missing required best or candidate tree")
+        best_branches = tree_branch_names(best_tree)
+        candidate_branches = tree_branch_names(candidates)
+        missing_best = sorted(BEST_TREE_REQUIRED_BRANCHES - best_branches)
+        missing_candidates = sorted(CANDIDATE_TREE_REQUIRED_BRANCHES - candidate_branches)
+        if missing_best or missing_candidates:
+            raise RuntimeError(
+                f"kinfit tree schema mismatch: best={missing_best}, candidates={missing_candidates}"
+            )
+        counters = {
+            "TTHSemiLepKinFit": int(best_tree.GetEntries()),
+            "TTHSemiLepKinFit_candidates": int(candidates.GetEntries()),
+        }
         if min(counters.values()) <= 0:
             raise RuntimeError(f"required kinfit trees are empty: {counters}")
-        candidates = root_file.Get("TTHSemiLepKinFit_candidates")
-        if candidates.GetBranch("fit_success") is None:
-            raise RuntimeError("candidate tree lacks fit_success counter branch")
-        counters["candidate_fit_success_rows"] = sum(int(row.fit_success) == 1 for row in candidates)
+        best = {}
+        for row in best_tree:
+            event_index = int(row.event_index)
+            if event_index in best:
+                raise RuntimeError(f"duplicate best-tree event_index {event_index}")
+            if event_index < 0 or event_index >= int(expected_input_events):
+                raise RuntimeError(f"best-tree event_index outside input ceiling: {event_index}")
+            combo_ids = [int(value) for value in row.top_combo_ids]
+            if int(row.top_n) != 10 or len(combo_ids) != 10 or len(set(combo_ids)) != 10:
+                raise RuntimeError(f"non-Top10 best-tree payload at event_index {event_index}")
+            best[event_index] = {
+                "run_number": int(row.run_number),
+                "event_number": int(row.event_number),
+                "combo_ids": combo_ids,
+            }
+        ranks = {}
+        counters["candidate_fit_success_rows"] = 0
+        for row in candidates:
+            event_index = int(row.event_index)
+            if event_index not in best:
+                raise RuntimeError(f"candidate event_index absent from best tree: {event_index}")
+            payload = best[event_index]
+            if (int(row.run_number), int(row.event_number)) != (
+                payload["run_number"], payload["event_number"]
+            ):
+                raise RuntimeError(f"candidate/best event-key mismatch at {event_index}")
+            rank = int(row.candidate_rank)
+            if rank < 0 or rank >= 10 or int(row.combo_id) != payload["combo_ids"][rank]:
+                raise RuntimeError(f"candidate Top10 alignment mismatch at event_index {event_index}")
+            ranks.setdefault(event_index, set()).add(rank)
+            counters["candidate_fit_success_rows"] += int(row.fit_success) == 1
         if counters["candidate_fit_success_rows"] <= 0:
             raise RuntimeError(f"candidate tree has no successful fit rows: {counters}")
+        incomplete = [index for index, values in ranks.items() if values != set(range(10))]
+        if incomplete or set(ranks) != set(best):
+            raise RuntimeError(
+                f"candidate ranks do not cover all ten base combos for all best events: {incomplete[:5]}"
+            )
+        counters.update(
+            {
+                "expected_input_events": int(expected_input_events),
+                "best_event_index_min": min(best),
+                "best_event_index_max": max(best),
+                "best_event_indices_unique": True,
+                "candidate_event_keys_align": True,
+                "candidate_top10_rank_combo_alignment": True,
+                "best_required_branches": sorted(BEST_TREE_REQUIRED_BRANCHES),
+                "candidate_required_branches": sorted(CANDIDATE_TREE_REQUIRED_BRANCHES),
+            }
+        )
         return counters
     finally:
         root_file.Close()
@@ -282,6 +410,40 @@ def main():
                 sort_keys=True,
             )
         )
+        return
+    if sys.argv[1:2] == ["_validate-kinfit"]:
+        validator = argparse.ArgumentParser()
+        validator.add_argument("_mode")
+        validator.add_argument("--output", type=Path, required=True)
+        validator.add_argument("--expected-input-events", type=int, required=True)
+        validator.add_argument("--expected-sha256")
+        validator.add_argument("--output-json", type=Path)
+        validation_args = validator.parse_args()
+        observed_hash = sha256(validation_args.output)
+        if (
+            validation_args.expected_sha256
+            and observed_hash != validation_args.expected_sha256
+        ):
+            raise RuntimeError(
+                f"ROOT hash mismatch: {observed_hash} != {validation_args.expected_sha256}"
+            )
+        payload = {
+            "root": str(validation_args.output.resolve(strict=True)),
+            "root_sha256": observed_hash,
+            "command": [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
+            "validation": validate_kinfit_root(
+                validation_args.output, validation_args.expected_input_events
+            ),
+        }
+        if validation_args.output_json:
+            if validation_args.output_json.exists() or validation_args.output_json.is_symlink():
+                raise RuntimeError(
+                    f"refusing to overwrite validation JSON: {validation_args.output_json}"
+                )
+            validation_args.output_json.write_text(
+                json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
+        print(KINFIT_VALIDATION_JSON_PREFIX + json.dumps(payload, sort_keys=True))
         return
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=("reco", "kinfit"))
@@ -368,7 +530,7 @@ def main():
         )
         runtime_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     else:
-        counters = validate_kinfit_root(output_path, runtime["root_python_dir"])
+        counters = runtime_validate_kinfit(repo, runtime, output_path, args.event_count)
         manifest["root_validation"] = counters
         manifest["accepted_exit_134"] = bool(validated_exit_134)
         runtime_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")

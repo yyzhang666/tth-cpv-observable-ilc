@@ -366,6 +366,31 @@ def test_runtime_validator_uses_prefixed_json_amid_pylcio_banner(monkeypatch):
     ) == validation
 
 
+def test_kinfit_runtime_validator_uses_explicit_compatible_child(monkeypatch):
+    validation = {"expected_input_events": 12499, "candidate_top10_rank_combo_alignment": True}
+    observed = {}
+
+    def fake_run(command, **kwargs):
+        observed["command"] = command
+        observed["env"] = kwargs["env"]
+        return types.SimpleNamespace(
+            stdout=marlin.KINFIT_VALIDATION_JSON_PREFIX + json.dumps(validation) + "\n"
+        )
+
+    monkeypatch.setattr(marlin.subprocess, "run", fake_run)
+    assert marlin.runtime_validate_kinfit(
+        ROOT, {"pythonpath_prefix": "/runtime"}, "/output.root", 12499
+    ) == validation
+    assert str(marlin.KINFit_VALIDATION_PYTHON) in observed["command"]
+    assert observed["command"][-1] == "12499"
+    assert set(observed["env"]) == {"HOME", "PATH"}
+
+
+def test_kinfit_schema_contract_includes_alignment_payload():
+    assert {"top_combo_ids", "top_n", "best_combo_id"} <= marlin.BEST_TREE_REQUIRED_BRANCHES
+    assert {"candidate_rank", "combo_id", "fit_success"} <= marlin.CANDIDATE_TREE_REQUIRED_BRANCHES
+
+
 def test_condor_dag_is_four_whole_sgv_then_reco_jobs_without_kinfit():
     rendered = dag.render_dag(Path("/repo"), Path("/run"))
     assert rendered.count("JOB SGV") == 4
