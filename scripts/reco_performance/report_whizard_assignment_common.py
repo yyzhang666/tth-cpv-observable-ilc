@@ -14,9 +14,14 @@ from pathlib import Path
 
 
 MODES = {
-    "Price2014": "price2014_prefit_bcharge1p00",
-    "flavor": "flavor_signed_only",
-    "kinfit": "logchi2_plus_flavor_x0p3",
+    "mass-constraint-only": "price2014_prefit",
+    "kinfit-only": "kinfit_chi2_only",
+    "mass-constraint-only + signed flavor": "price2014_prefit_bcharge1p00",
+    "kinfit + signed flavor": "authoritative_best_tree",
+}
+
+OFFLINE_MODES = {
+    label: mode for label, mode in MODES.items() if mode != "authoritative_best_tree"
 }
 
 
@@ -57,12 +62,38 @@ def write_csv(path, rows):
         writer.writerows(rows)
 
 
+def read_authoritative_best_map(root_path, rerank):
+    handle = rerank.ROOT.TFile.Open(root_path)
+    if not handle or handle.IsZombie():
+        raise RuntimeError(f"cannot open authoritative ROOT: {root_path}")
+    tree = handle.Get("TTHSemiLepKinFit")
+    if tree is None:
+        handle.Close()
+        raise RuntimeError(f"missing authoritative best tree in {root_path}")
+    branches = rerank.branch_names(tree)
+    required = {"event_index", "accepted", "fit_success", "best_combo_id"}
+    missing = sorted(required - branches)
+    if missing:
+        handle.Close()
+        raise RuntimeError(f"authoritative best tree missing branches: {missing}")
+    out = {}
+    try:
+        for row in tree:
+            event_index = int(row.event_index)
+            if int(row.accepted) == 1 and int(row.fit_success) == 1:
+                out[event_index] = int(row.best_combo_id)
+    finally:
+        handle.Close()
+    return out
+
+
 def analyze_source(source, rerank, legacy_cm, boundary, price, counters):
     source_id = source["source_file_id"]
     lcio = source["lcio"]
     root = source["root"]
     expected_events = int(source["expected_events"])
     top_scores, accepted = rerank.read_top_score_map(root)
+    authoritative = read_authoritative_best_map(root, rerank)
     candidate_rows = rerank.read_candidate_rows(root, source_id, top_scores)
     add_counter(counters, source_id, "top10_accepted", len(accepted))
     rows_by_event = defaultdict(list)
@@ -82,7 +113,7 @@ def analyze_source(source, rerank, legacy_cm, boundary, price, counters):
             if not bool(event):
                 break
             add_counter(counters, source_id, "events_read")
-            key = boundary.source_event_key(source_id, event)
+            key = boundary.source_event_key(source_id, local_index, event)
             if key in seen_keys:
                 raise RuntimeError(f"duplicate source-aware event key: {key}")
             seen_keys.add(key)
@@ -93,7 +124,15 @@ def analyze_source(source, rerank, legacy_cm, boundary, price, counters):
                 )
                 add_counter(counters, source_id, state)
                 if state == "relation_eligible":
+                    assignment_state, _, _ = boundary.positive_dice_assignment(
+                        context, legacy_cm
+                    )
+                    add_counter(counters, source_id, assignment_state)
+                    if assignment_state != "accepted_six_positive":
+                        local_index += 1
+                        continue
                     truth_summary = Counter()
+                    cfg["min_truejet_dice"] = math.nextafter(0.0, 1.0)
                     truth_info, matched = rerank.match_semileptonic_event_by_role_source(
                         event,
                         context["reco"],
@@ -146,39 +185,42 @@ def analyze_source(source, rerank, legacy_cm, boundary, price, counters):
         fit_rows = [row for row in rows if int(row.get("fit_success", 0)) == 1]
         if fit_rows:
             add_counter(counters, source_id, "fit_success")
-        price_valid = any(
-            math.isfinite(rerank.mode_score(row, MODES["Price2014"])[0])
-            for row in rows
-        )
-        flavor_valid = any(
-            math.isfinite(rerank.mode_score(row, MODES["flavor"])[0])
-            for row in rows
-        )
-        kinfit_valid = any(
-            math.isfinite(rerank.mode_score(row, MODES["kinfit"])[0])
-            for row in fit_rows
-        )
-        for name, valid in (
-            ("price_score_valid", price_valid),
-            ("signed_flavor_score_valid", flavor_valid),
-            ("kinfit_score_valid", kinfit_valid),
-        ):
+        score_valid = {}
+        for label, mode in OFFLINE_MODES.items():
+            candidate_rows_for_mode = (
+                fit_rows if rerank.mode_uses_kinfit(mode) else rows
+            )
+            score_valid[label] = any(
+                math.isfinite(rerank.mode_score(row, mode)[0])
+                for row in candidate_rows_for_mode
+            )
+        score_valid["kinfit + signed flavor"] = event_index in authoritative
+        for name, valid in score_valid.items():
             if valid:
-                add_counter(counters, source_id, name)
-        if event_index not in truth or not (price_valid and flavor_valid and kinfit_valid):
+                add_counter(counters, source_id, f"{name}_valid")
+        if event_index not in truth or not all(score_valid.values()):
             continue
-        best = rerank.select_best_by_mode(rows, list(MODES.values()), require_converged=False)
-        if set(best) != set(MODES.values()):
+        best = rerank.select_best_by_mode(
+            rows, list(OFFLINE_MODES.values()), require_converged=False
+        )
+        if set(best) != set(OFFLINE_MODES.values()):
+            continue
+        authoritative_combo = authoritative[event_index]
+        authoritative_flags = truth[event_index].get(authoritative_combo)
+        if authoritative_flags is None:
             continue
         key = source_keys[event_index]
         for method, mode in MODES.items():
-            selected[method][key] = best[mode]
+            selected_flags = (
+                authoritative_flags if mode == "authoritative_best_tree" else best[mode]
+            )
+            selected[method][key] = selected_flags
             for name in ("W", "t", "H", "all"):
                 add_counter(
                     counters,
                     source_id,
                     f"{method}_{name}_correct",
-                    int(best[mode][f"truth_match_{name}"]),
+                    int(selected_flags[f"truth_match_{name}"]),
                 )
         add_counter(counters, source_id, "common_eligible")
     return selected

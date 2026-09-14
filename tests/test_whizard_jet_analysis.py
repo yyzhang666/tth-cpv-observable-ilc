@@ -42,6 +42,37 @@ class WhizardJetAnalysisTest(unittest.TestCase):
         matrix[2][4] = 1.0
         self.assertEqual(CM.relation_state(Relation(1), matrix), "relation_eligible")
 
+    def test_positive_dice_assignment_is_atomic(self):
+        class Matrix:
+            def __init__(self, values):
+                self.values = values
+
+            def __getitem__(self, key):
+                row, column = key
+                return self.values[row][column]
+
+        legacy = types.SimpleNamespace(best_assignment=lambda score: (tuple(range(6)), 5.0))
+        positive = Matrix([[1.0 if i == j else 0.0 for j in range(6)] for i in range(6)])
+        state, permutation, assigned = CM.positive_dice_assignment({"score": positive}, legacy)
+        self.assertEqual(state, "accepted_six_positive")
+        self.assertEqual(permutation, tuple(range(6)))
+        self.assertEqual(assigned, [1.0] * 6)
+
+        one_zero = Matrix([[1.0 if i == j and i != 4 else 0.0 for j in range(6)] for i in range(6)])
+        state, permutation, assigned = CM.positive_dice_assignment({"score": one_zero}, legacy)
+        self.assertEqual(state, "relation_nonpositive_assigned_dice")
+        self.assertIsNone(permutation)
+        self.assertEqual(assigned[4], 0.0)
+
+    def test_authoritative_mode_is_not_offline_reranked(self):
+        self.assertEqual(
+            ASSIGNMENT.MODES["kinfit + signed flavor"], "authoritative_best_tree"
+        )
+        self.assertNotIn("kinfit + signed flavor", ASSIGNMENT.OFFLINE_MODES)
+        self.assertEqual(
+            ASSIGNMENT.MODES["mass-constraint-only"], "price2014_prefit"
+        )
+
     def test_relation_missing_precedes_jet_multiplicity_checks(self):
         legacy = types.SimpleNamespace(get_col=lambda event, name: None)
         state, context = CM.relation_context(object(), "RefinedJets6", legacy)
@@ -50,10 +81,16 @@ class WhizardJetAnalysisTest(unittest.TestCase):
 
     def test_source_aware_identity(self):
         event = types.SimpleNamespace(getRunNumber=lambda: 7, getEventNumber=lambda: 9)
-        self.assertEqual(CM.source_event_key("chunk0", event), ("chunk0", 7, 9))
+        self.assertEqual(
+            CM.source_event_key("chunk0", 3, event), ("chunk0", 3, 7, 9)
+        )
         self.assertNotEqual(
-            CM.source_event_key("chunk0", event),
-            CM.source_event_key("chunk1", event),
+            CM.source_event_key("chunk0", 3, event),
+            CM.source_event_key("chunk1", 3, event),
+        )
+        self.assertNotEqual(
+            CM.source_event_key("chunk0", 3, event),
+            CM.source_event_key("chunk0", 4, event),
         )
 
     def test_cm_event_contribution_is_atomic_six_jets(self):
@@ -74,14 +111,14 @@ class WhizardJetAnalysisTest(unittest.TestCase):
 
     def test_method_denominator_mismatch_is_rejected(self):
         good = {
-            "Price2014": {("a", 1, 2): object()},
-            "flavor": {("a", 1, 2): object()},
-            "kinfit": {("a", 1, 2): object()},
+            method: {("a", 1, 2): object()} for method in ASSIGNMENT.MODES
         }
         sets = ASSIGNMENT.method_key_sets(good)
-        self.assertEqual(sets["Price2014"], sets["kinfit"])
+        self.assertEqual(
+            sets["mass-constraint-only"], sets["kinfit + signed flavor"]
+        )
         bad = dict(good)
-        bad["kinfit"] = {}
+        bad["kinfit + signed flavor"] = {}
         with self.assertRaisesRegex(RuntimeError, "denominator mismatch"):
             ASSIGNMENT.method_key_sets(bad)
 

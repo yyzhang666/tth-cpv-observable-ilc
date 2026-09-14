@@ -10,7 +10,12 @@ from collections import Counter
 from pathlib import Path
 
 
-RELATION_STATES = ("relation_missing", "relation_empty", "relation_no_overlap", "relation_eligible")
+RELATION_STATES = (
+    "relation_missing",
+    "relation_empty",
+    "relation_no_overlap",
+    "relation_eligible",
+)
 
 
 def load_module(name, path):
@@ -20,8 +25,13 @@ def load_module(name, path):
     return module
 
 
-def source_event_key(source_file_id, event):
-    return source_file_id, int(event.getRunNumber()), int(event.getEventNumber())
+def source_event_key(source_file_id, local_index, event):
+    return (
+        source_file_id,
+        int(local_index),
+        int(event.getRunNumber()),
+        int(event.getEventNumber()),
+    )
 
 
 def relation_state(relation, shared_matrix):
@@ -88,6 +98,20 @@ def complete_six_jet_entries(entries):
     return list(entries) if len(entries) == 6 else None
 
 
+def positive_dice_assignment(context, legacy):
+    """Return an assignment only when all six assigned Dice values are positive."""
+    permutation, _ = legacy.best_assignment(context["score"])
+    if permutation is None:
+        return "no_assignment", None, []
+    assigned = [
+        float(context["score"][reco_index, permutation[reco_index]])
+        for reco_index in range(6)
+    ]
+    if not all(value > 0.0 for value in assigned):
+        return "relation_nonpositive_assigned_dice", None, assigned
+    return "accepted_six_positive", permutation, assigned
+
+
 def run_cm(sources, legacy, expected_events, selected_indices=None):
     counts = legacy.init_matrix()
     counters = {source["source_file_id"]: Counter() for source in sources}
@@ -108,21 +132,29 @@ def run_cm(sources, legacy, expected_events, selected_indices=None):
                 if not bool(event):
                     break
                 add_counter(counters, source_id, "events_read")
-                key = source_event_key(source_id, event)
+                key = source_event_key(source_id, local_index, event)
                 if key in seen_keys:
                     raise RuntimeError(f"duplicate source-aware event key: {key}")
                 seen_keys.add(key)
                 analyze = wanted is None or local_index in wanted
                 if analyze:
                     add_counter(counters, source_id, "events_analyzed")
-                    probe_state, _ = relation_context(event, "RefinedJets6", legacy)
+                    probe_state, probe_context = relation_context(event, "RefinedJets6", legacy)
+                    assigned_state = None
+                    assigned_dice = []
+                    if probe_state == "relation_eligible":
+                        assigned_state, _, assigned_dice = positive_dice_assignment(
+                            probe_context, legacy
+                        )
                     probe.append(
                         {
                             "source_file_id": source_id,
                             "local_index": local_index,
-                            "run": key[1],
-                            "event": key[2],
+                            "run": key[2],
+                            "event": key[3],
                             "relation_state": probe_state,
+                            "assigned_dice_state": assigned_state,
+                            "assigned_dice": assigned_dice,
                         }
                     )
                     channel = legacy.truth_ttbar_channel(event, colMC="MCParticlesSkimmed")
@@ -133,10 +165,11 @@ def run_cm(sources, legacy, expected_events, selected_indices=None):
                             state, context = relation_context(event, "RefinedJets6", legacy)
                             add_counter(counters, source_id, state)
                             if state == "relation_eligible":
-                                permutation, _ = legacy.best_assignment(context["score"])
-                                if permutation is None:
-                                    add_counter(counters, source_id, "no_assignment")
-                                else:
+                                assignment_state, permutation, _ = positive_dice_assignment(
+                                    context, legacy
+                                )
+                                add_counter(counters, source_id, assignment_state)
+                                if assignment_state == "accepted_six_positive":
                                     try:
                                         algorithm_id, _ = legacy.get_weaver_alg_id(
                                             context["reco"], weaver_name="weaver"
