@@ -344,3 +344,59 @@ direction: redo this frozen diagnostic on large production candidate outputs
 when available.
 
 Known doubts: the remote NAF original was not rehashed. The large-data version is intentionally deferred. Optional review directions: none.
+
+## 2026-09-14 Physsim ten-chunk mass comparison and Whizard truth-match gate
+
+The Physsim large-sample mass plot was produced by direct reuse of the ten
+existing ROOT inputs; SGV, complete reco, truth filtering, and kinfit were not
+rerun. Inputs are the ten ROOT/provenance pairs under
+`/data/dust/user/zhangyuy/analysis/tth/events_physsim/kinfit/mva_inputs_20260731/tth-sm/eL.pR/physsim__tth-sm__eL.pR__I01234_0_{1..10}`.
+The entry point is `scripts/reco_performance/plot_physsim10_assignment_masses.py`
+(SHA-256 prefix `b1ebfd2d...`). The authoritative formal POSTFIT curve is read
+from the best tree; the offline PREFIT curve is the legacy mass-constraint-only
+plus signed-flavor rerank. No truth line or assignment-accuracy claim is made.
+
+| quantity | value |
+|---|---:|
+| authoritative best rows | 46,415 |
+| fit-success rows | 46,414 |
+| candidate rows | 1,099,930 |
+| common denominator | 46,414 |
+| failed source event | chunk8, run1, event6976 (index6976) |
+| key policy | source-aware key |
+| histogram closure checks | 6 |
+| smoke validation | 20 events |
+
+Final NAF output is
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/jet_assignment_masses/20260914_physsim_chunks1_10_existing_root_b1ebfd2d`;
+local mirror is
+`/Users/tdbrylf/Documents/NAF_tth/naf_outputs/reco_performance_study/outputs/jet_assignment_masses/20260914_physsim_chunks1_10_existing_root_b1ebfd2d`.
+Eight focused tests, `py_compile`, diff-check, and visual QA passed. Superseded
+attempts are retained only as evidence: `3d199445` heterogeneous CSV failure,
+`77e82cdf` ambiguous diagnostic, and `31082e57` stopped before output.
+
+The old 21 mismatch was not reproduced: exact-double mass-row/SLD56 and
+persisted-float187 comparisons gave zero combo mismatches. This is a known
+diagnostic doubt; the formal curve is unaffected.
+
+Whizard recovery files are structurally valid at 4x12,500 and were not
+rerun. Source audit confirmed that missing `TrueJetPFOLink` collections are
+skipped and counted, while a present-but-empty collection yields all-zero Dice
+overlaps and is accepted by the legacy `min_dice=0.0` condition. The user
+approved an atomic event gate requiring all six Dice matches to satisfy
+`Dice>0`, for both `RefinedJets6` confusion-matrix matching and
+`OutputErrorFlowJets6` assignment truth matching. Rejected events will be
+counted separately; this changes the truth-matched denominator and must not be
+silently folded into the result. Whizard analysis has not yet been submitted;
+Top10 only, never Top180.
+
+NECESSITY: Direct ROOT reuse preserves the established production products and
+avoids an unnecessary reco/kinfit rerun.
+
+NECESSITY: The source-aware key prevents cross-chunk event-index collisions.
+
+NECESSITY: The all-six positive-Dice gate prevents arbitrary zero-overlap
+permutations from entering truth-labelled accuracy or confusion denominators.
+
+Known doubts: the old 21-mismatch diagnostic discrepancy remains unexplained;
+the Whizard analysis is pending submission. Optional review directions: none.
