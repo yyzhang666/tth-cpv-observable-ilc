@@ -452,7 +452,7 @@ completes.
 
 The local `reco_performance` branch was pushed non-forcibly to
 `git@github.com:yyzhang666/tth-cpv-observable-ilc.git`; the remote branch
-advanced from `f2821c5` to record commit `a18412f`.
+contains implementation commit `ec727b4` and this continuous study record.
 
 NECESSITY: The four-field key prevents cross-file/local-index collisions in
 the recovered multi-chunk sample.
