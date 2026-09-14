@@ -1,0 +1,20 @@
+{
+  "sources": [
+    {
+      "source_file_id": "whizard_I410213_0",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_0_complete_reco.slcio"
+    },
+    {
+      "source_file_id": "whizard_I410213_1",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_1_complete_reco.slcio"
+    },
+    {
+      "source_file_id": "whizard_I410213_2",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_2_complete_reco.slcio"
+    },
+    {
+      "source_file_id": "whizard_I410213_3",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_3_complete_reco.slcio"
+    }
+  ]
+}

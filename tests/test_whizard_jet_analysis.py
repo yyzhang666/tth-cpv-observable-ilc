@@ -1,6 +1,7 @@
 """Dependency-free boundary tests for normalized Whizard jet analysis."""
 
 import importlib.util
+import json
 import types
 import unittest
 from pathlib import Path
@@ -83,6 +84,31 @@ class WhizardJetAnalysisTest(unittest.TestCase):
         bad["kinfit"] = {}
         with self.assertRaisesRegex(RuntimeError, "denominator mismatch"):
             ASSIGNMENT.method_key_sets(bad)
+
+    def test_cm_condor_job_is_frozen_to_whole_reco_inputs(self):
+        submit = (ROOT / "condor/reco_performance/whizard_jet_cm.sub").read_text()
+        wrapper = (ROOT / "condor/reco_performance/run_whizard_jet_cm.sh").read_text()
+        self.assertIn("getenv = false", submit)
+        self.assertIn("on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)", submit)
+        self.assertIn("--expected-events 12500", wrapper)
+        self.assertIn("plot_tth_truejet_weaver_cm10.py", wrapper)
+        self.assertNotIn("Top180", submit + wrapper)
+        self.assertNotIn("kinfit", submit + wrapper.lower())
+
+    def test_smoke_fixture_has_exact_source_local_indices(self):
+        indices = json.loads(
+            (ROOT / "condor/reco_performance/whizard_jet_smoke_indices.json").read_text()
+        )
+        expected = json.loads(
+            (ROOT / "condor/reco_performance/whizard_jet_smoke_expected_relations.json").read_text()
+        )
+        fixture_keys = {
+            f"{source_id}:{local_index}"
+            for source_id, local_indices in indices.items()
+            for local_index in local_indices
+        }
+        self.assertEqual(set(expected), fixture_keys)
+        self.assertEqual(len(fixture_keys), 12)
 
 
 if __name__ == "__main__":

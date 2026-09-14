@@ -1,0 +1,16 @@
+universe = vanilla
+executable = $(REPO_ROOT)/condor/reco_performance/run_whizard_jet_cm.sh
+arguments = $(REPO_ROOT) $(RUN_ROOT) $(SOURCES_JSON)
+
+getenv = false
+should_transfer_files = NO
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+
+output = $(RUN_ROOT)/condor/job.out
+error = $(RUN_ROOT)/condor/job.err
+log = $(RUN_ROOT)/condor/job.log
+
+request_cpus = 1
+request_memory = 4GB
++RequestRuntime = 7200
+queue 1
