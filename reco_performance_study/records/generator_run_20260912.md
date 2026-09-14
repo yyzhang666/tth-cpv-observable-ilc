@@ -400,3 +400,61 @@ permutations from entering truth-labelled accuracy or confusion denominators.
 
 Known doubts: the old 21-mismatch diagnostic discrepancy remains unexplained;
 the Whizard analysis is pending submission. Optional review directions: none.
+
+## 2026-09-14 Whizard positive-Dice gate, submission, and local consolidation
+
+Source-confirmed implementation commit: `ec727b412c5e55c9606eb17697b8ecf946e841ae`.
+Changed surfaces are `report_whizard_jet_cm.py`,
+`report_whizard_assignment_common.py`, and `test_whizard_jet_analysis.py`.
+The event identity is the four-field key
+`(source_file_id, local_event_index, run, event)`.  The independent atomic
+gate requires all six assigned Dice values to be strictly positive, separately
+for `RefinedJets6` confusion-matrix matching and `OutputErrorFlowJets6`
+assignment matching; zero-Dice permutations are rejected and counted rather
+than entering a truth denominator.
+
+Validation was source-confirmed: 10/10 focused tests, `py_compile`, and
+`git diff --check` passed.  Relation smoke output:
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260914_whizard_positive_dice_smoke_4field_14cd253`;
+accepted=2, CM events=2, CM jets=12; summary SHA-256
+`60924855ce36ace56f211bc498aeee0036a4ed5c45db27a02845ac200731ed14`.
+Top10 smoke output:
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_positive_dice_smoke20_84cbb7d`;
+processed=19, best=7, candidates=110, successful=106; validated ROOT SHA-256
+`c2784feba3dfa53dcfc692889f079a6bc86fcd3c6b6452ad59f99088f5bfce8f`.
+
+The four whole-chunk canonical Top10 processes were submitted as Condor
+cluster `5121180`, run root
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d`.
+The submission command reconstructed from the generated `submit.sub` and
+runtime manifest was (the original interactive shell transcript was not
+retained):
+
+```sh
+condor_submit /data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/condor/submit.sub \
+  -append repo_root=/data/dust/user/zhangyuy/tth-cpv-observable-ilc-reco-performance \
+  -append reco_root=/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco \
+  -append run_root=/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d \
+  -terse
+```
+
+At the two-minute checkpoint all four were `Running` (about 134 s), stderr was
+empty, and no job was Held.  Monitoring stopped at the user's requested
+checkpoint.  These candidates are still running; no completion or final
+physics result is claimed.
+
+The local consolidation is
+`/Users/tdbrylf/Documents/NAF_tth/plots_ild_cern_version`, including
+`PRODUCT_INDEX.md`, the full 54 MB Physsim10 `selected_rows` CSV, outputs,
+scripts, tests, and the mirrored record.  The Whizard formal products and
+final CM/accuracy/mass figures remain pending until cluster `5121180`
+completes.
+
+NECESSITY: The four-field key prevents cross-file/local-index collisions in
+the recovered multi-chunk sample.
+
+NECESSITY: The all-six positive-Dice gate prevents zero-overlap arbitrary
+permutations from inflating truth-labelled CM and assignment denominators.
+
+Known doubts: cluster `5121180` completion and its final readable products
+remain pending. Optional review directions: none.
