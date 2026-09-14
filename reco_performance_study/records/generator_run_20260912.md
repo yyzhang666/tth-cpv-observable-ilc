@@ -462,3 +462,87 @@ permutations from inflating truth-labelled CM and assignment denominators.
 
 Known doubts: cluster `5121180` completion and its final readable products
 remain pending. Optional review directions: none.
+
+## 2026-09-14 Whizard phase-1 formal products and wrapper ABI incident
+
+Phase-1 Whizard products are complete. The four-source input ceiling was
+4x12,500 readable events; assignment ROOT validation reached 4x12,499. The
+all-six assigned-Dice `>0` gate was applied atomically to both
+`RefinedJets6`/`TrueJets` confusion matching and `OutputErrorFlowJets6`/`TrueJets`
+assignment matching, using `(source_file_id, local_index, run_number,
+event_number)` keys.
+
+CM output:
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260914_whizard_cm_4x12500_posdice_cf291a8`.
+
+| events analyzed/read | truth selected | relation eligible | nonpositive Dice | accepted six-positive | CM jets |
+|---:|---:|---:|---:|---:|---:|
+| 50,000 | 12,839 | 9,252 | 1,728 | 7,524 | 45,144 |
+
+Assignment output:
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_accuracy_4x12499_posdice_cf291a8`.
+The common denominator is 4,730 source-aware events.
+
+| method | W | top | H | all |
+|---|---:|---:|---:|---:|
+| mass-constraint-only | 0.820930 | 0.553066 | 0.465751 | 0.396406 |
+| kinfit-only | 0.821353 | 0.578224 | 0.526427 | 0.465751 |
+| mass-constraint-only + signed flavor | 0.844820 | 0.612262 | 0.514165 | 0.464059 |
+| kinfit + signed flavor | 0.849683 | 0.630444 | 0.571882 | 0.521776 |
+
+The selected common-event CSV SHA-256 is
+`885a86c45f0ce64255af5edb60c9148ffc0bcfdd2813234b6c13d7bde7dbc540`.
+
+Mass overlay output:
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/jet_assignment_masses/20260914_whizard_4x12499_common4730_cf291a8`.
+It uses the separate 4,730-event denominator and compares
+mass-constraint-only + signed flavor PREFIT with authoritative kinfit + signed
+flavor POSTFIT; no truth curve is claimed.
+
+| object | prefit mean [GeV] | postfit mean [GeV] |
+|---|---:|---:|
+| W | 80.7241 | 80.4878 |
+| top | 167.6137 | 166.6739 |
+| H | 121.0997 | 119.1855 |
+
+Exact commands, schema, input/output hashes, and scripts are retained in the
+CM/assignment/mass manifests. Local mirrors are under
+`/Users/tdbrylf/Documents/NAF_tth/plots_ild_cern_version`.
+
+Confirmed wrapper ABI bug: under Condor `getenv=false`, system-Python PyROOT
+was imported before setup, causing `libcppyy.so: undefined symbol:
+PyObject_Vectorcall`. The correction was an explicitly sourced py311/root
+validation child. No release/resubmit was made; legacy cluster `5121180`
+remains Held by design. Evidence: focused pytest 38, NAF unittest 13,
+clean-environment smoke best 7/candidates 110, and primary visual inspection
+of all three PNGs. Commit/push was
+`cf291a801cf7ebb9013573d20920155b76d51ba7` on `reco_performance`; worktree
+clean. Homebrew Python lacked pytest, so primary local pytest was unavailable;
+this is an environment limitation, not a code failure.
+
+NECESSITY: The explicit py311/root child prevents system-Python PyROOT ABI
+contamination from invalidating post-processing validation.
+
+Known doubts: CM and assignment intentionally differ in collections, input
+ceilings and denominators; `setup.sh` is nonzero in strict shell mode but the
+explicit runtime was validated. Phase-2 Top1/5/10 has not started and no
+active analysis process remains. Optional review directions: none.
+
+External validation details: the four reco inputs were
+`.../whizard_I410213_{0,1,2,3}_complete_reco.slcio` under
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco`;
+the four validated ROOT inputs are under
+`.../whizard_top10_4x12500_posdice_039354d/root` and each has expected event
+count 12,499. Their SHA-256 prefixes/full values retained by the manifest are:
+`fc8c6c25a56bfad225e91978cbc1aa75de0c274e5f6e5f6701a6204a047b74e4`,
+`b9af8d31f7ded8c6ae53e32876b1525f659be962c1ed56f9a14c8010400969fd`,
+`eab734d92abd4b01d2f9a922b4abfac557cf9e0026823208958a40df0a2eb9ca`,
+`51edffbadd9a86b818e1c360ee5b6037fbd79998068f519e9441f20713048afe`.
+The assignment script hash is
+`e2845dd0d7472fc30507a75f54ca6192c5576ddfe26fc85f49855adfc7c73d1f`; the
+legacy CM and rerank hashes are
+`e54d3103c5e1dbb9edcf060b65b87923cab53dd54762f035d5ec57409f2555dd` and
+`e3ee6146ec3b9eb8b0f9628cf8f66fcacca0611c3dffb5eb17ea4c50e3e42dd3`.
+The CM script hash is
+`1a8c6e30dd24caf6494e0118b8617ac75cff42cb623e594c3b29f61121d66f14`; CM
+summary hash is `920e27a3d968940768ea209ca0f16ae892abab6f06947b4f61d8e5930decd744`.
