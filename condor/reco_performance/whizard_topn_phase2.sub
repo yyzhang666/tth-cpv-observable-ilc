@@ -1,0 +1,26 @@
+universe = vanilla
+executable = /usr/bin/env
+arguments = python3 $(repo_root)/scripts/reco_performance/run_whizard_marlin.py kinfit --authority $(authority) --input $(reco_root)/whizard_I410213_$(index)_complete_reco.slcio --output $(run_root)/top$(top_n)/root/whizard_I410213_$(index)_top$(top_n).root --run-dir $(run_root)/top$(top_n)/run_$(index) --event-count 12500 --expected-top-n $(top_n) --allow-long-run --accept-validated-exit-134
+
+getenv = false
+should_transfer_files = NO
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+
+output = $(run_root)/condor/top$(top_n)_$(index).out
+error = $(run_root)/condor/top$(top_n)_$(index).err
+log = $(run_root)/condor/top$(top_n)_$(index).log
+
+request_cpus = 1
+request_memory = 6GB
++RequestRuntime = 7200
+
+queue top_n,index,authority from (
+1,0,$(repo_root)/steering/tth_semilep_kinfit_top1.xml
+1,1,$(repo_root)/steering/tth_semilep_kinfit_top1.xml
+1,2,$(repo_root)/steering/tth_semilep_kinfit_top1.xml
+1,3,$(repo_root)/steering/tth_semilep_kinfit_top1.xml
+5,0,$(repo_root)/steering/tth_semilep_kinfit_top5.xml
+5,1,$(repo_root)/steering/tth_semilep_kinfit_top5.xml
+5,2,$(repo_root)/steering/tth_semilep_kinfit_top5.xml
+5,3,$(repo_root)/steering/tth_semilep_kinfit_top5.xml
+)
