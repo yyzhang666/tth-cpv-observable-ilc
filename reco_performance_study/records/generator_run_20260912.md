@@ -596,3 +596,86 @@ Known doubts: the full180 rows use the current SA2.6 and positive-Dice/common-
 key contract, while the historical 830-event reference used older SA3.6 and
 min-Dice-zero settings; they are therefore a controlled correction, not an
 identical vintage reproduction. Optional review directions: none.
+
+## 2026-09-15 historical Whizard830 nine-point legend update — completed
+
+The user selected the original nine-point presentation plot at TopN = 1,5,10,20,30,45,60,90,180. This presentation-only redraw changes only the legend names to `mass constraint-only + q_flavor minimize` and `q_reco minimize`. All numeric CSV data are byte-identical; no Marlin or Condor ran.
+
+Local output: `/Users/tdbrylf/Documents/NAF_tth/plots_ild_cern_version/jet_assignment_topn/historical_whizard830_topn1_5_10_20_30_45_60_90_180_legend_update_v1`; NAF output: `/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_historical830_topn1_5_10_20_30_45_60_90_180_legend_update_v1`. Images: `historical_topn_accuracy_runtime_current_legend.png` and `.pdf`. Entry point: `relabel_historical_topn_figure.py`; exact command and input/output hashes are in `manifest.json`. Source CSV SHA-256 `482e125f...`; output PNG/PDF prefixes `bc256e64...` and `d9bf055c...`. Two tests, pycompile, diff-check, and 2160x864 visual QA passed. The new three-point high-statistics scan remains preserved and validated separately; this historical nine-point plot is the chosen presentation figure.
+
+Known doubts: the original late-extension standalone plotting snippet was not preserved, but the exact source CSV/original PNG and producer-context scripts are preserved. Optional review directions: none.
+
+## 2026-09-15 Whizard Top1/5/10 scan and conference CM redraw — completed
+
+The previously cancelled Top1/5/10 task was restored after the user clarified
+that the original two-panel efficiency/runtime figure was still required. The
+formal scan used four validated Whizard eLpR complete-reco chunks for Top1 and
+Top5 and the already validated Top10 ROOT/log products. All three settings
+used the canonical TopN steering family, `RefinedJets6`,
+`OutputErrorFlowJets6`, SLD, SA2.6, fullMass4C, soft-mass constraints,
+`FlavorWeight=0.3`, Hbb semileptonic truth, and the atomic all-six assigned
+Dice>0 gate. The common source-aware denominator across all N and both methods
+is 4,649 events.
+
+| TopN | method/stage | W | top | H | all | denominator |
+|---:|---|---:|---:|---:|---:|---:|
+| 1 | mass constraint-only + q_flavor minimize / PREFIT | 0.827920 | 0.389976 | 0.205636 | 0.193805 | 4649 |
+| 1 | q_reco minimize / POSTFIT | 0.827920 | 0.389976 | 0.205636 | 0.193805 | 4649 |
+| 5 | mass constraint-only + q_flavor minimize / PREFIT | 0.837815 | 0.588944 | 0.491288 | 0.442246 | 4649 |
+| 5 | q_reco minimize / POSTFIT | 0.838675 | 0.597333 | 0.532803 | 0.484190 | 4649 |
+| 10 | mass constraint-only + q_flavor minimize / PREFIT | 0.844268 | 0.612175 | 0.512583 | 0.463541 | 4649 |
+| 10 | q_reco minimize / POSTFIT | 0.849215 | 0.632394 | 0.574317 | 0.524629 | 4649 |
+
+| TopN | chunks | measured Marlin events | measured Marlin total [s] | total [s/event] |
+|---:|---:|---:|---:|---:|
+| 1 | 4 | 49,996 | 185.73826 | 0.00371506 |
+| 5 | 4 | 49,996 | 855.27280 | 0.0171068 |
+| 10 | 4 | 49,996 | 1,446.95660 | 0.0289414 |
+
+The authoritative NAF output is
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/final_common_analysis`;
+the local mirror is
+`/Users/tdbrylf/Documents/NAF_tth/plots_ild_cern_version/jet_assignment_topn/whizard_top1_5_10_common_sa2p6_v1`.
+The plot is `whizard_topn_accuracy_runtime.png` and `.pdf`; numeric outputs
+are `topn_accuracy.csv`, `topn_runtime.csv`, and
+`topn_runtime_per_chunk.csv`. Script/XML/submit surfaces are retained in the
+local mirror and NAF output: `report_whizard_topn_scan.py`,
+`run_whizard_marlin.py`, `tth_semilep_kinfit_top1.xml`,
+`tth_semilep_kinfit_top5.xml`, and `whizard_topn_phase2.sub`.
+The report command is the exact command recorded in `manifest.json`:
+
+```bash
+/data/dust/user/zhangyuy/.venvs/zhh-catboost-py311/bin/python3 /data/dust/user/zhangyuy/tth-cpv-observable-ilc-reco-performance/scripts/reco_performance/report_whizard_topn_scan.py --sources-json /data/dust/user/zhangyuy/tth-cpv-observable-ilc-reco-performance/condor/reco_performance/whizard_topn_sources_4x12499.json --legacy-rerank /data/dust/user/zhangyuy/tth-cpv-observable-ilc-reco-performance/reco_performance_study/legacy/rerank_tth_semilep_kinfit_with_flavor.py --legacy-cm /data/dust/user/zhangyuy/tth-cpv-observable-ilc-reco-performance/reco_performance_study/legacy/plot_tth_truejet_weaver_cm10.py --chi2-module-dir /data/dust/user/zhangyuy/analysis/tth/chi2_clustering --model-bundle /data/dust/user/zhangyuy/analysis/tth/chi2_clustering/outputs/current_baseline/mcancestor_mass_response_chi2/fit_models_mcancestor_mass_response.json --output-dir /data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/final_common_analysis
+```
+
+The formal Condor submission was cluster `5126209`; all eight jobs exited 0
+without retry. Smoke validation passed for Top1 (7 best/11 SLD rows) and
+Top5 (7 best/55 rows), including explicit py311 execution, XML-only TopN
+diff, schema/collection/rank/SLD checks. Overall validation was 47 tests plus
+`py_compile`, diff-check, external ROOT/log validation, and visual QA.
+
+The conference/readability CM redraw is presentation-only. Its NAF output is
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260915_whizard_cm_4x12500_posdice_conference_large_bold_numbers`;
+local output is
+`/Users/tdbrylf/Documents/NAF_tth/plots_ild_cern_version/jet_flavor_cm/conference_large_bold_numbers`.
+The PNG/PDF stem is `whizard_truejet_weaver_cm10_conference_large_bold_numbers`.
+The script is `scripts/reco_performance/restyle_whizard_jet_cm.py` in the
+branch checkout; the exact command, inputs, hashes, and output list are in
+the local and NAF `manifest.json`. Only 14-pt bold adaptive-contrast cell
+annotations changed; the three numeric CSVs are byte-identical to the formal
+CM. Visual QA passed.
+
+NECESSITY: Restoring Top1/Top5 supplies the explicitly requested efficiency
+and measured-runtime figure while reusing the validated Top10 result and
+avoiding a new Top10 production.
+
+NECESSITY: The common 4,649-key intersection prevents incomparable event
+denominators across TopN and method curves.
+
+NECESSITY: The presentation-only CM redraw improves conference legibility
+without altering counts, normalization, class order, or denominator.
+
+Known doubts: the 4,649 denominator is intentionally smaller than the prior
+Top10-only 4,730 denominator because it is the intersection required across
+all N and both methods; the CM remains a frozen 10-class quark-only argmax and
+does not report gluon predictions. Optional review directions: none.
