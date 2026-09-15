@@ -546,3 +546,53 @@ legacy CM and rerank hashes are
 The CM script hash is
 `1a8c6e30dd24caf6494e0118b8617ac75cff42cb623e594c3b29f61121d66f14`; CM
 summary hash is `920e27a3d968940768ea209ca0f16ae892abab6f06947b4f61d8e5930decd744`.
+
+## 2026-09-14 assignment-accuracy pool/label contract correction (resolved 2026-09-15)
+
+Historical common830 used full180 base-combo+SLD, `sa3.6`, and legacy `min_dice=0`; its mass-only and kinfit-only values were respectively `0.2494/0.1675/0.2434/0.1253` and `0.2795/0.2012/0.2759/0.1602` for W/top/H/all. Current common4730 used RefinedJets6 signed-flavor-preselected Top10+SLD, `sa2.6`, and all-six `Dice>0`, so its `0.8209/0.5531/0.4658/0.3964` and `0.8214/0.5782/0.5264/0.4658` values are within-signed-flavor-Top10 diagnostics, not flavor-free methods or a same-method large-stat replacement. Truth direct matcher orientation/index audit found no bug. The correction is complete in new immutable output `20260914_whizard_full180_first2_common4730_sa2p6_v1` (commit `b7d2717`): only the first two bars were recomputed from full180; the last two were copied byte-for-value from the Top10 diagnostic. Counts, validation, and paths are recorded in the completion section below. The obsolete Top1/5/10 runtime phase was canceled and not submitted. Known doubts: positive-Dice and sample/SA effects are not separately quantified, and the historical vintage used different SA/Dice settings. Optional review direction: none.
+
+## 2026-09-15 Whizard full180 correction — completed
+
+The requested correction is complete under implementation commit `b7d2717`.
+Only the first two bars were recomputed, using all 180 base assignments plus
+SLD for the immutable common set of 4,730 source-aware event keys. The final
+two bars were copied byte-for-value from the validated signed-flavor Top10
+result; they were not reranked. This is a new output and does not overwrite
+the earlier diagnostic.
+
+| display label | internal mode | candidate pool/stage | W | top | H | all |
+|---|---|---|---:|---:|---:|---:|
+| mass constraint-only [full180] | `price2014_prefit` | full180 base+SLD, prefit | 0.316068 | 0.226850 | 0.305497 | 0.162791 |
+| kinfit-only [full180] | `kinfit_chi2_only` | full180 base+SLD, successful fit | 0.338055 | 0.261734 | 0.370613 | 0.220719 |
+| mass constraint-only + q_flavor minimize [signed-flavor-preselected Top10] | `price2014_prefit_bcharge1p00` | signed-flavor Top10, prefit | 0.844820 | 0.612262 | 0.514165 | 0.464059 |
+| q_reco minimize [signed-flavor-preselected Top10] | `kinfit_flavor_rerank` | signed-flavor Top10, postfit | 0.849683 | 0.630444 | 0.571882 | 0.521776 |
+
+Numerator counts for the four rows are respectively `(1495,1073,1445,770)`,
+`(1599,1238,1753,1044)`, `(3996,2896,2432,2195)`, and
+`(4019,2982,2705,2468)` for W/top/H/all. Exact source filter counts were
+1,168/1,168/1,168/1,226. The ≤20-event smoke processed 19 events, found 180
+unique combinations per event, and had 19/19 first-ten overlap with the
+existing Top10 workflow. Four formal Condor jobs were cluster `5125333`, all
+exited 0; formal first-ten overlap was 4,730/4,730.
+
+Authoritative NAF output:
+`/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1`
+
+Local mirror:
+`/Users/tdbrylf/Documents/NAF_tth/plots_ild_cern_version/jet_assignment_accuracy/whizard4x12499_full180_first2_common4730_sa2p6_v1`
+
+Validation evidence: 44 focused tests passed; `py_compile` and
+`git diff --check` passed; image visual QA passed. The executed authority XML
+is preserved in the output and differs from the repository XML only by a
+trailing blank line. The `.bashrc` invalid-export warning was external and
+had no effect. The obsolete Top1/5/10 runtime phase was canceled and no such
+jobs were submitted.
+
+NECESSITY: Recomputing only the mislabeled first two bars over full180 fixes
+the candidate-pool contract without changing the frozen signed-flavor
+reference bars or overwriting prior evidence.
+
+Known doubts: the full180 rows use the current SA2.6 and positive-Dice/common-
+key contract, while the historical 830-event reference used older SA3.6 and
+min-Dice-zero settings; they are therefore a controlled correction, not an
+identical vintage reproduction. Optional review directions: none.
