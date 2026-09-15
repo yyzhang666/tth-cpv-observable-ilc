@@ -247,6 +247,24 @@ def test_kinfit_authority_is_current_canonical_top10():
     assert (values["SigmaEnergyScaleFactor"], values["SigmaAnglesScaleFactor"], values["SigmaInvPtScaleFactor"]) == ("1.6", "2.6", "1.1")
 
 
+def test_full180_authority_has_only_topn_semantic_difference():
+    top10 = ET.parse(ROOT / "steering/tth_semilep_kinfit.xml").getroot()
+    full180 = ET.parse(ROOT / "steering/tth_semilep_kinfit_full180.xml").getroot()
+    top10_node = marlin.one(
+        top10,
+        "./processor[@name='MyTTHSemiLepKinFit']/parameter[@name='TopN']",
+    )
+    full180_node = marlin.one(
+        full180,
+        "./processor[@name='MyTTHSemiLepKinFit']/parameter[@name='TopN']",
+    )
+    assert top10_node.text.strip() == "10"
+    assert full180_node.text.strip() == "180"
+    marlin.validate_kinfit_authority(full180, expected_top_n=180)
+    full180_node.text = top10_node.text
+    assert canonical(full180) == canonical(top10)
+
+
 def test_historical_top180_kinfit_authority_is_rejected(tmp_path):
     authority = ROOT / "reco_performance_study/steering/reference/whizard_kinfit_20260618.xml"
     with pytest.raises(RuntimeError, match="non-canonical kinfit authority"):
@@ -382,13 +400,27 @@ def test_kinfit_runtime_validator_uses_explicit_compatible_child(monkeypatch):
         ROOT, {"pythonpath_prefix": "/runtime"}, "/output.root", 12499
     ) == validation
     assert str(marlin.KINFit_VALIDATION_PYTHON) in observed["command"]
-    assert observed["command"][-1] == "12499"
+    assert observed["command"][-4:] == [
+        "--expected-input-events", "12499", "--expected-top-n", "10",
+    ]
     assert set(observed["env"]) == {"HOME", "PATH"}
 
 
 def test_kinfit_schema_contract_includes_alignment_payload():
     assert {"top_combo_ids", "top_n", "best_combo_id"} <= marlin.BEST_TREE_REQUIRED_BRANCHES
     assert {"candidate_rank", "combo_id", "fit_success"} <= marlin.CANDIDATE_TREE_REQUIRED_BRANCHES
+
+
+def test_full180_condor_has_four_filtered_jobs_and_no_topn_scan():
+    submit = (
+        ROOT / "condor/reco_performance/whizard_full180_common4730.sub"
+    ).read_text(encoding="utf-8")
+    assert submit.count("whizard_I410213_") == 4
+    assert "--expected-top-n 180" in submit
+    assert "getenv = false" in submit
+    assert "on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)" in submit
+    assert "top1.xml" not in submit and "top5.xml" not in submit
+    assert "topn_phase2" not in submit.lower()
 
 
 def test_condor_dag_is_four_whole_sgv_then_reco_jobs_without_kinfit():

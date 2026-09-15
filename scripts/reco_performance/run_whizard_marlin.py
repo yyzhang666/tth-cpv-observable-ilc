@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import csv
 import hashlib
 import json
 import os
@@ -94,9 +95,9 @@ def render_reco(authority, input_path, output_path, event_count):
     return root, skip, maximum
 
 
-def render_kinfit(authority, input_path, output_path, maximum):
+def render_kinfit(authority, input_path, output_path, maximum, expected_top_n=10):
     root = copy.deepcopy(ET.parse(authority).getroot())
-    validate_kinfit_authority(root)
+    validate_kinfit_authority(root, expected_top_n)
     one(root, "./global/parameter[@name='LCIOInputFiles']").text = str(input_path)
     one(root, "./global/parameter[@name='MaxRecordNumber']").set("value", str(maximum))
     one(root, "./global/parameter[@name='SkipNEvents']").set("value", "0")
@@ -104,14 +105,14 @@ def render_kinfit(authority, input_path, output_path, maximum):
     return root, 0, maximum
 
 
-def validate_kinfit_authority(root):
+def validate_kinfit_authority(root, expected_top_n=10):
     processor = one(root, "./processor[@name='MyTTHSemiLepKinFit']")
     values = {
         node.get("name"): (node.text or "").strip()
         for node in processor.findall("./parameter")
     }
     required = {
-        "TopN": "10",
+        "TopN": str(expected_top_n),
         "FlavorJetCollectionName": "RefinedJets6",
         "JetCollectionName": "OutputErrorFlowJets6",
     }
@@ -248,13 +249,37 @@ def runtime_validate_reco(repo, runtime, input_path, output_path, expected_event
     return json.loads(payloads[0])
 
 
-def runtime_validate_kinfit(repo, runtime, output_path, expected_input_events):
+def runtime_validate_kinfit(
+    repo,
+    runtime,
+    output_path,
+    expected_input_events,
+    expected_top_n=10,
+    reference_top10_root=None,
+    event_mapping_csv=None,
+):
     """Validate ROOT in a clean sourced child pinned to the compatible py311."""
     shell = (
         'source "$1" >/dev/null 2>&1; '
         'export PYTHONPATH="$2:${PYTHONPATH:-}"; '
-        'exec "$3" "$4" _validate-kinfit --output "$5" --expected-input-events "$6"'
+        'validation_python="$3"; shift 3; exec "$validation_python" "$@"'
     )
+    validation_args = [
+        str(Path(__file__).resolve()),
+        "_validate-kinfit",
+        "--output", str(output_path),
+        "--expected-input-events", str(expected_input_events),
+        "--expected-top-n", str(expected_top_n),
+    ]
+    if reference_top10_root is not None or event_mapping_csv is not None:
+        if reference_top10_root is None or event_mapping_csv is None:
+            raise RuntimeError("TopN overlap validation requires both reference ROOT and mapping CSV")
+        validation_args.extend(
+            [
+                "--reference-top10-root", str(reference_top10_root),
+                "--event-mapping-csv", str(event_mapping_csv),
+            ]
+        )
     result = subprocess.run(
         [
             "bash",
@@ -264,9 +289,7 @@ def runtime_validate_kinfit(repo, runtime, output_path, expected_input_events):
             str(SETUP),
             runtime["pythonpath_prefix"],
             str(KINFit_VALIDATION_PYTHON),
-            str(Path(__file__).resolve()),
-            str(output_path),
-            str(expected_input_events),
+            *validation_args,
         ],
         cwd=repo,
         check=True,
@@ -310,8 +333,57 @@ def tree_branch_names(tree):
     return {str(branch.GetName()) for branch in tree.GetListOfBranches()}
 
 
-def validate_kinfit_root(path, expected_input_events):
-    """Check the persisted Top10 schema and best/candidate event alignment."""
+def validate_first10_overlap(
+    path, reference_top10_root, event_mapping_csv, expected_input_events
+):
+    """Require full180's first ten base-combo ids to equal frozen Top10 per event."""
+    import ROOT
+
+    mapping = {}
+    with Path(event_mapping_csv).open(newline="", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            filtered_index = int(row["filtered_local_index"])
+            if filtered_index < int(expected_input_events):
+                mapping[filtered_index] = int(row["original_local_index"])
+    full_file = ROOT.TFile.Open(str(path))
+    top10_file = ROOT.TFile.Open(str(reference_top10_root))
+    if not full_file or full_file.IsZombie() or not top10_file or top10_file.IsZombie():
+        raise RuntimeError("cannot open full180 or Top10 ROOT for overlap validation")
+    try:
+        full_tree = full_file.Get("TTHSemiLepKinFit")
+        top10_tree = top10_file.Get("TTHSemiLepKinFit")
+        if full_tree is None or top10_tree is None:
+            raise RuntimeError("missing best tree for Top10 overlap validation")
+        reference = {
+            int(row.event_index): [int(value) for value in row.top_combo_ids]
+            for row in top10_tree
+        }
+        compared = 0
+        for row in full_tree:
+            filtered_index = int(row.event_index)
+            if filtered_index not in mapping:
+                raise RuntimeError(f"full180 event_index absent from mapping: {filtered_index}")
+            original_index = mapping[filtered_index]
+            full_ids = [int(value) for value in row.top_combo_ids]
+            if original_index not in reference or full_ids[:10] != reference[original_index]:
+                raise RuntimeError(f"Top10 overlap mismatch at filtered event {filtered_index}")
+            compared += 1
+        if compared != len(mapping):
+            raise RuntimeError(f"Top10 overlap compared {compared} events, expected {len(mapping)}")
+        return {
+            "first10_overlap_events": compared,
+            "reference_top10_root": str(Path(reference_top10_root).resolve(strict=True)),
+            "reference_top10_sha256": sha256(reference_top10_root),
+            "event_mapping_csv": str(Path(event_mapping_csv).resolve(strict=True)),
+            "event_mapping_sha256": sha256(event_mapping_csv),
+        }
+    finally:
+        full_file.Close()
+        top10_file.Close()
+
+
+def validate_kinfit_root(path, expected_input_events, expected_top_n=10):
+    """Check the persisted schema and best/candidate event alignment."""
     import ROOT
 
     root_file = ROOT.TFile.Open(str(path))
@@ -344,8 +416,14 @@ def validate_kinfit_root(path, expected_input_events):
             if event_index < 0 or event_index >= int(expected_input_events):
                 raise RuntimeError(f"best-tree event_index outside input ceiling: {event_index}")
             combo_ids = [int(value) for value in row.top_combo_ids]
-            if int(row.top_n) != 10 or len(combo_ids) != 10 or len(set(combo_ids)) != 10:
-                raise RuntimeError(f"non-Top10 best-tree payload at event_index {event_index}")
+            if (
+                int(row.top_n) != int(expected_top_n)
+                or len(combo_ids) != int(expected_top_n)
+                or len(set(combo_ids)) != int(expected_top_n)
+            ):
+                raise RuntimeError(
+                    f"non-Top{expected_top_n} best-tree payload at event_index {event_index}"
+                )
             best[event_index] = {
                 "run_number": int(row.run_number),
                 "event_number": int(row.event_number),
@@ -363,16 +441,26 @@ def validate_kinfit_root(path, expected_input_events):
             ):
                 raise RuntimeError(f"candidate/best event-key mismatch at {event_index}")
             rank = int(row.candidate_rank)
-            if rank < 0 or rank >= 10 or int(row.combo_id) != payload["combo_ids"][rank]:
-                raise RuntimeError(f"candidate Top10 alignment mismatch at event_index {event_index}")
+            if (
+                rank < 0
+                or rank >= int(expected_top_n)
+                or int(row.combo_id) != payload["combo_ids"][rank]
+            ):
+                raise RuntimeError(
+                    f"candidate Top{expected_top_n} alignment mismatch at event_index {event_index}"
+                )
             ranks.setdefault(event_index, set()).add(rank)
             counters["candidate_fit_success_rows"] += int(row.fit_success) == 1
         if counters["candidate_fit_success_rows"] <= 0:
             raise RuntimeError(f"candidate tree has no successful fit rows: {counters}")
-        incomplete = [index for index, values in ranks.items() if values != set(range(10))]
+        incomplete = [
+            index
+            for index, values in ranks.items()
+            if values != set(range(int(expected_top_n)))
+        ]
         if incomplete or set(ranks) != set(best):
             raise RuntimeError(
-                f"candidate ranks do not cover all ten base combos for all best events: {incomplete[:5]}"
+                f"candidate ranks do not cover all {expected_top_n} base combos for all best events: {incomplete[:5]}"
             )
         counters.update(
             {
@@ -381,7 +469,7 @@ def validate_kinfit_root(path, expected_input_events):
                 "best_event_index_max": max(best),
                 "best_event_indices_unique": True,
                 "candidate_event_keys_align": True,
-                "candidate_top10_rank_combo_alignment": True,
+                f"candidate_top{expected_top_n}_rank_combo_alignment": True,
                 "best_required_branches": sorted(BEST_TREE_REQUIRED_BRANCHES),
                 "candidate_required_branches": sorted(CANDIDATE_TREE_REQUIRED_BRANCHES),
             }
@@ -416,6 +504,9 @@ def main():
         validator.add_argument("_mode")
         validator.add_argument("--output", type=Path, required=True)
         validator.add_argument("--expected-input-events", type=int, required=True)
+        validator.add_argument("--expected-top-n", type=int, choices=(10, 180), default=10)
+        validator.add_argument("--reference-top10-root", type=Path)
+        validator.add_argument("--event-mapping-csv", type=Path)
         validator.add_argument("--expected-sha256")
         validator.add_argument("--output-json", type=Path)
         validation_args = validator.parse_args()
@@ -427,13 +518,27 @@ def main():
             raise RuntimeError(
                 f"ROOT hash mismatch: {observed_hash} != {validation_args.expected_sha256}"
             )
+        validation = validate_kinfit_root(
+            validation_args.output,
+            validation_args.expected_input_events,
+            validation_args.expected_top_n,
+        )
+        if validation_args.expected_top_n == 180:
+            if not validation_args.reference_top10_root or not validation_args.event_mapping_csv:
+                raise RuntimeError("full180 validation requires Top10 reference and event mapping")
+            validation.update(
+                validate_first10_overlap(
+                    validation_args.output,
+                    validation_args.reference_top10_root,
+                    validation_args.event_mapping_csv,
+                    validation_args.expected_input_events,
+                )
+            )
         payload = {
             "root": str(validation_args.output.resolve(strict=True)),
             "root_sha256": observed_hash,
             "command": [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
-            "validation": validate_kinfit_root(
-                validation_args.output, validation_args.expected_input_events
-            ),
+            "validation": validation,
         }
         if validation_args.output_json:
             if validation_args.output_json.exists() or validation_args.output_json.is_symlink():
@@ -452,6 +557,9 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--event-count", type=int, required=True, help="whole SGV/reco count; kinfit input count")
+    parser.add_argument("--expected-top-n", type=int, choices=(10, 180), default=10)
+    parser.add_argument("--reference-top10-root", type=Path)
+    parser.add_argument("--event-mapping-csv", type=Path)
     parser.add_argument("--allow-long-run", action="store_true")
     parser.add_argument("--accept-validated-exit-134", action="store_true")
     parser.add_argument("--accept-validated-reco-tail-segv", action="store_true")
@@ -470,7 +578,9 @@ def main():
     if args.mode == "reco":
         root, skip, maximum = render_reco(authority, input_path, output_path, args.event_count)
     else:
-        root, skip, maximum = render_kinfit(authority, input_path, output_path, args.event_count)
+        root, skip, maximum = render_kinfit(
+            authority, input_path, output_path, args.event_count, args.expected_top_n
+        )
     if args.event_count > 20 and not args.allow_long_run:
         raise RuntimeError("Marlin above 20 events requires the recorded long-run gate")
     run_dir.mkdir(parents=True)
@@ -530,7 +640,15 @@ def main():
         )
         runtime_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     else:
-        counters = runtime_validate_kinfit(repo, runtime, output_path, args.event_count)
+        counters = runtime_validate_kinfit(
+            repo,
+            runtime,
+            output_path,
+            args.event_count,
+            args.expected_top_n,
+            args.reference_top10_root,
+            args.event_mapping_csv,
+        )
         manifest["root_validation"] = counters
         manifest["accepted_exit_134"] = bool(validated_exit_134)
         runtime_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")

@@ -1,0 +1,22 @@
+universe = vanilla
+executable = /usr/bin/env
+arguments = python3 $(repo_root)/scripts/reco_performance/run_whizard_marlin.py kinfit --authority $(repo_root)/steering/tth_semilep_kinfit_full180.xml --input $(filter_root)/$(source_id)_common.slcio --output $(run_root)/root/$(source_id)_full180.root --run-dir $(run_root)/run_$(index) --event-count $(event_count) --expected-top-n 180 --reference-top10-root $(top10_root)/$(source_id)_top10.root --event-mapping-csv $(filter_root)/$(source_id)_mapping.csv --allow-long-run --accept-validated-exit-134
+
+getenv = false
+should_transfer_files = NO
+on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
+
+output = $(run_root)/condor/$(source_id).out
+error = $(run_root)/condor/$(source_id).err
+log = $(run_root)/condor/$(source_id).log
+
+request_cpus = 1
+request_memory = 6GB
++RequestRuntime = 21600
+
+queue index,source_id,event_count from (
+0,whizard_I410213_0,1168
+1,whizard_I410213_1,1168
+2,whizard_I410213_2,1168
+3,whizard_I410213_3,1226
+)

@@ -1,0 +1,48 @@
+{
+  "sources": [
+    {
+      "source_file_id": "whizard_I410213_0",
+      "filtered_lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/filtered_inputs/whizard_I410213_0_common.slcio",
+      "filtered_lcio_sha256": "e91897353417f9f7bb6371eeaee0e4062406391ee3db8b76d3a6f5fce51adcb2",
+      "mapping_csv": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/filtered_inputs/whizard_I410213_0_mapping.csv",
+      "mapping_csv_sha256": "445341cdc2be872edae77ff873a7a34b0779d0559337727be06fce9b71e74f02",
+      "full180_root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/root/whizard_I410213_0_full180.root",
+      "full180_root_sha256": "5a266746b447da70c13315fa785c81d825cf865381cffb6eb92854b404a6a2b8",
+      "top10_root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_0_top10.root",
+      "top10_root_sha256": "fc8c6c25a56bfad225e91978cbc1aa75de0c274e5f6e5f6701a6204a047b74e4"
+    },
+    {
+      "source_file_id": "whizard_I410213_1",
+      "filtered_lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/filtered_inputs/whizard_I410213_1_common.slcio",
+      "filtered_lcio_sha256": "97e884e27edd3c53c17ca96c7f6c7891fdf76b67a1f8437c0997b031ba93560d",
+      "mapping_csv": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/filtered_inputs/whizard_I410213_1_mapping.csv",
+      "mapping_csv_sha256": "39deece6c877e5c9f4878c9a14c66a83d6ce17986559ea5f57aae60ccccb0dc0",
+      "full180_root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/root/whizard_I410213_1_full180.root",
+      "full180_root_sha256": "9aaa9ec37e7a1cade5c467a3baaeb1319fadfc7ec96527c3f5c1053853d64e52",
+      "top10_root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_1_top10.root",
+      "top10_root_sha256": "b9af8d31f7ded8c6ae53e32876b1525f659be962c1ed56f9a14c8010400969fd"
+    },
+    {
+      "source_file_id": "whizard_I410213_2",
+      "filtered_lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/filtered_inputs/whizard_I410213_2_common.slcio",
+      "filtered_lcio_sha256": "a4d215c1bbdb43602958dc7a1db264ceea649190c7e9b5467cd4e93e180eb5b1",
+      "mapping_csv": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/filtered_inputs/whizard_I410213_2_mapping.csv",
+      "mapping_csv_sha256": "20d6aed16fa1d60d0d88be8dcf4d41afcc7756070ff398ea1f51625fd5acd609",
+      "full180_root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/root/whizard_I410213_2_full180.root",
+      "full180_root_sha256": "ea6adae832a535fe20393d8a4c85e771a36e5d42bfb6dee031138bcb62918e35",
+      "top10_root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_2_top10.root",
+      "top10_root_sha256": "eab734d92abd4b01d2f9a922b4abfac557cf9e0026823208958a40df0a2eb9ca"
+    },
+    {
+      "source_file_id": "whizard_I410213_3",
+      "filtered_lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/filtered_inputs/whizard_I410213_3_common.slcio",
+      "filtered_lcio_sha256": "6451888a7e42b81f9f0d055ab71caf697ffcd404da6f288553f48ce1007bc565",
+      "mapping_csv": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/filtered_inputs/whizard_I410213_3_mapping.csv",
+      "mapping_csv_sha256": "28fbafd643a8c4cd312b0798d409cf020aa861b78ab1161226bba7db7c2df06d",
+      "full180_root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_full180_first2_common4730_sa2p6_v1/root/whizard_I410213_3_full180.root",
+      "full180_root_sha256": "761104ed49f3301b6d817970343b5d269c77f1d14742999cb40c7c9f4a4e2ba4",
+      "top10_root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_3_top10.root",
+      "top10_root_sha256": "51edffbadd9a86b818e1c360ee5b6037fbd79998068f519e9441f20713048afe"
+    }
+  ]
+}
