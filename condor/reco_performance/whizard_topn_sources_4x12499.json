@@ -1,0 +1,92 @@
+{
+  "sources": [
+    {
+      "source_file_id": "whizard_I410213_0",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_0_complete_reco.slcio",
+      "expected_events": 12499,
+      "runs": {
+        "1": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top1/root/whizard_I410213_0_top1.root",
+          "root_sha256": "7aca60ae2c1f0534bdb52cccebefa342f00e301978cb4d2c52add02e346ca6c7",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top1/run_0/marlin.log"
+        },
+        "5": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top5/root/whizard_I410213_0_top5.root",
+          "root_sha256": "e07ab65f1fada5444df5f6de8df97418a4107cf75ee251f8eb5468b64bb75c3d",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top5/run_0/marlin.log"
+        },
+        "10": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_0_top10.root",
+          "root_sha256": "fc8c6c25a56bfad225e91978cbc1aa75de0c274e5f6e5f6701a6204a047b74e4",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/run_0/marlin.log"
+        }
+      }
+    },
+    {
+      "source_file_id": "whizard_I410213_1",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_1_complete_reco.slcio",
+      "expected_events": 12499,
+      "runs": {
+        "1": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top1/root/whizard_I410213_1_top1.root",
+          "root_sha256": "de4b386111185ffcb8a38fb302e8bd39524e9c593fb0bef8513f6f0019fd6c14",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top1/run_1/marlin.log"
+        },
+        "5": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top5/root/whizard_I410213_1_top5.root",
+          "root_sha256": "cca560a502c852fc2355bd0f02d1a6a61024c9b1ce697c9f00c87ce56526b9bc",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top5/run_1/marlin.log"
+        },
+        "10": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_1_top10.root",
+          "root_sha256": "b9af8d31f7ded8c6ae53e32876b1525f659be962c1ed56f9a14c8010400969fd",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/run_1/marlin.log"
+        }
+      }
+    },
+    {
+      "source_file_id": "whizard_I410213_2",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_2_complete_reco.slcio",
+      "expected_events": 12499,
+      "runs": {
+        "1": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top1/root/whizard_I410213_2_top1.root",
+          "root_sha256": "209b9f8e842ac8749db24e46f1f4fa0cd0de0d7c5c308d42120451540269bad8",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top1/run_2/marlin.log"
+        },
+        "5": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top5/root/whizard_I410213_2_top5.root",
+          "root_sha256": "d990201f880b42da98aca4b184edac9c6bfc6f763bdbabeca5f0364b03aab07e",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top5/run_2/marlin.log"
+        },
+        "10": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_2_top10.root",
+          "root_sha256": "eab734d92abd4b01d2f9a922b4abfac557cf9e0026823208958a40df0a2eb9ca",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/run_2/marlin.log"
+        }
+      }
+    },
+    {
+      "source_file_id": "whizard_I410213_3",
+      "lcio": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_flavor/20260913_whizard_reco_recovery_4x12500_36f05b6/reco/whizard_I410213_3_complete_reco.slcio",
+      "expected_events": 12499,
+      "runs": {
+        "1": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top1/root/whizard_I410213_3_top1.root",
+          "root_sha256": "068f6e562ef3342d27bf19d86661e3a3134ee18d36dbf738bcd2c517690d167b",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top1/run_3/marlin.log"
+        },
+        "5": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top5/root/whizard_I410213_3_top5.root",
+          "root_sha256": "d78dced23dfb90f9a7fbded8a9ed832f9caf767b07aa21ce76cd3e888458be05",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260915_whizard_top1_5_10_common_sa2p6_v1/top5/run_3/marlin.log"
+        },
+        "10": {
+          "root": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/root/whizard_I410213_3_top10.root",
+          "root_sha256": "51edffbadd9a86b818e1c360ee5b6037fbd79998068f519e9441f20713048afe",
+          "log": "/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260914_whizard_top10_4x12500_posdice_039354d/run_3/marlin.log"
+        }
+      }
+    }
+  ]
+}
