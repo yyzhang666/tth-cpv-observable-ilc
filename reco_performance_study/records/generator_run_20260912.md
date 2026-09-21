@@ -679,3 +679,29 @@ Known doubts: the 4,649 denominator is intentionally smaller than the prior
 Top10-only 4,730 denominator because it is the intersection required across
 all N and both methods; the CM remains a frozen 10-class quark-only argmax and
 does not report gluon predictions. Optional review directions: none.
+
+## 2026-09-21 Whizard common4730 with unchanged PHYSSIM truth — completed diagnostic
+
+The requested cross-generator diagnostic reused the immutable Whizard common4730 event/candidate set and evaluated only `q_reco minimize [signed-flavor-preselected Top10]`. No PHYSSIM file, fixed workflow, truth module, Marlin/kinfit job, or Condor production was modified or rerun, and no previous Whizard output was overwritten.
+
+Frozen selected-common CSV SHA-256: `885a86c45f0ce64255af5edb60c9148ffc0bcfdd2813234b6c13d7bde7dbc540`. Source-aware base counts were `whizard_I410213_0/1/2/3 = 1168/1168/1168/1226`. The PHYSSIM helper was imported read-only from `/data/dust/user/zhangyuy/analysis/tth/yuyang_tth_observable/src/ilc_tth_cpv/physsim_bjet_truth.py`, SHA-256 `0d058caa16ab8e1f560c8cc75d817c5b4ec29a67cb5edd720d0472fb54d9fd33`; its bridge was `OutputErrorFlowJets6 -> RefinedJets6` with unique Dice >= 0.95, exactly-two direct |PDG|=5 TrueJets, top Dice >= 0.2, unchanged ancestry/Hbb thresholds, and W as complement.
+
+The five-events-per-source smoke was `20/20` exact for original-vs-filtered LCIO helper status, reason, bridge, truth partition, and flags. Formal runtime was `33.34 s` internal / `38.65 s` wall, with zero integrity failures and closure `4730 = 0 evaluable + 4730 truth-unresolved`.
+
+| source | base | direct-b multiplicity 3 | multiplicity 4 | multiplicity 5 | evaluable |
+|---|---:|---:|---:|---:|---:|
+| whizard_I410213_0 | 1168 | 5 | 1163 | 0 | 0 |
+| whizard_I410213_1 | 1168 | 1 | 1166 | 1 | 0 |
+| whizard_I410213_2 | 1168 | 3 | 1163 | 2 | 0 |
+| whizard_I410213_3 | 1226 | 6 | 1219 | 1 | 0 |
+| total | 4730 | 15 | 4711 | 4 | 0 |
+
+Accuracies are intentionally null and no PNG/PDF was generated under the frozen stop rule. This is a `CONDITIONAL CROSS-GENERATOR DIAGNOSTIC`, not an assignment-performance claim. The confirmed trap is that `build_direct_b_truejet_infos` treats every |PDG|=5 TrueJet as a top-b candidate while the matcher requires exactly two; Whizard Hbb exposes mostly four such TrueJets.
+
+Canonical output (`final_r2`; the earlier `final/` is superseded formatting and must not be used): NAF `/data/dust/user/zhangyuy/analysis/tth/reco_performance_study/outputs/whizard_jet_assignment/20260920_whizard_common4730_physsim_truth_qreco_v1/final_r2`; local `/Users/tdbrylf/Documents/NAF_tth/plots_ild_cern_version/jet_assignment_accuracy/whizard4x12499_physsim_truth_common4730_qreco_v1/final_r2`. Key files are `summary.json`, `rejection_summary.csv`, `assignment_accuracy.csv`, `manifest.json`, and provenance copies; no image exists by contract. Commits `6b529e9` and `a2d0638` were pushed; eight tests, pycompile, diff checks, and hash validation passed.
+
+NECESSITY: Reusing the pinned PHYSSIM helper without changing its thresholds tests the proposed cross-generator truth interpretation while keeping the established PHYSSIM workflow untouched.
+
+NECESSITY: Recording exclusive direct-b multiplicity and zero coverage prevents a null accuracy from being mistaken for low physics accuracy or a broken candidate set.
+
+Known doubts: this fixed PHYSSIM truth definition has zero evaluable coverage on Whizard common4730; the sample was historically preconditioned by the old Whizard all-six-positive-Dice gate, which was not reapplied here. Optional review directions: none; a nonzero comparison requires a new user-approved truth definition distinguishing top-b from Higgs-b TrueJets.
