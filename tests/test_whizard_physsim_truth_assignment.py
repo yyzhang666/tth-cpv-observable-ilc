@@ -168,3 +168,16 @@ def test_all_flag_is_exact_intersection():
     assert REPORT.validate_flags({"W": True, "top": True, "H": True, "all": True})["all"]
     with pytest.raises(RuntimeError, match="all flag"):
         REPORT.validate_flags({"W": True, "top": False, "H": True, "all": True})
+
+
+def test_nonexclusive_diagnostics_do_not_invent_unreached_seed_counts():
+    counters = Counter()
+    REPORT.update_diagnostics(
+        counters,
+        {
+            "status": "unresolved",
+            "reason": "direct_b_truejet_multiplicity_4",
+            "direct_b_truejet_multiplicity": 4,
+        },
+    )
+    assert counters == Counter({"direct_b_truejet_multiplicity:4": 1})

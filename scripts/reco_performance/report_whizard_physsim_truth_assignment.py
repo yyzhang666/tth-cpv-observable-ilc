@@ -425,8 +425,9 @@ def update_diagnostics(diagnostics: Counter, result: Mapping[str, Any]) -> None:
         diagnostics[f"bridge_status:{bridge.get('status', '')}:{bridge.get('reason', '')}"] += 1
         diagnostics[f"bridge_minimum_dice_bin:{float(bridge.get('minimum_dice', 0.0)):.3f}"] += 1
     seed_counts = result.get("seed_counts", {})
-    for name in ("Hbb_seed_partons", "topbb_seed_partons", "Whad_seed_partons"):
-        diagnostics[f"seed_count:{name}:{int(seed_counts.get(name, -1))}"] += 1
+    if seed_counts:
+        for name in ("Hbb_seed_partons", "topbb_seed_partons", "Whad_seed_partons"):
+            diagnostics[f"seed_count:{name}:{int(seed_counts.get(name, 0))}"] += 1
     top_match = result.get("top_match", {})
     if top_match:
         diagnostics[f"top_pair_multiplicity:{len(top_match.get('indices', []))}"] += 1
