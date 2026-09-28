@@ -13,6 +13,7 @@ import csv
 import importlib.util
 import json
 import shutil
+import shlex
 import subprocess
 import sys
 import time
@@ -470,7 +471,7 @@ def render_plot(metrics: Mapping[str, Any], png: Path, pdf: Path) -> None:
 
     labels = ["W", "top", "H", "all"]
     values = [float(metrics[f"A_{name}"]) for name in labels]
-    fig, ax = plt.subplots(figsize=(10.0, 6.7), dpi=180)
+    fig, ax = plt.subplots(figsize=(10.6, 7.4), dpi=180)
     bars = ax.bar(labels, values, color=["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"])
     ax.bar_label(bars, fmt="%.3f", fontsize=13, padding=4)
     ax.set_ylim(0.0, max(0.9, max(values) + 0.08))
@@ -480,27 +481,108 @@ def render_plot(metrics: Mapping[str, Any], png: Path, pdf: Path) -> None:
         if metrics["coverage"] < 0.95
         else "HYBRID-TRUTH CROSS-GENERATOR DIAGNOSTIC"
     )
-    ax.set_title(title, fontsize=15, weight="bold")
-    ax.text(
+    fig.suptitle(title, fontsize=16, weight="bold", y=0.965)
+    fig.text(
         0.5,
-        1.01,
-        (
-            "Whizard origin-aware top-b selection + fixed PHYSSIM Hbb/W truth; "
-            "not pure PHYSSIM truth and not canonical Whizard truth\n"
-            f"q_reco common4730: evaluable={metrics['evaluable_denominator']}/"
-            f"{metrics['selection_base_denominator']} ({metrics['coverage']:.2%}); "
-            "base historically conditioned by Whizard six-positive-Dice selection"
-        ),
-        transform=ax.transAxes,
+        0.905,
+        "Whizard origin-aware top-b selection + fixed PHYSSIM Hbb/W truth",
         ha="center",
-        va="bottom",
-        fontsize=9,
+        va="center",
+        fontsize=11,
+    )
+    fig.text(
+        0.5,
+        0.865,
+        (
+            "Not pure PHYSSIM truth and not canonical Whizard truth; "
+            f"q_reco common4730: evaluable={metrics['evaluable_denominator']}/"
+            f"{metrics['selection_base_denominator']} ({metrics['coverage']:.2%})"
+        ),
+        ha="center",
+        va="center",
+        fontsize=9.5,
     )
     ax.grid(axis="y", alpha=0.25)
-    fig.tight_layout()
-    fig.savefig(png, bbox_inches="tight")
-    fig.savefig(pdf, bbox_inches="tight")
+    fig.text(
+        0.5,
+        0.035,
+        "Base historically conditioned by Whizard six-positive-Dice selection.",
+        ha="center",
+        va="center",
+        fontsize=8.5,
+        color="#444444",
+    )
+    fig.subplots_adjust(left=0.11, right=0.96, bottom=0.13, top=0.79)
+    fig.savefig(png)
+    fig.savefig(pdf)
     plt.close(fig)
+
+
+def redraw_from_existing(source_dir: Path, output_dir: Path, test_file: Path | None) -> int:
+    if output_dir.exists() or output_dir.is_symlink():
+        raise RuntimeError(f"refusing to reuse output directory: {output_dir}")
+    summary_path = (source_dir / "summary.json").resolve(strict=True)
+    accuracy_path = (source_dir / "assignment_accuracy.csv").resolve(strict=True)
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    with accuracy_path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    if len(rows) != 1:
+        raise hard("redraw_source_mismatch", f"accuracy rows={len(rows)}")
+    row = rows[0]
+    metrics = {
+        "selection_base_denominator": int(summary["selection_base_denominator"]),
+        "evaluable_denominator": int(summary["evaluable_denominator"]),
+        "coverage": float(summary["coverage"]),
+        **{f"A_{name}": float(summary["accuracies"][name]) for name in ("W", "top", "H", "all")},
+    }
+    for name in ("selection_base_denominator", "evaluable_denominator"):
+        if int(row[name]) != metrics[name]:
+            raise hard("redraw_source_mismatch", name)
+    if abs(float(row["coverage"]) - metrics["coverage"]) > 1.0e-15:
+        raise hard("redraw_source_mismatch", "coverage")
+    for name in ("W", "top", "H", "all"):
+        if abs(float(row[f"A_{name}"]) - metrics[f"A_{name}"]) > 1.0e-15:
+            raise hard("redraw_source_mismatch", f"A_{name}")
+
+    output_dir.mkdir(parents=True)
+    png = output_dir / "assignment_accuracy_hybrid_truth_qreco.png"
+    pdf = output_dir / "assignment_accuracy_hybrid_truth_qreco.pdf"
+    render_plot(metrics, png, pdf)
+    provenance_paths = create_provenance(output_dir, test_file)
+    command_path = output_dir / "redraw_command.txt"
+    command_path.write_text(shlex.join([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]]) + "\n", encoding="utf-8")
+    manifest_path = output_dir / "redraw_manifest.json"
+    manifest = {
+        "created_utc": datetime.now(timezone.utc).isoformat(),
+        "status": "formatting_only_redraw",
+        "physics_and_data_changed": False,
+        "source": {
+            "directory": str(source_dir.resolve(strict=True)),
+            "summary_json": {"path": str(summary_path), "sha256": sha256(summary_path)},
+            "assignment_accuracy_csv": {"path": str(accuracy_path), "sha256": sha256(accuracy_path)},
+        },
+        "metrics": metrics,
+        "command": [sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]],
+        "outputs": {},
+    }
+    for path in [png, pdf, command_path, *provenance_paths]:
+        manifest["outputs"][path.relative_to(output_dir).as_posix()] = {
+            "path": str(path.resolve()),
+            "sha256": sha256(path),
+        }
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(json.dumps({"status": manifest["status"], "output_dir": str(output_dir), "metrics": metrics}, sort_keys=True))
+    return 0
+
+
+def redraw_main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description="Redraw an existing hybrid-truth result without rerunning events")
+    parser.add_argument("--mode", choices=("redraw",), required=True)
+    parser.add_argument("--source-dir", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--test-file", type=Path)
+    args = parser.parse_args(argv)
+    return redraw_from_existing(args.source_dir, args.output_dir, args.test_file)
 
 
 def create_provenance(output_dir: Path, test_file: Path | None) -> list[Path]:
@@ -527,6 +609,10 @@ def git_commit() -> str:
 
 
 def main() -> int:
+    if "--mode" in sys.argv:
+        mode_index = sys.argv.index("--mode") + 1
+        if mode_index < len(sys.argv) and sys.argv[mode_index] == "redraw":
+            return redraw_main(sys.argv[1:])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("smoke", "formal"), required=True)
     parser.add_argument("--selected-common-csv", type=Path, required=True)

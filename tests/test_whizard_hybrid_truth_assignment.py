@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import csv
+import json
 from pathlib import Path
 
 import pytest
@@ -182,3 +184,48 @@ def test_pinned_hash_arguments_cannot_be_redefined():
     assert REPORT.PHYSSIM_SHA256 == "0d058caa16ab8e1f560c8cc75d817c5b4ec29a67cb5edd720d0472fb54d9fd33"
     assert REPORT.WHIZARD_TRUTH_SHA256 == "c117466ccd9cd8dca2ff90686f5c937ca32300367c75da32614eee7e04b128f0"
     assert REPORT.CHI2_RECO_SHA256 == "e7c9bbca72afef927ce99786855ec75b651a38c77805ebd9c5490130ecc7d174"
+
+
+def test_formatting_only_redraw_has_separated_large_canvas_and_frozen_metrics(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    summary = {
+        "selection_base_denominator": 4730,
+        "evaluable_denominator": 4000,
+        "coverage": 4000 / 4730,
+        "accuracies": {"W": 0.8, "top": 0.6, "H": 0.5, "all": 0.4},
+    }
+    (source / "summary.json").write_text(json.dumps(summary), encoding="utf-8")
+    with (source / "assignment_accuracy.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "selection_base_denominator", "evaluable_denominator", "coverage",
+                "A_W", "A_top", "A_H", "A_all",
+            ],
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "selection_base_denominator": 4730,
+                "evaluable_denominator": 4000,
+                "coverage": 4000 / 4730,
+                "A_W": 0.8,
+                "A_top": 0.6,
+                "A_H": 0.5,
+                "A_all": 0.4,
+            }
+        )
+    output = tmp_path / "redraw"
+    assert REPORT.redraw_from_existing(source, output, None) == 0
+    assert (output / "assignment_accuracy_hybrid_truth_qreco.pdf").stat().st_size > 1000
+    import matplotlib.image as mpimg
+
+    image = mpimg.imread(output / "assignment_accuracy_hybrid_truth_qreco.png")
+    assert image.shape[1] >= 1900
+    assert image.shape[0] >= 1300
+    manifest = json.loads((output / "redraw_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["physics_and_data_changed"] is False
+    assert manifest["metrics"]["A_all"] == 0.4
+    with pytest.raises(RuntimeError, match="refusing to reuse"):
+        REPORT.redraw_from_existing(source, output, None)
