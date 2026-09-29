@@ -1,56 +1,49 @@
-# local machine paths (never commit paths.local.yaml)
-configs/paths.local.yaml
+# Python and packaging
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+.venv/
+venv/
 
-# machine-specific symlinks to shared kinfit trees
-# (create with scripts/link_kinfit_inputs.sh)
-data/
+# Local configuration and editor state
+.env
+.env.*
+!.env.example
+*.local.yaml
+.vscode/
+.idea/
+.DS_Store
+.ipynb_checkpoints/
 
-# outputs and models
-outputs/*
-!outputs/README.md
-!outputs/.gitkeep
-models/
-*.cbm
-*.onnx
-model_metadata.json
-
-# data files
+# Runtime data, caches, model artifacts and analysis outputs
+/data/
+/outputs/
+/runs/
+/models/
+/.cache/
+catboost_info/
 *.slcio
 *.stdhep
 *.root
-*.npz
+*.h5
 *.hdf5
+*.npz
 *.parquet
-split_*.slcio
-
-# large tables (keep small reference CSVs explicitly if needed)
+*.cbm
+*.onnx
+*.pkl
+*.joblib
 *.csv
-!docs/**/*.csv
-!tests/data/*.csv
+!tests/fixtures/**/*.csv
+!examples/data/**/*.csv
 
-# logs and dumps
+# Runtime logs
 *.log
 *.out
-logs/
-dumpevent_*.txt
-condor/example/log/
-condor/example/out/
-condor/example/err/
-condor/example/arguments*.txt
-
-# python
-__pycache__/
-*.pyc
-.pytest_cache/
-*.egg-info/
-.venv/
-*.json.model
-
-# editors
-.vscode/
-.idea/
-.ipynb_checkpoints/
-
-# logs and errors
 *.err
-*.log
+*.tfevents*

@@ -3,25 +3,16 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ilc-tth-cpv"
-version = "0.2.0"
-description = "Student-facing ttH CPV angular and ML analysis framework for DESY NAF"
+name = "ilc-miner"
+dynamic = ["version"]
+description = "Machine-learning observables and inference workflows for ILC analyses"
+readme = "README.md"
 requires-python = ">=3.9"
-dependencies = [
-  "numpy",
-  "PyYAML",
-]
+dependencies = []
 
-[project.optional-dependencies]
-baseline-ml = ["xgboost"]
-classical-ml = ["scikit-learn", "catboost", "xgboost", "lightgbm"]
-plot = ["matplotlib"]
-test = ["pytest"]
+[tool.setuptools.dynamic]
+version = {attr = "ilc_miner.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src"]
-addopts = "-q"
+include = ["ilc_miner*"]

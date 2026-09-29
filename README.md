@@ -1,229 +1,77 @@
-# ilc-tth-cpv
+# ilc-miner
 
-Unified entry point for the ILC/LCF `e+e- -> ttH` CP-violation summer-student
-project on the DESY NAF.
+A general-purpose machine-learning observable package for ILC analyses, starting
+with CP-violation classification and local Fisher-information evaluation.
 
-Supervisor reference copy on NAF: `ilc-tth-cpv-v2`.
-GitHub mirror: `git@github.com:yyzhang666/tth-cpv-observable-ilc.git`.
+The aim is to configure a dataset, features, a learning target, a model and
+experimental conditions once, then run feature preparation, training, observable
+construction and evaluation through a shared Python API or command-line entry
+point. The API organization is inspired by
+[MadMiner](https://arxiv.org/abs/1907.10621); this is an independent project.
 
-## What this repository studies
+## Development status
 
-```
-e+e- -> ttH            sqrt(s) = 550 GeV
-semileptonic channel   H -> bbar b
-CP-violating top-Higgs coupling (kappa_t, kappa~_t)
-angular observables and ML-learned observables
-generator-to-reconstruction information loss
-```
+This branch is a **development foundation, not a working analysis pipeline**.
+It currently contains an installable `ilc_miner` namespace, general provenance
+utilities, their tests and the [workflow design](docs/ILC_MINER_DESIGN.md).
 
-The full scientific programme: [docs/PROJECT_NOTE_FULL.md](docs/PROJECT_NOTE_FULL.md)
-(student-facing full project guide) and
-[docs/PROJECT_NOTE.md](docs/PROJECT_NOTE.md) (short chapter map).
+The feature registry, metadata-driven normalization, training interfaces,
+observable registry, templates, Fisher evaluation and analysis CLI are **not
+implemented yet**. Commands in the design document are proposed interfaces.
 
-## Current project status
+Historical analysis scripts, teaching material, fixed-sample configurations,
+tracked datasets, reports and generated outputs have been removed from this
+branch. There is no legacy compatibility layer. They remain recoverable from
+[the pre-cleanup commit](https://github.com/yyzhang666/tth-cpv-observable-ilc/tree/476383ddf2f4179150c681eed4eec00797c10a48)
+and the existing analysis branches.
 
-- There is **no completed angular–ML baseline**. Building, validating, and
-  documenting the first baseline is the first scientific result.
-- **Signal samples are produced**: 1M CPV events per polarization
-  (`eL.pR`, `eR.pL`), 80 chunks each, from Physsim through SGV to
-  kinfit-ready complete reconstruction, with per-chunk CPV weight sidecars
-  ([configs/samples.yaml](configs/samples.yaml)). Generator physics and
-  production validation are complete; see
-  [docs/SAMPLE_PROVENANCE.md](docs/SAMPLE_PROVENANCE.md).
-- **SM denominator samples are produced and wired** at generator and reco
-  level. Both LR and RL have polarization-matched, audited `TTHBases`
-  cross sections and support physical binned `nu0` templates.
-- **Jet assignment + kinematic fit** is a standard, frozen pipeline stage
-  ([docs/KINFIT_JET_ASSIGNMENT.md](docs/KINFIT_JET_ASSIGNMENT.md));
-  production final selection uses `FinalSelectionMode=logchi2_plus_flavor`
-  with `FlavorWeight=0.3`, and all reco-level observables use that selected
-  candidate.
-- Event-selection MVA production remains a separate workstream.  This branch
-  consumes the frozen `eLpR` v0 background/SM-test/CPV-test event tables in
-  `data/event_csv/v0/` for observable optimization and diagnostics; it does
-  not duplicate the MVA-production repository ([docs/MVA_INTERFACE.md](docs/MVA_INTERFACE.md),
-  [docs/BACKGROUND_INTERFACE.md](docs/BACKGROUND_INTERFACE.md)).
-- Everything blocking or ambiguous is tracked in
-  [KNOWN_ISSUES.md](KNOWN_ISSUES.md). Read it before trusting any convention.
+## Design commitments
 
-## Clone on the NAF: use your own DUST
+- Define a feature once; export, training and evaluation share its implementation.
+  Missing features are computed from declared dependencies and traceable sources.
+- Compute physical weights from source metadata, generation statistics, cross
+  sections, luminosity and polarization at run time, with explicit overrides.
+- Keep physical sample roles, training labels, training weights and template
+  weights separate.
+- Support binary and three-class CPV targets; class 2 represents SM or
+  SM plus background.
+- Register ML observables independently of models. The default is
+  `P(plus) - P(minus)`; three-class ratios are explicit alternatives.
+- Keep process-specific selections and ILC input adapters outside the generic
+  analysis core.
+- Track definitions, dependencies, class mappings and normalization alongside
+  artifacts; validate numerical and physics closure before reporting results.
 
-Do not clone the working repository into AFS (`/afs/desy.de/user/...`). The
-kinfit ROOT files, feature tables, models, and plots are written below the
-working copy, so the clone itself must live in the student's DUST area:
+The first end-to-end implementation will target CPV. Other processes can reuse
+the infrastructure with suitable inputs and targets. Local-score regression is
+a future extension requiring appropriate derivative supervision, not just a
+different list of features.
 
-```bash
-mkdir -p /data/dust/user/$USER/analysis
-cd /data/dust/user/$USER/analysis
+## Develop locally
 
-# After forking on GitHub, replace YOUR_GITHUB_ACCOUNT with the student's account.
-git clone git@github.com:YOUR_GITHUB_ACCOUNT/tth-cpv-observable-ilc.git
-cd tth-cpv-observable-ilc
-```
-
-The large input samples remain read-only in the supervisor's
-`events_physsim/production` tree through [configs/samples.yaml](configs/samples.yaml);
-they are not copied. All student products then stay under
-`/data/dust/user/$USER/analysis/tth-cpv-observable-ilc/outputs/`. Do not put
-derived student products inside the shared `events_physsim` or
-`events_whizard` production trees.
-
-## Quick start
+Python 3.9 or newer is required. From this checkout:
 
 ```bash
-cd /data/dust/user/$USER/analysis/tth-cpv-observable-ilc
-source env/setup.sh
-bash env/check_environment.sh
-bash env/check_environment.sh --data
-
-# look at generator events (chunk 0)
-python3 scripts/inspect_generator_event.py --config configs/analysis_ow_lr.yaml --max-events 3
-
-# look at a reconstructed event
-python3 scripts/inspect_reco_event.py --config configs/analysis_ow_lr.yaml --max-events 1
-
-# generator-level CPV + real-SM-nu0 chain on a few hundred events
-# (integration smoke only; the limited event scope is NOT a physics result)
-bash scripts/run_baseline.sh configs/analysis_ow_lr.yaml --max-events 500
-
-# kinfit + jet assignment smoke test on one chunk
-bash scripts/run_kinfit_assignment.sh \
-  --config configs/analysis_ow_lr.yaml \
-  --chunk 0 \
-  --max-events 50 \
-  --out-dir outputs/ow_lr/kinfit_smoke
+python -m pip install -e .
+python -m unittest discover -s tests -v
 ```
 
-The 50-event kinfit output is deliberately isolated from the canonical
-full-chunk directory. The standard reco feature exporter reads only a validated
-full-chunk ROOT; follow PROJECT_NOTE_FULL.md Chapter 3 for the one-chunk
-HTCondor gate and reco export. Kinfit ROOT files made before the 2026-07-22
-processor update do not contain `nu_fit_{E,px,py,pz}` and are rejected by the
-validator; rerun the kinfit stage rather than reusing those files.
+The current utilities use only the Python standard library. No ROOT, LCIO or ML
+backend is required for these tests. Installation does not provide an analysis
+command yet.
 
-At reco level, kinfit chooses the W pair. `export_features.py` then orients its
-two jets with Weaver light-flavour probabilities. Opposite q/qbar preferences
-are used directly; for two q-like jets the larger `P(q)` is q, and for two
-qbar-like jets the larger `P(qbar)` is qbar. The orientation status, decision
-margin, and both jets' scores are saved in the feature table for inspection.
+## Current repository layout
 
-## Inspect event files directly
-
-These LCIO command-line tools are useful for building intuition about what is
-actually stored in event files. They are inspection/debug tools, not the
-production analysis workflow.
-
-```bash
-source env/setup.sh
-
-# summarize an SLCIO file: events, collections, collection types, parameters
-anajob /path/to/file.slcio
-
-# dump the n-th event in an SLCIO file
-dumpevent /path/to/file.slcio 0
-
-# dump one specific run/event pair
-dumpevent /path/to/file.slcio <runNum> <evtNum>
-
-# restrict the dump to selected collections
-LCIO_READ_COL_NAMES="MCParticle RefinedJets6 OutputErrorFlowJets6" dumpevent /path/to/file.slcio 0
-
-# convert stdhep -> SLCIO for inspection; maxEvt=-1 means all events
-stdhepjob_new /path/to/input.stdhep /tmp/stdhep_subset.slcio 100
+```text
+docs/ILC_MINER_DESIGN.md   Physics contracts, intended interfaces and roadmap
+src/ilc_miner/            Package namespace and provenance utilities
+tests/                   Tests of the retained utilities
+pyproject.toml           Minimal package/build configuration
+LICENSE                  Unchanged license-pending declaration
 ```
 
-Use real sample paths from [configs/samples.yaml](configs/samples.yaml).
-For reconstructed analysis inputs, inspect the `complete_reco_kinfit_ready`
-`.slcio` files; for generator-only checks, use
-`scripts/inspect_generator_event.py` or first convert a small subset with
-`stdhepjob_new`.
+## License
 
-## The pipeline
-
-```
-generator stdhep + sidecar        (CPV interference; produced per chunk)
-SM generator stdhep               (produced; supplies the binned nu0)
-        |
-SGV -> complete_reco_kinfit_ready (produced; per chunk)
-        |
-kinfit + jet assignment           scripts/run_kinfit_assignment.sh   <- YOU run this
-        |                         (all 80 chunks: HTCondor, condor/README.md)
-feature export                    scripts/export_features.py
-        |
-angular template  +  ML model     scripts/build_angular_observable.py
-        |                         scripts/train_cpv_model.py
-ML observable                     scripts/build_ml_observable.py
-        |
-Fisher / likelihood               scripts/evaluate_fisher.py
-        |
-selection MVA + backgrounds       (interfaces frozen, deliveries pending)
-LCF polarisation combination      scripts/apply_polarization_weights.py
-```
-
-The maintained event-table workflow is documented in
-[docs/OBSERVABLE_RESEARCH_WORKFLOW.md](docs/OBSERVABLE_RESEARCH_WORKFLOW.md).
-Its runnable entry points are separated into `scripts/workflows/`; one-off
-cross-checks and historical investigations belong in `scripts/diagnostics/`.
-The former `scripts/evaluate_event_csv_fisher.py` command remains a compatible
-wrapper, so the published v0 commands continue to run.
-
-## Where things are
-
-- Sample manifest (the ONLY place with data paths):
-  [configs/samples.yaml](configs/samples.yaml)
-- Sample history / validation state: [docs/SAMPLE_PROVENANCE.md](docs/SAMPLE_PROVENANCE.md)
-- Where every reused piece of code came from: [docs/CODE_PROVENANCE.md](docs/CODE_PROVENANCE.md)
-- Student setup notes: [docs/NAF_STUDENT_SETUP.md](docs/NAF_STUDENT_SETUP.md)
-- Dependency/model policy: [docs/DEPENDENCY_AND_MODEL_POLICY.md](docs/DEPENDENCY_AND_MODEL_POLICY.md)
-- Machine-specific paths: copy `configs/paths.template.yaml` to
-  `configs/paths.local.yaml` (gitignored) and edit.
-- Batch processing: [condor/README.md](condor/README.md)
-
-## Repository layout
-
-```
-configs/     sample manifest, per-analysis configs, polarisation scenario
-docs/        schema, conventions, provenance, interfaces, kinfit stage
-env/         setup + environment check
-steering/    frozen Marlin steering (kinfit + jet assignment)
-condor/      HTCondor rules + working example (submit/wrapper/arguments)
-src/         ilc_tth_cpv python package (shared physics library)
-scripts/     runnable entry points (kinfit, export, train, histogram, Fisher)
-templates/   commented reader/training/Fisher walk-throughs for the student
-tests/       pure-python unit tests
-notebooks/   scratch notebooks
-outputs/     all products (gitignored)
-```
-
-## Rules that protect the physics
-
-1. All paths come from configs. The only external paths anywhere are the
-   large data samples and the ZHH software setup.
-2. One shared frame/angle implementation:
-   [src/ilc_tth_cpv/frames.py](src/ilc_tth_cpv/frames.py) and
-   [src/ilc_tth_cpv/angles.py](src/ilc_tth_cpv/angles.py) — import it
-   everywhere.
-3. ML inputs are **raw variables** (E, theta, phi, masses, scores), exactly
-   as exported (frozen decision; see `docs/DATA_SCHEMA.md`).
-4. Training weights and physics-template weights live in separate columns;
-   each output uses its own kind ([docs/DATA_SCHEMA.md](docs/DATA_SCHEMA.md)).
-5. Reco-level observables come from the production kinfit selected candidate:
-   `FinalSelectionMode=logchi2_plus_flavor`, `FlavorWeight=0.3`, and
-   `accepted=1 && fit_success=1`
-   ([docs/KINFIT_JET_ASSIGNMENT.md](docs/KINFIT_JET_ASSIGNMENT.md)).
-6. Debug runs (`--max-events`, split files) are for pipeline validation;
-   physics numbers come from full-sample runs.
-7. Every result directory contains the config and metadata that produced it.
-
-## Checks the student is expected to do
-
-- verify collection names against the actual SLCIO files (`inspect_*` scripts);
-- verify event counts and paths in `configs/samples.yaml`;
-- verify all input files are readable (`env/check_environment.sh --data`);
-- verify the default model profile (`python3 scripts/check_model_profile.py`);
-- smoke-test ONE condor job end-to-end before submitting 80;
-- check every trained model for overtraining (train vs validation curves);
-- check sidecar/event alignment and record gen-only, reco-only, and overlapping
-  event counts (do not intersect IDs for the total-retention result);
-- check normalization of every histogram output;
-- check the deterministic train/validation/test split for overlap.
+An open-source license has not yet been selected. The existing
+[license declaration](LICENSE) is unchanged; the project is not currently
+offered under an open-source license.
