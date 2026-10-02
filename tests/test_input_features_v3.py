@@ -110,15 +110,31 @@ def test_charge_mapping_higgs_rest_objects_aliases_and_angles(charge, top_b_inde
     assert derived["O_lnu"] == pytest.approx(angles.delta_phi(derived[expected_lnu_order[0]], derived[expected_lnu_order[1]]))
 
 
-def test_direct_first_batch_and_context_cache_semantics():
+def test_direct_first_batch_and_context_cache_semantics(monkeypatch):
     row = _baseline_row()
-    row["m_H"] = 130.0
-    assert resolve_feature_values(row, ("m_H", "chi2_over_ndof")) == {
-        "m_H": 130.0,
+    context = FeatureContext(row)
+    monkeypatch.setattr(
+        "ilc_tth_cpv.input_features.flavor.orient_w_pair",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("orientation must stay lazy")
+        ),
+    )
+    monkeypatch.setattr(
+        "ilc_tth_cpv.input_features.frames.boost_to_rest",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("boost must stay lazy")
+        ),
+    )
+    assert resolve_feature_values(context, ("m_H", "chi2_over_ndof")) == {
+        "m_H": 124.25,
         "chi2_over_ndof": 3.0,
     }
-    context = FeatureContext(row)
+    assert set(context._resolved) == {"m_H", "chi2_over_ndof"}
+    assert context._intermediate == {}
+
     assert context.resolve("m_top_had") == pytest.approx(173.2)
+    assert set(context._resolved) == {"m_H", "chi2_over_ndof", "m_top_had"}
+    assert context._intermediate == {}
     row["mt_had_postfit"] = 180.0
     assert context.resolve("m_top_had") == pytest.approx(173.2)
     assert FeatureContext(row).resolve("m_top_had") == pytest.approx(180.0)

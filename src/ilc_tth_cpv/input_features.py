@@ -1,14 +1,15 @@
-"""Authoritative row-level ML input-feature resolution.
+"""Authoritative, lazy row-level ML input-feature resolution.
 
-CSV columns are always preferred when they contain a finite numeric value.
-The small resolver registry below only supplies the frozen calculations needed
-by existing ML superdatasets when a materialized column is absent or invalid.
+Finite materialized CSV columns always win. Derived values are dispatched
+through an explicit registry and share only event-local intermediate caches;
+requesting one feature never materializes the full canonical feature table.
 """
 
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from ilc_tth_cpv import angles, flavor, frames
@@ -16,20 +17,57 @@ from ilc_tth_cpv import angles, flavor, frames
 NAN = float("nan")
 
 CANONICAL_OBJECTS = (
-    "wjet_quark",
-    "wjet_antiquark",
-    "top_side_fermion",
-    "anti_top_side_fermion",
-    "top_b",
-    "antitop_bbar",
-    "lepton",
-    "neutrino",
-    "top",
-    "antitop",
-    "higgs",
+    "wjet_quark", "wjet_antiquark", "top_side_fermion",
+    "anti_top_side_fermion", "top_b", "antitop_bbar", "lepton",
+    "neutrino", "top", "antitop", "higgs",
+)
+OBJECT_VARIABLES = ("E", "pt", "theta", "phi", "mass", "valid")
+WEAVER_SCORE_KEYS = (
+    "mc_u", "mc_d", "mc_s", "mc_c", "mc_b",
+    "mc_ubar", "mc_dbar", "mc_sbar", "mc_cbar", "mc_bbar",
+)
+WEAVER_SUMMARY_KEYS = ("mc_b", "mc_bbar", "mc_c", "mc_cbar")
+ORIENTED_WEAVER_OBJECTS = (
+    "wjet_quark", "wjet_antiquark", "top_b", "antitop_bbar",
 )
 
-WEAVER_SUMMARY_KEYS = ("mc_b", "mc_bbar", "mc_c", "mc_cbar")
+ORIENTATION_FIELDS = (
+    "idx_W_quark", "idx_W_antiquark", "w_orientation_status",
+    "w_orientation_margin", "W1_weaver_pq", "W1_weaver_pqbar",
+    "W1_weaver_qminusqbar", "W2_weaver_pq", "W2_weaver_pqbar",
+    "W2_weaver_qminusqbar", "L12", "L21",
+    "w_assignment_likelihood_selected",
+)
+CHARGE_FIELDS = (
+    "hadronic_W_charge", "idx_W_down_candidate", "down_candidate_source",
+    "down_type_slot",
+)
+KINEMATIC_FIELDS = tuple(
+    f"{name}_{variable}"
+    for name in CANONICAL_OBJECTS
+    for variable in OBJECT_VARIABLES
+)
+V2_CANONICAL_FIELDS = (
+    ORIENTATION_FIELDS
+    + CHARGE_FIELDS
+    + KINEMATIC_FIELDS
+    + ("lepton_px", "lepton_py", "lepton_pz")
+    + ("nu_fit_pt", "nu_fit_theta", "nu_fit_phi")
+    + (
+        "m_ttbar", "m_W_had", "m_top_had", "m_top_lep", "m_H",
+        "down_jet_mass", "top_side_fermion_down_jet_mass",
+        "anti_top_side_fermion_down_jet_mass",
+    )
+    + ("O_W", "O_lD", "O_b", "O_top", "O_lnu", "chi2_over_ndof")
+    + tuple(f"max_weaver_{key}" for key in WEAVER_SUMMARY_KEYS)
+    + tuple(
+        f"{name}_weaver_{key}"
+        for name in ORIENTED_WEAVER_OBJECTS
+        for key in WEAVER_SUMMARY_KEYS
+    )
+)
+
+STRING_FEATURES = {"w_orientation_status", "down_candidate_source"}
 
 
 def to_float(value: object) -> float:
@@ -37,7 +75,7 @@ def to_float(value: object) -> float:
     try:
         return float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
-        return float("nan")
+        return NAN
 
 
 def feature_columns_from_config(
@@ -57,304 +95,214 @@ def feature_columns_from_config(
     return columns
 
 
-def _selected_w_likelihood(row: Mapping[str, object]) -> float:
-    preference = row.get("w_orientation_status")
-    if preference == "L12_preferred":
-        return to_float(row.get("L12"))
-    if preference == "L21_preferred":
-        return to_float(row.get("L21"))
-    return float("nan")
-
-
-def _down_type_daughter(row: Mapping[str, object], variable: str) -> float:
-    down = to_float(row.get("idx_W_down_candidate"))
-    quark = to_float(row.get("idx_W_quark"))
-    antiquark = to_float(row.get("idx_W_antiquark"))
-    if not math.isfinite(down) or down == -1.0:
-        return float("nan")
-    if down == quark:
-        prefix = "wjet_quark"
-    elif down == antiquark:
-        prefix = "wjet_antiquark"
-    else:
-        return float("nan")
-    return to_float(row.get(f"{prefix}_{variable}"))
-
-
-def _second_w_daughter(row: Mapping[str, object], variable: str) -> float:
-    down = to_float(row.get("idx_W_down_candidate"))
-    quark = to_float(row.get("idx_W_quark"))
-    antiquark = to_float(row.get("idx_W_antiquark"))
-    if not all(math.isfinite(value) for value in (down, quark, antiquark)):
-        return float("nan")
-    if down == quark:
-        prefix = "wjet_antiquark"
-    elif down == antiquark:
-        prefix = "wjet_quark"
-    else:
-        return float("nan")
-
-    if variable == "pt":
-        energy = to_float(row.get(f"{prefix}_E"))
-        theta = to_float(row.get(f"{prefix}_theta"))
-        mass = to_float(row.get(f"{prefix}_mass"))
-        if not (math.isfinite(energy) and math.isfinite(theta)):
-            return float("nan")
-        mass_value = mass if math.isfinite(mass) else 0.0
-        momentum = math.sqrt(max(0.0, energy**2 - mass_value**2))
-        return momentum * math.sin(theta)
-    return to_float(row.get(f"{prefix}_{variable}"))
-
-
-def _neutrino(row: Mapping[str, object], variable: str) -> float:
-    if variable == "pt":
-        energy = to_float(row.get("neutrino_E"))
-        theta = to_float(row.get("neutrino_theta"))
-        if math.isfinite(energy) and math.isfinite(theta):
-            return energy * math.sin(theta)
-    return float("nan")
-
-
 def _add_p4(*items: tuple[float, float, float, float] | None):
     if any(item is None for item in items):
         return None
-    return tuple(sum(item[i] for item in items if item is not None) for i in range(4))
+    return tuple(
+        sum(item[index] for item in items if item is not None)
+        for index in range(4)
+    )
+
+
+@dataclass(frozen=True)
+class FeatureSpec:
+    """One exact feature calculator in the lazy registry."""
+
+    calculator: Callable[["FeatureContext", str], object]
 
 
 class FeatureContext:
-    """One-row derived-feature context with event-local memoization.
-
-    The underlying row is treated as immutable for the lifetime of a context.
-    Values already resolved by this context remain cached even if the caller
-    mutates the mapping; construct a new context to observe changed inputs.
-    """
+    """One immutable-row view with lazy, event-local intermediate caches."""
 
     def __init__(self, row: Mapping[str, object]):
         self.row = row
-        self._resolved: dict[str, float] = {}
-        self._derived: dict[str, object] | None = None
+        self._resolved: dict[str, object] = {}
+        self._intermediate: dict[str, object] = {}
 
     def _p4(self, prefix: str):
-        values = tuple(to_float(self.row.get(f"{prefix}_{suffix}")) for suffix in ("E", "px", "py", "pz"))
-        return values if all(math.isfinite(value) for value in values) else None
+        key = f"p4:{prefix}"
+        if key not in self._intermediate:
+            values = tuple(
+                to_float(self.row.get(f"{prefix}_{suffix}"))
+                for suffix in ("E", "px", "py", "pz")
+            )
+            self._intermediate[key] = (
+                values if all(math.isfinite(value) for value in values) else None
+            )
+        return self._intermediate[key]
 
-    def _jet_p4(self, index_value: object):
-        index = to_float(index_value)
-        if not math.isfinite(index) or int(index) != index or not 0 <= int(index) < 6:
+    @staticmethod
+    def _slot(index_value: object) -> int | None:
+        value = to_float(index_value)
+        if not math.isfinite(value) or int(value) != value or not 0 <= int(value) < 6:
             return None
-        return self._p4(f"jet{int(index)}")
+        return int(value)
+
+    def _slot_p4(self, index_value: object):
+        slot = self._slot(index_value)
+        return self._p4(f"jet{slot}") if slot is not None else None
 
     def _weaver(self, index_value: object) -> dict[str, float] | None:
-        index = to_float(index_value)
-        if not math.isfinite(index) or int(index) != index or not 0 <= int(index) < 6:
+        slot = self._slot(index_value)
+        if slot is None:
             return None
-        scores = {
-            key: to_float(self.row.get(f"jet{int(index)}_weaver_{key}"))
-            for key in (
-                "mc_u", "mc_d", "mc_s", "mc_c", "mc_b",
-                "mc_ubar", "mc_dbar", "mc_sbar", "mc_cbar", "mc_bbar",
+        key = f"weaver:{slot}"
+        if key not in self._intermediate:
+            self._intermediate[key] = {
+                score: to_float(self.row.get(f"jet{slot}_weaver_{score}"))
+                for score in WEAVER_SCORE_KEYS
+            }
+        return self._intermediate[key]  # type: ignore[return-value]
+
+    def _orientation(self) -> dict | None:
+        key = "orientation"
+        if key not in self._intermediate:
+            first = self._weaver(self.row.get("idx_W1"))
+            second = self._weaver(self.row.get("idx_W2"))
+            if first is None or second is None:
+                result = None
+            else:
+                try:
+                    result = flavor.orient_w_pair(first, second)
+                except (ValueError, ZeroDivisionError):
+                    result = None
+            self._intermediate[key] = result
+        return self._intermediate[key]  # type: ignore[return-value]
+
+    def _oriented_w_slots(self) -> tuple[int | None, int | None]:
+        key = "oriented_w_slots"
+        if key not in self._intermediate:
+            orientation = self._orientation()
+            selected = (
+                self._slot(self.row.get("idx_W1")),
+                self._slot(self.row.get("idx_W2")),
             )
-        }
-        return scores
+            if orientation is None or None in selected:
+                result = (None, None)
+            else:
+                result = (
+                    selected[orientation["quark_slot"]],
+                    selected[orientation["antiquark_slot"]],
+                )
+            self._intermediate[key] = result
+        return self._intermediate[key]  # type: ignore[return-value]
 
-    def _build_derived(self) -> dict[str, object]:
-        if self._derived is not None:
-            return self._derived
+    def _charge_assignment(self) -> dict[str, object]:
+        key = "charge_assignment"
+        if key not in self._intermediate:
+            wq_slot, wqbar_slot = self._oriented_w_slots()
+            w1 = self._slot_p4(self.row.get("idx_W1"))
+            w2 = self._slot_p4(self.row.get("idx_W2"))
+            bhad = self._slot_p4(self.row.get("idx_bhad"))
+            blep = self._slot_p4(self.row.get("idx_blep"))
+            lepton = self._p4("lepton_lab")
+            neutrino = self._p4("nu_fit")
+            wq = self._slot_p4(wq_slot)
+            wqbar = self._slot_p4(wqbar_slot)
+            hadronic_top = _add_p4(w1, w2, bhad)
+            leptonic_top = _add_p4(lepton, neutrino, blep)
+            charge = to_float(self.row.get("lepton_charge"))
+            result: dict[str, object] = {
+                "charge": charge,
+                "wq": wq,
+                "wqbar": wqbar,
+                "wq_slot": wq_slot,
+                "wqbar_slot": wqbar_slot,
+            }
+            if math.isfinite(charge) and charge < 0.0:
+                result.update({
+                    "top": hadronic_top, "antitop": leptonic_top,
+                    "top_side": wqbar, "anti_side": lepton,
+                    "top_b": bhad, "antitop_bbar": blep,
+                    "top_b_slot": self._slot(self.row.get("idx_bhad")),
+                    "antitop_bbar_slot": self._slot(self.row.get("idx_blep")),
+                    "down": wqbar, "down_slot": wqbar_slot,
+                    "hadronic_W_charge": 1,
+                })
+            elif math.isfinite(charge) and charge > 0.0:
+                result.update({
+                    "top": leptonic_top, "antitop": hadronic_top,
+                    "top_side": lepton, "anti_side": wq,
+                    "top_b": blep, "antitop_bbar": bhad,
+                    "top_b_slot": self._slot(self.row.get("idx_blep")),
+                    "antitop_bbar_slot": self._slot(self.row.get("idx_bhad")),
+                    "down": wq, "down_slot": wq_slot,
+                    "hadronic_W_charge": -1,
+                })
+            self._intermediate[key] = result
+        return self._intermediate[key]  # type: ignore[return-value]
 
-        out: dict[str, object] = {}
-        idx_w1 = self.row.get("idx_W1")
-        idx_w2 = self.row.get("idx_W2")
-        w1 = self._jet_p4(idx_w1)
-        w2 = self._jet_p4(idx_w2)
-        bhad = self._jet_p4(self.row.get("idx_bhad"))
-        blep = self._jet_p4(self.row.get("idx_blep"))
-        h1 = self._jet_p4(self.row.get("idx_H1"))
-        h2 = self._jet_p4(self.row.get("idx_H2"))
-        lepton = self._p4("lepton_lab")
-        neutrino = self._p4("nu_fit")
-        higgs = _add_p4(h1, h2)
+    def _canonical_p4(self, object_name: str):
+        key = f"canonical_p4:{object_name}"
+        if key not in self._intermediate:
+            if object_name == "lepton":
+                value = self._p4("lepton_lab")
+            elif object_name == "neutrino":
+                value = self._p4("nu_fit")
+            elif object_name == "higgs":
+                value = _add_p4(
+                    self._slot_p4(self.row.get("idx_H1")),
+                    self._slot_p4(self.row.get("idx_H2")),
+                )
+            else:
+                assignment = self._charge_assignment()
+                value = {
+                    "wjet_quark": assignment.get("wq"),
+                    "wjet_antiquark": assignment.get("wqbar"),
+                    "top_side_fermion": assignment.get("top_side"),
+                    "anti_top_side_fermion": assignment.get("anti_side"),
+                    "top_b": assignment.get("top_b"),
+                    "antitop_bbar": assignment.get("antitop_bbar"),
+                    "top": assignment.get("top"),
+                    "antitop": assignment.get("antitop"),
+                }.get(object_name)
+            self._intermediate[key] = value
+        return self._intermediate[key]
 
-        orientation = None
-        w1_scores = self._weaver(idx_w1)
-        w2_scores = self._weaver(idx_w2)
-        if w1_scores is not None and w2_scores is not None:
-            try:
-                orientation = flavor.orient_w_pair(w1_scores, w2_scores)
-            except (ValueError, ZeroDivisionError):
-                orientation = None
+    def _rest_p4(self):
+        key = "higgs_rest_p4"
+        if key not in self._intermediate:
+            self._intermediate[key] = self._canonical_p4("higgs")
+        return self._intermediate[key]
 
-        wq = wqbar = None
-        wq_index = wqbar_index = None
-        if orientation is not None:
-            selected = (idx_w1, idx_w2)
-            wq_index = int(to_float(selected[orientation["quark_slot"]]))
-            wqbar_index = int(to_float(selected[orientation["antiquark_slot"]]))
-            wq = self._jet_p4(wq_index)
-            wqbar = self._jet_p4(wqbar_index)
-            out.update({
-                "idx_W_quark": wq_index,
-                "idx_W_antiquark": wqbar_index,
-                "w_orientation_status": orientation["status"],
-                "w_orientation_margin": orientation["margin"],
-                "W1_weaver_pq": orientation["w1"]["p_quark"],
-                "W1_weaver_pqbar": orientation["w1"]["p_antiquark"],
-                "W1_weaver_qminusqbar": orientation["w1"]["signed_score"],
-                "W2_weaver_pq": orientation["w2"]["p_quark"],
-                "W2_weaver_pqbar": orientation["w2"]["p_antiquark"],
-                "W2_weaver_qminusqbar": orientation["w2"]["signed_score"],
-                "L12": orientation["L12"],
-                "L21": orientation["L21"],
-            })
-            if orientation["status"] == "L12_preferred":
-                out["w_assignment_likelihood_selected"] = orientation["L12"]
-            elif orientation["status"] == "L21_preferred":
-                out["w_assignment_likelihood_selected"] = orientation["L21"]
-
-        hadronic_top = _add_p4(w1, w2, bhad)
-        leptonic_top = _add_p4(lepton, neutrino, blep)
-        charge = to_float(self.row.get("lepton_charge"))
-        top = antitop = top_side = anti_side = top_b = antitop_bbar = down = None
-        down_index = -1
-        if math.isfinite(charge) and charge < 0.0:
-            top, antitop = hadronic_top, leptonic_top
-            top_side, anti_side = wqbar, lepton
-            top_b, antitop_bbar = bhad, blep
-            down, down_index = wqbar, wqbar_index if wqbar_index is not None else -1
-            out["hadronic_W_charge"] = 1
-        elif math.isfinite(charge) and charge > 0.0:
-            top, antitop = leptonic_top, hadronic_top
-            top_side, anti_side = lepton, wq
-            top_b, antitop_bbar = blep, bhad
-            down, down_index = wq, wq_index if wq_index is not None else -1
-            out["hadronic_W_charge"] = -1
-
-        if math.isfinite(charge) and charge != 0.0:
-            w1_number = to_float(idx_w1)
-            w2_number = to_float(idx_w2)
-            out.update({
-                "idx_W_down_candidate": down_index,
-                "down_candidate_source": "qqbar_orientation_plus_lepton_charge",
-                "down_type_slot": (
-                    1 if math.isfinite(w1_number) and down_index == int(w1_number)
-                    else 2 if math.isfinite(w2_number) and down_index == int(w2_number)
-                    else 0
-                ),
-            })
-
-        objects = {
-            "wjet_quark": wq,
-            "wjet_antiquark": wqbar,
-            "top_side_fermion": top_side,
-            "anti_top_side_fermion": anti_side,
-            "top_b": top_b,
-            "antitop_bbar": antitop_bbar,
-            "lepton": lepton,
-            "neutrino": neutrino,
-            "top": top,
-            "antitop": antitop,
-            "higgs": higgs,
-        }
-        rest_p4 = higgs
-        phis: dict[str, float] = {}
-        for name in CANONICAL_OBJECTS:
-            p4 = objects[name]
-            boosted = frames.boost_to_rest(p4, rest_p4) if p4 is not None and rest_p4 is not None else None
-            boosted_angles = frames.boost_only_angles(p4, rest_p4) if p4 is not None and rest_p4 is not None else None
+    def _object_kinematics(self, object_name: str) -> dict[str, float]:
+        key = f"kinematics:{object_name}"
+        if key not in self._intermediate:
+            p4 = self._canonical_p4(object_name)
+            rest_p4 = self._rest_p4()
+            boosted = (
+                frames.boost_to_rest(p4, rest_p4)
+                if p4 is not None and rest_p4 is not None
+                else None
+            )
+            boosted_angles = (
+                frames.boost_only_angles(p4, rest_p4)
+                if p4 is not None and rest_p4 is not None
+                else None
+            )
             if boosted is None:
-                out.update({
-                    f"{name}_E": NAN, f"{name}_pt": NAN,
-                    f"{name}_theta": NAN, f"{name}_phi": NAN,
-                    f"{name}_mass": NAN, f"{name}_valid": 0,
-                })
-                continue
-            energy, px, py, pz = boosted
-            if boosted_angles is None:
-                out.update({
-                    f"{name}_E": energy,
-                    f"{name}_pt": math.hypot(px, py),
-                    f"{name}_theta": NAN,
-                    f"{name}_phi": NAN,
-                    f"{name}_mass": frames.invariant_mass(p4),
-                    f"{name}_valid": 0,
-                })
-                continue
-            _, cos_theta, phi = boosted_angles
-            out.update({
-                f"{name}_E": energy,
-                f"{name}_pt": math.hypot(px, py),
-                f"{name}_theta": math.acos(max(-1.0, min(1.0, cos_theta))),
-                f"{name}_phi": phi,
-                f"{name}_mass": frames.invariant_mass(p4),
-                f"{name}_valid": 1,
-            })
-            phis[name] = phi
+                values = {
+                    "E": NAN, "pt": NAN, "theta": NAN, "phi": NAN,
+                    "mass": NAN, "valid": 0.0,
+                }
+            else:
+                energy, px, py, _ = boosted
+                values = {
+                    "E": energy,
+                    "pt": math.hypot(px, py),
+                    "mass": frames.invariant_mass(p4),
+                    "valid": 0.0 if boosted_angles is None else 1.0,
+                    "theta": NAN,
+                    "phi": NAN,
+                }
+                if boosted_angles is not None:
+                    _, cos_theta, phi = boosted_angles
+                    values["theta"] = math.acos(max(-1.0, min(1.0, cos_theta)))
+                    values["phi"] = phi
+            self._intermediate[key] = values
+        return self._intermediate[key]  # type: ignore[return-value]
 
-        if lepton is not None and rest_p4 is not None:
-            boosted_lepton = frames.boost_to_rest(lepton, rest_p4)
-            if boosted_lepton is not None:
-                out.update({
-                    "lepton_px": boosted_lepton[1],
-                    "lepton_py": boosted_lepton[2],
-                    "lepton_pz": boosted_lepton[3],
-                })
-
-        if neutrino is not None:
-            _, px, py, pz = neutrino
-            momentum = math.sqrt(px * px + py * py + pz * pz)
-            out.update({
-                "nu_fit_pt": math.hypot(px, py),
-                "nu_fit_theta": math.acos(max(-1.0, min(1.0, pz / momentum))) if momentum > 0.0 else NAN,
-                "nu_fit_phi": math.atan2(py, px),
-            })
-
-        ttbar = _add_p4(top, antitop)
-        out["m_ttbar"] = frames.invariant_mass(ttbar) if ttbar is not None else NAN
-        out.update({
-            "m_W_had": to_float(self.row.get("mW_had_postfit")),
-            "m_top_had": to_float(self.row.get("mt_had_postfit")),
-            "m_top_lep": to_float(self.row.get("mt_lep_postfit")),
-            "m_H": to_float(self.row.get("mH_postfit")),
-            "down_jet_mass": frames.invariant_mass(down) if down is not None else NAN,
-            "top_side_fermion_down_jet_mass": frames.invariant_mass(top_side) if top_side is not None else NAN,
-            "anti_top_side_fermion_down_jet_mass": frames.invariant_mass(anti_side) if anti_side is not None else NAN,
-        })
-
-        def dphi(first: str, second: str) -> float:
-            if first not in phis or second not in phis:
-                return NAN
-            return angles.delta_phi(phis[first], phis[second])
-
-        out.update({
-            "O_W": dphi("wjet_quark", "wjet_antiquark"),
-            "O_lD": dphi("top_side_fermion", "anti_top_side_fermion"),
-            "O_b": dphi("top_b", "antitop_bbar"),
-            "O_top": dphi("top", "antitop"),
-            "O_lnu": dphi("lepton", "neutrino") if charge < 0.0 else dphi("neutrino", "lepton") if charge > 0.0 else NAN,
-        })
-
-        ndof = to_float(self.row.get("ndof"))
-        fitchi2 = to_float(self.row.get("fitchi2"))
-        out["chi2_over_ndof"] = fitchi2 / ndof if math.isfinite(fitchi2) and math.isfinite(ndof) and ndof > 0.0 else NAN
-
-        all_scores = [self._weaver(index) for index in range(6)]
-        for key in WEAVER_SUMMARY_KEYS:
-            values = [scores[key] for scores in all_scores if scores is not None and math.isfinite(scores[key])]
-            out[f"max_weaver_{key}"] = max(values) if values else NAN
-        oriented_indices = {
-            "wjet_quark": wq_index,
-            "wjet_antiquark": wqbar_index,
-            "top_b": self.row.get("idx_bhad") if charge < 0.0 else self.row.get("idx_blep") if charge > 0.0 else None,
-            "antitop_bbar": self.row.get("idx_blep") if charge < 0.0 else self.row.get("idx_bhad") if charge > 0.0 else None,
-        }
-        for name, index in oriented_indices.items():
-            scores = self._weaver(index)
-            for key in WEAVER_SUMMARY_KEYS:
-                out[f"{name}_weaver_{key}"] = scores[key] if scores is not None else NAN
-
-        self._derived = out
-        return out
-
-    def resolve(self, feature_name: str) -> float:
+    def _value(self, feature_name: str) -> object:
         if feature_name in self._resolved:
             return self._resolved[feature_name]
 
@@ -362,24 +310,279 @@ class FeatureContext:
         if math.isfinite(direct):
             self._resolved[feature_name] = direct
             return direct
+        if feature_name in STRING_FEATURES:
+            direct_string = self.row.get(feature_name)
+            if isinstance(direct_string, str) and direct_string:
+                self._resolved[feature_name] = direct_string
+                return direct_string
 
-        derived = self._build_derived()
-        value = to_float(derived.get(feature_name))
-        if not math.isfinite(value):
-            if feature_name == "w_assignment_likelihood_selected":
-                value = _selected_w_likelihood(self.row)
-            elif feature_name.startswith("down_type_daughter_"):
-                value = _down_type_daughter({**derived, **self.row}, feature_name.removeprefix("down_type_daughter_"))
-            elif feature_name.startswith("second_w_daughter_"):
-                value = _second_w_daughter({**derived, **self.row}, feature_name.removeprefix("second_w_daughter_"))
-            elif feature_name.startswith("neutrino_"):
-                value = _neutrino(self.row, feature_name.removeprefix("neutrino_"))
-
+        spec = _EXACT_REGISTRY.get(feature_name)
+        if spec is not None:
+            value = spec.calculator(self, feature_name)
+        else:
+            value = NAN
+            for prefix, calculator in _PREFIX_REGISTRY:
+                if feature_name.startswith(prefix):
+                    value = calculator(self, feature_name)
+                    break
         self._resolved[feature_name] = value
         return value
 
-    def materialize(self) -> dict[str, object]:
-        return dict(self._build_derived())
+    def resolve(self, feature_name: str) -> float:
+        """Resolve one numeric feature and cache only its dependency path."""
+        return to_float(self._value(feature_name))
+
+
+def _calc_orientation(context: FeatureContext, name: str) -> object:
+    orientation = context._orientation()
+    if orientation is None:
+        return NAN
+    wq_slot, wqbar_slot = context._oriented_w_slots()
+    mapping: dict[str, object] = {
+        "idx_W_quark": wq_slot,
+        "idx_W_antiquark": wqbar_slot,
+        "w_orientation_status": orientation["status"],
+        "w_orientation_margin": orientation["margin"],
+        "W1_weaver_pq": orientation["w1"]["p_quark"],
+        "W1_weaver_pqbar": orientation["w1"]["p_antiquark"],
+        "W1_weaver_qminusqbar": orientation["w1"]["signed_score"],
+        "W2_weaver_pq": orientation["w2"]["p_quark"],
+        "W2_weaver_pqbar": orientation["w2"]["p_antiquark"],
+        "W2_weaver_qminusqbar": orientation["w2"]["signed_score"],
+        "L12": orientation["L12"],
+        "L21": orientation["L21"],
+    }
+    return mapping.get(name, NAN)
+
+
+def _calc_selected_likelihood(context: FeatureContext, _name: str) -> float:
+    raw_status = context.row.get("w_orientation_status")
+    if raw_status == "L12_preferred":
+        return to_float(context.row.get("L12"))
+    if raw_status == "L21_preferred":
+        return to_float(context.row.get("L21"))
+    orientation = context._orientation()
+    if orientation is None:
+        return NAN
+    if orientation["status"] == "L12_preferred":
+        return float(orientation["L12"])
+    if orientation["status"] == "L21_preferred":
+        return float(orientation["L21"])
+    return NAN
+
+
+def _calc_charge(context: FeatureContext, name: str) -> object:
+    assignment = context._charge_assignment()
+    charge = to_float(assignment.get("charge"))
+    if not math.isfinite(charge) or charge == 0.0:
+        return NAN
+    if name == "hadronic_W_charge":
+        return assignment.get("hadronic_W_charge", NAN)
+    if name == "idx_W_down_candidate":
+        slot = assignment.get("down_slot")
+        return slot if slot is not None else -1
+    if name == "down_candidate_source":
+        return "qqbar_orientation_plus_lepton_charge"
+    down_slot = assignment.get("down_slot")
+    w1_slot = context._slot(context.row.get("idx_W1"))
+    w2_slot = context._slot(context.row.get("idx_W2"))
+    return 1 if down_slot == w1_slot else 2 if down_slot == w2_slot else 0
+
+
+def _parse_object_feature(name: str) -> tuple[str, str] | None:
+    for object_name in CANONICAL_OBJECTS:
+        prefix = f"{object_name}_"
+        if name.startswith(prefix):
+            variable = name.removeprefix(prefix)
+            if variable in OBJECT_VARIABLES:
+                return object_name, variable
+    return None
+
+
+def _calc_object_feature(context: FeatureContext, name: str) -> float:
+    parsed = _parse_object_feature(name)
+    if parsed is None:
+        return NAN
+    object_name, variable = parsed
+    value = context._object_kinematics(object_name)[variable]
+    if object_name == "neutrino" and variable == "pt" and not math.isfinite(value):
+        energy = to_float(context.row.get("neutrino_E"))
+        theta = to_float(context.row.get("neutrino_theta"))
+        if math.isfinite(energy) and math.isfinite(theta):
+            return energy * math.sin(theta)
+    return value
+
+
+def _calc_lepton_component(context: FeatureContext, name: str) -> float:
+    p4 = context._canonical_p4("lepton")
+    rest = context._rest_p4()
+    key = "boosted:lepton"
+    if key not in context._intermediate:
+        context._intermediate[key] = (
+            frames.boost_to_rest(p4, rest)
+            if p4 is not None and rest is not None
+            else None
+        )
+    boosted = context._intermediate[key]
+    if boosted is None:
+        return NAN
+    return float(boosted[{"lepton_px": 1, "lepton_py": 2, "lepton_pz": 3}[name]])
+
+
+def _calc_nu_fit(context: FeatureContext, name: str) -> float:
+    p4 = context._p4("nu_fit")
+    if p4 is None:
+        return NAN
+    _, px, py, pz = p4
+    if name == "nu_fit_pt":
+        return math.hypot(px, py)
+    if name == "nu_fit_phi":
+        return math.atan2(py, px)
+    momentum = math.sqrt(px * px + py * py + pz * pz)
+    return math.acos(max(-1.0, min(1.0, pz / momentum))) if momentum > 0.0 else NAN
+
+
+def _calc_mass_or_alias(context: FeatureContext, name: str) -> float:
+    aliases = {
+        "m_W_had": "mW_had_postfit",
+        "m_top_had": "mt_had_postfit",
+        "m_top_lep": "mt_lep_postfit",
+        "m_H": "mH_postfit",
+    }
+    if name in aliases:
+        return to_float(context.row.get(aliases[name]))
+    if name == "chi2_over_ndof":
+        chi2 = to_float(context.row.get("fitchi2"))
+        ndof = to_float(context.row.get("ndof"))
+        return chi2 / ndof if math.isfinite(chi2) and math.isfinite(ndof) and ndof > 0.0 else NAN
+    if name == "m_ttbar":
+        ttbar = _add_p4(context._canonical_p4("top"), context._canonical_p4("antitop"))
+        return frames.invariant_mass(ttbar) if ttbar is not None else NAN
+    assignment = context._charge_assignment()
+    object_key = {
+        "down_jet_mass": "down",
+        "top_side_fermion_down_jet_mass": "top_side",
+        "anti_top_side_fermion_down_jet_mass": "anti_side",
+    }[name]
+    p4 = assignment.get(object_key)
+    return frames.invariant_mass(p4) if p4 is not None else NAN
+
+
+def _calc_angle(context: FeatureContext, name: str) -> float:
+    pairs = {
+        "O_W": ("wjet_quark_phi", "wjet_antiquark_phi"),
+        "O_lD": ("top_side_fermion_phi", "anti_top_side_fermion_phi"),
+        "O_b": ("top_b_phi", "antitop_bbar_phi"),
+        "O_top": ("top_phi", "antitop_phi"),
+    }
+    if name == "O_lnu":
+        charge = to_float(context.row.get("lepton_charge"))
+        if charge < 0.0:
+            pair = ("lepton_phi", "neutrino_phi")
+        elif charge > 0.0:
+            pair = ("neutrino_phi", "lepton_phi")
+        else:
+            return NAN
+    else:
+        pair = pairs[name]
+    first = context.resolve(pair[0])
+    second = context.resolve(pair[1])
+    return angles.delta_phi(first, second) if math.isfinite(first) and math.isfinite(second) else NAN
+
+
+def _calc_max_weaver(context: FeatureContext, name: str) -> float:
+    score = name.removeprefix("max_weaver_")
+    values = []
+    for slot in range(6):
+        scores = context._weaver(slot)
+        if scores is not None and math.isfinite(scores[score]):
+            values.append(scores[score])
+    return max(values) if values else NAN
+
+
+def _calc_oriented_weaver(context: FeatureContext, name: str) -> float:
+    for object_name in ORIENTED_WEAVER_OBJECTS:
+        prefix = f"{object_name}_weaver_"
+        if name.startswith(prefix):
+            score = name.removeprefix(prefix)
+            assignment = context._charge_assignment()
+            slot = {
+                "wjet_quark": assignment.get("wq_slot"),
+                "wjet_antiquark": assignment.get("wqbar_slot"),
+                "top_b": assignment.get("top_b_slot"),
+                "antitop_bbar": assignment.get("antitop_bbar_slot"),
+            }[object_name]
+            scores = context._weaver(slot)
+            return scores[score] if scores is not None else NAN
+    return NAN
+
+
+def _calc_down_type_daughter(context: FeatureContext, name: str) -> float:
+    variable = name.removeprefix("down_type_daughter_")
+    down = context.resolve("idx_W_down_candidate")
+    quark = context.resolve("idx_W_quark")
+    antiquark = context.resolve("idx_W_antiquark")
+    if not math.isfinite(down) or down == -1.0:
+        return NAN
+    prefix = "wjet_quark" if down == quark else "wjet_antiquark" if down == antiquark else None
+    return context.resolve(f"{prefix}_{variable}") if prefix else NAN
+
+
+def _calc_second_w_daughter(context: FeatureContext, name: str) -> float:
+    variable = name.removeprefix("second_w_daughter_")
+    down = context.resolve("idx_W_down_candidate")
+    quark = context.resolve("idx_W_quark")
+    antiquark = context.resolve("idx_W_antiquark")
+    if not all(math.isfinite(value) for value in (down, quark, antiquark)):
+        return NAN
+    prefix = "wjet_antiquark" if down == quark else "wjet_quark" if down == antiquark else None
+    if prefix is None:
+        return NAN
+    if variable == "pt":
+        energy = context.resolve(f"{prefix}_E")
+        theta = context.resolve(f"{prefix}_theta")
+        mass = context.resolve(f"{prefix}_mass")
+        if not (math.isfinite(energy) and math.isfinite(theta)):
+            return NAN
+        mass_value = mass if math.isfinite(mass) else 0.0
+        return math.sqrt(max(0.0, energy**2 - mass_value**2)) * math.sin(theta)
+    return context.resolve(f"{prefix}_{variable}")
+
+
+_EXACT_REGISTRY: dict[str, FeatureSpec] = {}
+for _name in ORIENTATION_FIELDS[:-1]:
+    _EXACT_REGISTRY[_name] = FeatureSpec(_calc_orientation)
+_EXACT_REGISTRY["w_assignment_likelihood_selected"] = FeatureSpec(_calc_selected_likelihood)
+for _name in CHARGE_FIELDS:
+    _EXACT_REGISTRY[_name] = FeatureSpec(_calc_charge)
+for _name in ("lepton_px", "lepton_py", "lepton_pz"):
+    _EXACT_REGISTRY[_name] = FeatureSpec(_calc_lepton_component)
+for _name in ("nu_fit_pt", "nu_fit_theta", "nu_fit_phi"):
+    _EXACT_REGISTRY[_name] = FeatureSpec(_calc_nu_fit)
+for _name in (
+    "m_ttbar", "m_W_had", "m_top_had", "m_top_lep", "m_H",
+    "down_jet_mass", "top_side_fermion_down_jet_mass",
+    "anti_top_side_fermion_down_jet_mass", "chi2_over_ndof",
+):
+    _EXACT_REGISTRY[_name] = FeatureSpec(_calc_mass_or_alias)
+for _name in ("O_W", "O_lD", "O_b", "O_top", "O_lnu"):
+    _EXACT_REGISTRY[_name] = FeatureSpec(_calc_angle)
+for _name in tuple(f"max_weaver_{key}" for key in WEAVER_SUMMARY_KEYS):
+    _EXACT_REGISTRY[_name] = FeatureSpec(_calc_max_weaver)
+for _name in tuple(
+    f"{obj}_weaver_{key}"
+    for obj in ORIENTED_WEAVER_OBJECTS
+    for key in WEAVER_SUMMARY_KEYS
+):
+    _EXACT_REGISTRY[_name] = FeatureSpec(_calc_oriented_weaver)
+
+_PREFIX_REGISTRY: tuple[tuple[str, Callable[[FeatureContext, str], object]], ...] = (
+    tuple((f"{name}_", _calc_object_feature) for name in CANONICAL_OBJECTS)
+    + (
+        ("down_type_daughter_", _calc_down_type_daughter),
+        ("second_w_daughter_", _calc_second_w_daughter),
+    )
+)
 
 
 def resolve_feature_value(
@@ -391,9 +594,9 @@ def resolve_feature_value(
 
 
 def resolve_feature_values(
-    row: Mapping[str, object] | FeatureContext, names: list[str] | tuple[str, ...]
+    row: Mapping[str, object] | FeatureContext, names: Sequence[str]
 ) -> dict[str, float]:
-    """Resolve several features through one shared event-local context."""
+    """Resolve only the requested names through one shared event context."""
     context = row if isinstance(row, FeatureContext) else FeatureContext(row)
     return {name: context.resolve(name) for name in names}
 
@@ -401,10 +604,10 @@ def resolve_feature_values(
 def materialize_v2_canonical_fields(
     row_or_context: Mapping[str, object] | FeatureContext,
 ) -> dict[str, object]:
-    """Build the v2 canonical/diagnostic fields from one v3 baseline row."""
+    """Compatibility helper: explicitly resolve the frozen v2 field list."""
     context = (
         row_or_context
         if isinstance(row_or_context, FeatureContext)
         else FeatureContext(row_or_context)
     )
-    return context.materialize()
+    return {name: context._value(name) for name in V2_CANONICAL_FIELDS}
