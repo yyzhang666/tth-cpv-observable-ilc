@@ -29,7 +29,7 @@ from sklearn.metrics import roc_curve, auc, precision_score
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from ilc_tth_cpv.io import load_analysis_config, read_table, repo_root  # noqa: E402
-from ilc_tth_cpv.ml_features import (  # noqa: E402
+from ilc_tth_cpv.input_features import (  # noqa: E402
     feature_columns_from_config,
     resolve_feature_value,
     to_float,

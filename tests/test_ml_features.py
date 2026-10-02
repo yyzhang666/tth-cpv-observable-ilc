@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from ilc_tth_cpv.ml_features import (
+from ilc_tth_cpv.input_features import (
     feature_columns_from_config,
     resolve_feature_value,
 )
@@ -36,6 +36,18 @@ def test_selected_w_likelihood_uses_orientation_decision():
         {"w_orientation_status": "L21_preferred", "L12": "0.8", "L21": "0.2"},
         "w_assignment_likelihood_selected",
     ) == pytest.approx(0.2)
+
+
+def test_finite_materialized_value_takes_priority_over_resolver():
+    assert resolve_feature_value(
+        {
+            "w_assignment_likelihood_selected": "0.123456789",
+            "w_orientation_status": "L12_preferred",
+            "L12": "0.8",
+            "L21": "0.2",
+        },
+        "w_assignment_likelihood_selected",
+    ) == pytest.approx(0.123456789)
 
 
 def test_invalid_minus_one_down_type_indices_do_not_resolve_a_fake_feature():

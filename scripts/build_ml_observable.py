@@ -27,6 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from ilc_tth_cpv.histograms import SignedHistogram, linear_edges  # noqa: E402
+from ilc_tth_cpv.input_features import resolve_feature_value  # noqa: E402
 from ilc_tth_cpv.io import load_analysis_config, read_table, repo_root, write_table  # noqa: E402
 from ilc_tth_cpv.validation import check_phi_wrapping, check_signed_weight_sums
 
@@ -40,120 +41,6 @@ def filter_rows(rows: list, split: str = "all", lepton_flavor: str = "all") -> l
     return rows
 
 
-def to_float(val) -> float:
-    """Safely convert values to finite floats or NaN."""
-    if val is None or val == "":
-        return float("nan")
-    try:
-        fval = float(val)
-        return fval if math.isfinite(fval) else float("nan")
-    except (TypeError, ValueError):
-        return float("nan")
-    
-
-def extract_feature_value(row: dict, feature_name: str) -> float:
-    """Extract feature value using direct lookup with dynamic fallback resolution
-    for derived features (w_assignment_likelihood_selected, down_type_daughter_*, second_w_daughter_*).
-    """
-    # Try direct column lookup (works for v2 and all standard features)
-    fval = to_float(row.get(feature_name))
-    if math.isfinite(fval):
-        return fval
-
-    # Dynamic resolution for w_assignment_likelihood_selected
-    if feature_name == "w_assignment_likelihood_selected":
-        preference = row.get("w_orientation_status")
-        L12 = row.get("L12")
-        L21 = row.get("L21")
-
-        if preference == "L12_preferred":
-            selected_L = L12
-        elif preference == "L21_preferred":
-            selected_L = L21
-        else:
-            selected_L = None
-
-        return to_float(selected_L)
-
-    # Fallback dynamic resolution for missing v1 down_type_daughter_* columns
-    if feature_name.startswith("down_type_daughter_"):
-        variable = feature_name.removeprefix("down_type_daughter_")
-        try:
-            idx_down = float(row.get("idx_W_down_candidate", -1.0))
-            idx_q = float(row.get("idx_W_quark", -1.0))
-            idx_qbar = float(row.get("idx_W_antiquark", -1.0))
-        except (TypeError, ValueError):
-            return float("nan")
-
-        if idx_down != -1.0 and math.isfinite(idx_down):
-            if idx_down == idx_q:
-                prefix = "wjet_quark"
-            elif idx_down == idx_qbar:
-                prefix = "wjet_antiquark"
-            else:
-                return float("nan")
-        else:
-            return float("nan")
-
-        val = row.get(f"{prefix}_{variable}")
-        return float(val) if val is not None else float("nan")
-
-    # Fallback dynamic resolution for second_w_daughter_* features
-    if feature_name.startswith("second_w_daughter_"):
-        variable = feature_name.removeprefix("second_w_daughter_")
-
-        idx_W_down_candidate = to_float(row.get("idx_W_down_candidate"))
-        idx_W_quark          = to_float(row.get("idx_W_quark"))
-        idx_W_antiquark      = to_float(row.get("idx_W_antiquark"))
-
-        if not (math.isfinite(idx_W_down_candidate) and math.isfinite(idx_W_quark) and math.isfinite(idx_W_antiquark)):
-            return float("nan")
-
-        if idx_W_down_candidate == idx_W_quark:
-            prefix = "wjet_antiquark"
-        elif idx_W_down_candidate == idx_W_antiquark:
-            prefix = "wjet_quark"
-        else:
-            return float("nan")
-
-        # Calculate pT from E, theta, mass
-        if variable == "pt":
-            E     = to_float(row.get(f"{prefix}_E"))
-            theta = to_float(row.get(f"{prefix}_theta"))
-            m     = to_float(row.get(f"{prefix}_mass"))
-
-            if not (math.isfinite(E) and math.isfinite(theta)):
-                return float("nan")
-
-            m_val = m if math.isfinite(m) else 0.0
-
-            p = math.sqrt(max(0.0, E**2 - m_val**2))
-            return p * math.sin(theta)
-
-        return to_float(row.get(f"{prefix}_{variable}"))
-
-    # Dynamic resolution for neutrino_* features
-    if feature_name.startswith("neutrino_"):
-        
-        # 1. Try to read the column directly from the CSV
-        val = row.get(feature_name)
-        if val is not None:
-            parsed_val = to_float(val)
-            if math.isfinite(parsed_val):
-                return parsed_val
-
-        # 2. Safety fallback: calculate pt from E and theta if neutrino_pt is missing
-        if feature_name == "neutrino_pt":
-            E     = to_float(row.get("neutrino_E"))
-            theta = to_float(row.get("neutrino_theta"))
-            if math.isfinite(E) and math.isfinite(theta):
-                return E * math.sin(theta)
-
-        return float("nan")
-        
-    return to_float(row.get(feature_name))
-
-        
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True)
@@ -244,7 +131,7 @@ def main() -> int:
         feats = []
         valid = True
         for col in feature_cols:
-            value = extract_feature_value(row, col)
+            value = resolve_feature_value(row, col)
             if not math.isfinite(value):
                 valid = False
                 break
