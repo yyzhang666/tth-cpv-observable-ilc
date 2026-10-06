@@ -548,6 +548,167 @@ def _calc_second_w_daughter(context: FeatureContext, name: str) -> float:
         return math.sqrt(max(0.0, energy**2 - mass_value**2)) * math.sin(theta)
     return context.resolve(f"{prefix}_{variable}")
 
+def _orientation_v2(self) -> dict | None:
+    key = "orientation_v2"
+
+    if key not in self._intermediate:
+        first = self._weaver(self.row.get("idx_W1"))
+        second = self._weaver(self.row.get("idx_W2"))
+
+        if first is None or second is None:
+            result = None
+        else:
+            try:
+                result = flavor.orient_w_pair_v2(first, second)
+            except (ValueError, ZeroDivisionError):
+                result = None
+
+        self._intermediate[key] = result
+
+    return self._intermediate[key]  # type: ignore[return-value]
+
+
+def _w_slots_v2(self) -> dict[str, int | None]:
+    """
+    Resolve global jet slots for:
+      down-type, up-type, quark, antiquark
+
+    Hard D/U ordering comes only from orient_w_pair_v2.
+    q/qbar interpretation additionally uses lepton charge.
+    """
+
+    key = "w_slots_v2"
+
+    if key not in self._intermediate:
+        orientation = self._orientation_v2()
+
+        selected = (
+            self._slot(self.row.get("idx_W1")),
+            self._slot(self.row.get("idx_W2")),
+        )
+
+        charge = to_float(self.row.get("lepton_charge"))
+
+        if (
+            orientation is None
+            or None in selected
+            or not math.isfinite(charge)
+            or charge == 0.0
+        ):
+            result = {
+                "down": None,
+                "up": None,
+                "quark": None,
+                "antiquark": None,
+            }
+
+        else:
+            down_local = orientation["down_slot"]
+            up_local = orientation["up_slot"]
+
+            quark_local, antiquark_local = (
+                flavor.quark_antiquark_slots_from_type(
+                    charge,
+                    down_local,
+                    up_local,
+                )
+            )
+
+            result = {
+                "down": selected[down_local],
+                "up": selected[up_local],
+                "quark": selected[quark_local],
+                "antiquark": selected[antiquark_local],
+            }
+
+        self._intermediate[key] = result
+
+    return self._intermediate[key]  # type: ignore[return-value]
+
+def _slot_phi_higgs_rest(
+    context: FeatureContext,
+    slot: int | None,
+) -> float:
+    if slot is None:
+        return NAN
+
+    p4 = context._slot_p4(slot)
+    rest_p4 = context._rest_p4()
+
+    if p4 is None or rest_p4 is None:
+        return NAN
+
+    triple = frames.boost_only_angles(p4, rest_p4)
+
+    if triple is None:
+        return NAN
+
+    return float(triple[2])
+
+
+def _calc_angle_v2(
+    context: FeatureContext,
+    name: str,
+) -> float:
+
+    slots = context._w_slots_v2()
+
+    if name == "O_W_v2":
+        phi_q = _slot_phi_higgs_rest(
+            context,
+            slots["quark"],
+        )
+        phi_qbar = _slot_phi_higgs_rest(
+            context,
+            slots["antiquark"],
+        )
+
+        if not (
+            math.isfinite(phi_q)
+            and math.isfinite(phi_qbar)
+        ):
+            return NAN
+
+        return angles.delta_phi(phi_q, phi_qbar)
+
+    if name == "O_lD_v2":
+        phi_down = _slot_phi_higgs_rest(
+            context,
+            slots["down"],
+        )
+
+        phi_lepton = context.resolve("lepton_phi")
+
+        charge = to_float(
+            context.row.get("lepton_charge")
+        )
+
+        if not (
+            math.isfinite(phi_down)
+            and math.isfinite(phi_lepton)
+            and math.isfinite(charge)
+        ):
+            return NAN
+
+        # q_l > 0:
+        # top side     = l+
+        # antitop side = D from W-
+        if charge > 0.0:
+            return angles.delta_phi(
+                phi_lepton,
+                phi_down,
+            )
+
+        # q_l < 0:
+        # top side     = anti-D from W+
+        # antitop side = l-
+        if charge < 0.0:
+            return angles.delta_phi(
+                phi_down,
+                phi_lepton,
+            )
+
+    return NAN
 
 _EXACT_REGISTRY: dict[str, FeatureSpec] = {}
 for _name in ORIENTATION_FIELDS[:-1]:
@@ -576,6 +737,8 @@ for _name in tuple(
 ):
     _EXACT_REGISTRY[_name] = FeatureSpec(_calc_oriented_weaver)
 
+for _name in ("O_W_v2", "O_lD_v2"):
+    _EXACT_REGISTRY[_name] = FeatureSpec(_calc_angle_v2)
 _PREFIX_REGISTRY: tuple[tuple[str, Callable[[FeatureContext, str], object]], ...] = (
     tuple((f"{name}_", _calc_object_feature) for name in CANONICAL_OBJECTS)
     + (

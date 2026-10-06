@@ -8,8 +8,8 @@ from typing import Mapping
 
 LIGHT_QUARK_KEYS = ("mc_u", "mc_d", "mc_s", "mc_c")
 LIGHT_ANTIQUARK_KEYS = ("mc_ubar", "mc_dbar", "mc_sbar", "mc_cbar")
-DOWN_TYPE_KEYS={"mc_d","mc_dbar","mc_s","mc_sbar"}
-UP_TYPE_KEYS={"mc_u","mc_ubar","mc_c","mc_cbar"}
+DOWN_TYPE_KEYS=("mc_d","mc_dbar","mc_s","mc_sbar")
+UP_TYPE_KEYS=("mc_u","mc_ubar","mc_c","mc_cbar")
 
 
 def light_charge_scores(scores: Mapping[str, float]) -> dict[str, float]:
