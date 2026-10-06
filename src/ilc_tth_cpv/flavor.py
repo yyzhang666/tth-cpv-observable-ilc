@@ -253,3 +253,20 @@ def semileptonic_down_type_order(
         return "wjet_antiquark", "lepton"
 
     return None
+
+def w_type_assignment_likelihood(
+    down_scores: Mapping[str, float],
+    up_scores: Mapping[str, float],
+) -> float:
+    """
+    Return the up/down-type likelihood for an already chosen W-daughter
+    assignment.
+
+    The caller is responsible for deciding which jet is the down-type
+    candidate and which is the up-type candidate.
+    """
+
+    down = down_type_scores(down_scores)
+    up = down_type_scores(up_scores)
+
+    return down["p_down"] * up["p_up"]

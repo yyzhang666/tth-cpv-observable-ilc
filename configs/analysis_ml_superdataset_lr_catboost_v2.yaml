@@ -230,10 +230,77 @@ features:
       auxiliary:
         - lepton_charge
         - w_assignment_likelihood_selected
+        - w_type_assignment_likelihood_selected
         - final_selection_score
         - m_H
         - m_ttbar
         - down_jet_mass
+    
+    lD_auxiliary_wbjets_lepton_separate_score:
+      objects:
+        lepton:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E 
+          - pt
+          - theta
+          - phi
+
+        top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        anti_top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 1
+        wjet_quark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 2
+        wjet_antiquark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Top-decay b object
+        top_b:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # antitop-decay bbar object
+        antitop_bbar:
+          - E
+          - pt
+          - theta
+          - phi
+
+      auxiliary:
+        - lepton_charge
+        - w_assignment_likelihood_selected
+        - w_type_assignment_likelihood_selected
+        - final_fit_score
+        - final_flavor_score
+        - m_H
+        - m_ttbar
+        - down_jet_mass
+
 
 
 training:

@@ -35,6 +35,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     augment.add_argument("--input-pattern", required=True)
     augment.add_argument("--chunks", required=True)
     augment.add_argument("--output", required=True)
+    augment.add_argument("--component", choices=("interference", "sm"), default="interference")
     augment.add_argument("--compat-policy", choices=COMPAT_POLICIES, default="canonical")
     args = parser.parse_args(argv)
     if args.command == "baseline" and args.max_events < 0:
@@ -74,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
             chunks=args.chunk_ids,
             output=Path(args.output),
             compat_policy=args.compat_policy,
+            component=args.component,
         )
     metadata = json.loads(output.with_suffix(".meta.json").read_text())
     n_rows = metadata.get("n_exported", metadata.get("n_output_rows"))

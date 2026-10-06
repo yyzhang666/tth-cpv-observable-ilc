@@ -83,12 +83,14 @@ def _is_numeric_zero(value: object) -> bool:
     return not isinstance(value, bool) and isinstance(value, (int, float)) and value == 0
 
 
-def _validate_source_metadata(metadata: Mapping[str, object], csv_path: Path, chunk: int) -> None:
+def _validate_source_metadata(
+    metadata: Mapping[str, object], csv_path: Path, chunk: int, component: str
+) -> None:
     expected = {
         "schema_version": "reco_baseline_v3",
         "frame": "lab_raw",
         "level": "reco",
-        "component": "interference",
+        "component": component,
         "status": "baseline_export",
         "n_columns": 148,
         "table": csv_path.name,
@@ -216,6 +218,7 @@ def augment_feature_table(
     chunks: Sequence[int],
     output: Path,
     compat_policy: str = "canonical",
+    component: str = "interference",
 ) -> Path:
     """Write one compact feature table from ordered v3 baseline chunks."""
     if input_pattern.count("{chunk}") != 1:
@@ -224,6 +227,8 @@ def augment_feature_table(
         raise ValueError("--output must have suffix .csv")
     if compat_policy not in COMPAT_POLICIES:
         raise ValueError(f"unknown compatibility policy {compat_policy!r}")
+    if component not in {"interference", "sm"}:
+        raise ValueError(f"unsupported component {component!r}")
     ordered_chunks = sorted(set(chunks))
     if not ordered_chunks or any(isinstance(chunk, bool) or not isinstance(chunk, int) or chunk <= 0 for chunk in ordered_chunks):
         raise ValueError("chunks must contain positive integers")
@@ -289,7 +294,7 @@ def augment_feature_table(
                 metadata = json.loads(source_metadata.read_text())
                 if not isinstance(metadata, dict):
                     raise ValueError(f"source metadata must be an object: {source_metadata}")
-                _validate_source_metadata(metadata, source_csv, chunk)
+                _validate_source_metadata(metadata, source_csv, chunk, component)
                 source_csv_hash = _sha256(source_csv)
                 source_metadata_hash = _sha256(source_metadata)
 
@@ -375,7 +380,7 @@ def augment_feature_table(
             "feature_list": features,
             "input_pattern": input_pattern,
             "chunks": ordered_chunks,
-            "component": "interference",
+            "component": component,
             "level": "reco",
             "input_frame": "lab_raw",
             "feature_frame": "higgs_rest",

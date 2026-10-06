@@ -76,7 +76,13 @@ def _row(event_id: int, chunk: int) -> dict[str, object]:
     return row
 
 
-def _write_source(directory: Path, chunk: int, rows: list[dict[str, object]]) -> Path:
+def _write_source(
+    directory: Path,
+    chunk: int,
+    rows: list[dict[str, object]],
+    *,
+    component: str = "interference",
+) -> Path:
     table = directory / f"baseline_chunk{chunk}.csv"
     with table.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=RECO_BASELINE_COLUMNS)
@@ -86,7 +92,7 @@ def _write_source(directory: Path, chunk: int, rows: list[dict[str, object]]) ->
         "schema_version": "reco_baseline_v3",
         "frame": "lab_raw",
         "level": "reco",
-        "component": "interference",
+        "component": component,
         "status": "baseline_export",
         "max_events": 0,
         "n_columns": 148,
@@ -275,6 +281,22 @@ def test_metadata_contract_failure_is_atomic(tmp_path):
         )
     assert not output.exists()
     assert not output.with_suffix(".meta.json").exists()
+
+
+def test_sm_component_is_validated_and_recorded(tmp_path):
+    _write_source(tmp_path, 1, [_row(711, 1)], component="sm")
+    output = tmp_path / "sm.csv"
+    augment_feature_table(
+        {"features": {"sets": {"tiny": {"auxiliary": ["m_H"]}}}},
+        config_path=_config_file(tmp_path),
+        feature_set="tiny",
+        input_pattern=str(tmp_path / "baseline_chunk{chunk}.csv"),
+        chunks=[1],
+        output=output,
+        component="sm",
+    )
+    metadata = json.loads(output.with_suffix(".meta.json").read_text())
+    assert metadata["component"] == "sm"
 
 
 def test_legacy_policy_replaces_pt_invalidates_whole_block_and_preserves_aux(

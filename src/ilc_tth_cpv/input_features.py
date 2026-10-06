@@ -371,6 +371,42 @@ def _calc_selected_likelihood(context: FeatureContext, _name: str) -> float:
     return NAN
 
 
+def _calc_selected_type_likelihood(
+    context: FeatureContext,
+    _name: str,
+) -> float:
+
+    assignment = context._charge_assignment()
+
+    down_slot = assignment.get("down_slot")
+    wq_slot = assignment.get("wq_slot")
+    wqbar_slot = assignment.get("wqbar_slot")
+
+    if down_slot is None or wq_slot is None or wqbar_slot is None:
+        return NAN
+
+    if down_slot == wq_slot:
+        up_slot = wqbar_slot
+    elif down_slot == wqbar_slot:
+        up_slot = wq_slot
+    else:
+        return NAN
+
+    down_scores = context._weaver(down_slot)
+    up_scores = context._weaver(up_slot)
+
+    if down_scores is None or up_scores is None:
+        return NAN
+
+    try:
+        return flavor.w_type_assignment_likelihood(
+            down_scores,
+            up_scores,
+        )
+    except ValueError:
+        return NAN
+
+
 def _calc_charge(context: FeatureContext, name: str) -> object:
     assignment = context._charge_assignment()
     charge = to_float(assignment.get("charge"))
@@ -714,6 +750,7 @@ _EXACT_REGISTRY: dict[str, FeatureSpec] = {}
 for _name in ORIENTATION_FIELDS[:-1]:
     _EXACT_REGISTRY[_name] = FeatureSpec(_calc_orientation)
 _EXACT_REGISTRY["w_assignment_likelihood_selected"] = FeatureSpec(_calc_selected_likelihood)
+_EXACT_REGISTRY["w_type_assignment_likelihood_selected"] = FeatureSpec(_calc_selected_type_likelihood)
 for _name in CHARGE_FIELDS:
     _EXACT_REGISTRY[_name] = FeatureSpec(_calc_charge)
 for _name in ("lepton_px", "lepton_py", "lepton_pz"):
@@ -746,6 +783,7 @@ _PREFIX_REGISTRY: tuple[tuple[str, Callable[[FeatureContext, str], object]], ...
         ("second_w_daughter_", _calc_second_w_daughter),
     )
 )
+
 
 
 def resolve_feature_value(
