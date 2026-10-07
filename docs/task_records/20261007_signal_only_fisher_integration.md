@@ -126,3 +126,17 @@ None.
 - After correction, `bash -n`, `--help`, a fresh separate-score `--dry-run`
   with before/after no-directory checks, command-sequence checks, and targeted
   `git diff --check` all passed.
+
+## Publication completion
+
+- NAF commit: `1653cee78afb053e067c06799bb9774f0a4db906`.
+- Parent: `e748f617b46602712c714bfd80083e9a9735773d`.
+- Commit message: `Unify observable feature workflow`.
+- The NAF HTTPS push failed because credentials were unavailable. The
+  authenticated Mac clone fetched the exact NAF branch, verified that GitHub
+  `observable_workflow` at `a16f06c` was an ancestor, and non-force pushed the
+  exact chain `a16f06c..1653cee`.
+- Final `origin/observable_workflow` was verified at
+  `1653cee78afb053e067c06799bb9774f0a4db906`.
+- Current active `catboost_info` files and the user's `lnu` YAML working-tree
+  changes were not included in commit `1653cee`.
