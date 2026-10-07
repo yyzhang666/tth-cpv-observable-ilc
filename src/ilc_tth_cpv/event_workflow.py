@@ -93,11 +93,11 @@ def event_key(row: dict[str, str], role: str) -> tuple[str, ...]:
 def read_and_select(
     path: Path,
     role: str,
-    q_sel_threshold: float,
+    q_sel_threshold: Optional[float],
     angle: Optional[str],
     score_column: Optional[str],
 ) -> SelectedEvents:
-    """Read one role table, apply q_sel per event, and retain finite values."""
+    """Read one role table, optionally apply q_sel, and retain finite values."""
     values: dict[str, list[float]] = {flavor: [] for flavor in FLAVORS}
     weights: dict[str, list[float]] = {flavor: [] for flavor in FLAVORS}
     seen: set[tuple[str, ...]] = set()
@@ -112,13 +112,14 @@ def read_and_select(
             if key in seen:
                 raise ValueError(f"duplicate {role} event key {key} in {path}")
             seen.add(key)
-            try:
-                q_sel = finite_value(row, "q_sel")
-            except ValueError:
-                invalid_q_sel += 1
-                continue
-            if not strict_q_sel_pass(q_sel, q_sel_threshold):
-                continue
+            if q_sel_threshold is not None:
+                try:
+                    q_sel = finite_value(row, "q_sel")
+                except ValueError:
+                    invalid_q_sel += 1
+                    continue
+                if not strict_q_sel_pass(q_sel, q_sel_threshold):
+                    continue
             passed += 1
             try:
                 flavor = row["lepton_flavor"]
@@ -184,7 +185,7 @@ def histogram(
 
 
 def build_fisher(
-    background: SelectedEvents,
+    background: Optional[SelectedEvents],
     sm: SelectedEvents,
     cpv: SelectedEvents,
     edges: np.ndarray,
@@ -192,10 +193,18 @@ def build_fisher(
     bin_rows: list[dict[str, Any]] = []
     flavor_summary: dict[str, Any] = {}
     for flavor in FLAVORS:
-        background_hist, background_entries = histogram(background, flavor, edges)
+        if background is None:
+            background_hist = np.zeros(len(edges) - 1, dtype=np.float64)
+            background_entries = np.zeros(len(edges) - 1, dtype=np.int64)
+        else:
+            background_hist, background_entries = histogram(background, flavor, edges)
         sm_hist, sm_entries = histogram(sm, flavor, edges)
         cpv_hist, cpv_entries = histogram(cpv, flavor, edges)
-        result = fisher_information(sm_hist, cpv_hist, background=background_hist)
+        result = fisher_information(
+            sm_hist,
+            cpv_hist,
+            background=None if background is None else background_hist,
+        )
         flavor_summary[flavor] = {
             "fisher": float(result["fisher_absolute"]),
             "sigma_c": float(result["sigma_c"]),
@@ -249,6 +258,7 @@ def make_plots(
     rows: list[dict[str, Any]],
     summary: dict[str, Any],
     xlabel: str,
+    signal_only: bool = False,
 ) -> list[Path]:
     import matplotlib
 
@@ -271,12 +281,13 @@ def make_plots(
         axes[0, column].step(
             edges, np.r_[sm_hist, sm_hist[-1]], where="post", label=r"SM $S_0$"
         )
-        axes[0, column].step(
-            edges,
-            np.r_[background_hist, background_hist[-1]],
-            where="post",
-            label="background",
-        )
+        if not signal_only:
+            axes[0, column].step(
+                edges,
+                np.r_[background_hist, background_hist[-1]],
+                where="post",
+                label="background",
+            )
         axes[0, column].set_title(flavor)
         axes[0, column].grid(alpha=0.22)
         axes[1, column].step(
@@ -289,7 +300,9 @@ def make_plots(
     axes[1, 0].set_ylabel(r"signed CPV $S_1$ at $8\,\mathrm{ab}^{-1}$")
     axes[0, 0].legend(frameon=False)
     fig.suptitle(
-        "This tests CP sensitivity after strict event selection using reco-level eLpR tables.",
+        "Signal-only CP sensitivity using reco-level eLpR tables."
+        if signal_only
+        else "This tests CP sensitivity after strict event selection using reco-level eLpR tables.",
         fontsize=10,
     )
     fig.tight_layout()
@@ -309,7 +322,9 @@ def make_plots(
         axis.grid(axis="y", alpha=0.22)
     axes[0].set_ylabel("per-bin Fisher information")
     fig.suptitle(
-        "Per-bin Fisher: signed CPV derivative over SM plus background denominator.",
+        "Per-bin Fisher: signed CPV derivative over SM denominator."
+        if signal_only
+        else "Per-bin Fisher: signed CPV derivative over SM plus background denominator.",
         fontsize=10,
     )
     fig.tight_layout()
@@ -326,6 +341,11 @@ def parser() -> argparse.ArgumentParser:
     choice.add_argument("--ml-score-column")
     choice.add_argument("--angle", choices=available_csv_angles())
     result.add_argument("--list-observables", action="store_true")
+    result.add_argument(
+        "--signal-only",
+        action="store_true",
+        help="use SM and CPV only, with no q_sel selection or background",
+    )
     result.add_argument("--background-csv", type=Path, default=DEFAULT_BACKGROUND)
     result.add_argument("--sm-csv", type=Path, default=DEFAULT_SM)
     result.add_argument("--cpv-csv", type=Path, default=DEFAULT_CPV)
@@ -357,13 +377,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         raise SystemExit("choose exactly one of --ml-model, --ml-score-column, or --angle")
     if args.bins <= 0:
         raise SystemExit("--bins must be positive")
-    if not math.isfinite(args.q_sel_threshold):
-        raise SystemExit("--q-sel-threshold must be finite")
-    if args.q_sel_threshold < args.background_q_sel_floor:
-        raise SystemExit(
-            f"requested q_sel>{args.q_sel_threshold} is below the background CSV floor "
-            f"{args.background_q_sel_floor}; supply a background CSV complete to the lower threshold"
-        )
+    if not args.signal_only:
+        if not math.isfinite(args.q_sel_threshold):
+            raise SystemExit("--q-sel-threshold must be finite")
+        if args.q_sel_threshold < args.background_q_sel_floor:
+            raise SystemExit(
+                f"requested q_sel>{args.q_sel_threshold} is below the background CSV floor "
+                f"{args.background_q_sel_floor}; supply a background CSV complete to the lower threshold"
+            )
 
     score_column = args.ml_score_column
     observable_name = args.angle
@@ -385,28 +406,46 @@ def main(argv: Optional[List[str]] = None) -> int:
         raise SystemExit("invalid --range")
     edges = np.linspace(low, high, args.bins + 1)
 
-    background = read_and_select(
-        args.background_csv, "background", args.q_sel_threshold, args.angle, score_column
+    q_sel_threshold = None if args.signal_only else args.q_sel_threshold
+    background = (
+        None
+        if args.signal_only
+        else read_and_select(
+            args.background_csv,
+            "background",
+            args.q_sel_threshold,
+            args.angle,
+            score_column,
+        )
     )
-    sm = read_and_select(args.sm_csv, "sm", args.q_sel_threshold, args.angle, score_column)
-    cpv = read_and_select(args.cpv_csv, "cpv", args.q_sel_threshold, args.angle, score_column)
+    sm = read_and_select(args.sm_csv, "sm", q_sel_threshold, args.angle, score_column)
+    cpv = read_and_select(args.cpv_csv, "cpv", q_sel_threshold, args.angle, score_column)
     bin_rows, fisher_summary = build_fisher(background, sm, cpv, edges)
 
     threshold_tag = str(args.q_sel_threshold).replace(".", "p")
-    output_dir = args.output_dir or (
-        REPO_ROOT / "outputs/event_csv_fisher" / f"{observable_name}_qsel_gt_{threshold_tag}"
+    default_output_name = (
+        f"{observable_name}_signal_only"
+        if args.signal_only
+        else f"{observable_name}_qsel_gt_{threshold_tag}"
     )
+    output_dir = args.output_dir or REPO_ROOT / "outputs/event_csv_fisher" / default_output_name
     output_dir.mkdir(parents=True, exist_ok=True)
     bins_path = output_dir / "fisher_bins.csv"
     write_bins(bins_path, bin_rows)
     plot_paths: list[Path] = []
     if args.plot:
         xlabel = f"{args.angle} [rad]" if args.angle else observable_name
-        plot_paths = make_plots(output_dir, bin_rows, fisher_summary, xlabel)
+        plot_paths = make_plots(
+            output_dir, bin_rows, fisher_summary, xlabel, signal_only=args.signal_only
+        )
 
     payload: dict[str, Any] = {
         "created_utc": datetime.now(timezone.utc).isoformat(),
-        "status": "eLpR test-covered-background diagnostic",
+        "status": (
+            "eLpR signal-only diagnostic"
+            if args.signal_only
+            else "eLpR test-covered-background diagnostic"
+        ),
         "observable": {
             "kind": "angle" if args.angle else "ml_score",
             "name": observable_name,
@@ -414,33 +453,31 @@ def main(argv: Optional[List[str]] = None) -> int:
             "bins": args.bins,
             "range": [low, high],
         },
-        "selection": {
-            "expression": f"q_sel > {args.q_sel_threshold}",
-            "strict_greater_than": True,
-            "background_q_sel_floor": args.background_q_sel_floor,
-        },
+        "selection": (
+            {"expression": "none (signal-only)", "strict_greater_than": False}
+            if args.signal_only
+            else {
+                "expression": f"q_sel > {args.q_sel_threshold}",
+                "strict_greater_than": True,
+                "background_q_sel_floor": args.background_q_sel_floor,
+            }
+        ),
         "weights": "weight_8ab from CSV; no additional luminosity scaling",
-        "fisher": "sum over e/mu and bins of S1^2/(S0+B)",
-        "inputs": {
-            "background": str(args.background_csv),
-            "sm": str(args.sm_csv),
-            "cpv": str(args.cpv_csv),
-        },
+        "fisher": (
+            "sum over e/mu and bins of S1^2/S0"
+            if args.signal_only
+            else "sum over e/mu and bins of S1^2/(S0+B)"
+        ),
+        "inputs": {"sm": str(args.sm_csv), "cpv": str(args.cpv_csv)},
         "input_files": {
-            "background": file_record(args.background_csv),
             "sm": file_record(args.sm_csv),
             "cpv": file_record(args.cpv_csv),
         },
         "input_sha256": {
-            "background": sha256_file(args.background_csv),
             "sm": sha256_file(args.sm_csv),
             "cpv": sha256_file(args.cpv_csv),
         },
-        "event_accounting": {
-            "background": background.accounting(),
-            "sm": sm.accounting(),
-            "cpv": cpv.accounting(),
-        },
+        "event_accounting": {"sm": sm.accounting(), "cpv": cpv.accounting()},
         "summary": fisher_summary,
         "runtime": runtime_state(("numpy", "matplotlib")),
         "git": git_state(REPO_ROOT),
@@ -453,17 +490,30 @@ def main(argv: Optional[List[str]] = None) -> int:
             "plots": [file_record(path) for path in plot_paths],
         },
     }
+    if background is not None:
+        payload["inputs"]["background"] = str(args.background_csv)
+        payload["input_files"]["background"] = file_record(args.background_csv)
+        payload["input_sha256"]["background"] = sha256_file(args.background_csv)
+        payload["event_accounting"]["background"] = background.accounting()
     summary_path = output_dir / "fisher_summary.json"
     payload["outputs"]["summary"] = str(summary_path)
     atomic_write_json(summary_path, payload)
 
-    for flavor in FLAVORS:
-        print(
-            f"{flavor:8s} I={fisher_summary[flavor]['fisher']:.12g} "
-            f"S0={fisher_summary[flavor]['S0_8ab']:.6g} "
-            f"S1={fisher_summary[flavor]['S1_8ab_signed']:+.6g} "
-            f"B={fisher_summary[flavor]['B_8ab']:.6g}"
-        )
-    print(f"combined I={fisher_summary['combined_likelihood']['fisher']:.12g}")
+    if args.signal_only:
+        for flavor in FLAVORS:
+            print(f"{flavor}: Fisher = {fisher_summary[flavor]['fisher']:.12g}")
+        combined = fisher_summary["combined_likelihood"]
+        print(f"combined signal-only Fisher = {combined['fisher']:.12g}")
+        print(f"sigma_c = {combined['sigma_c']:.12g}")
+        print(f"c95 = {combined['c95']:.12g}")
+    else:
+        for flavor in FLAVORS:
+            print(
+                f"{flavor:8s} I={fisher_summary[flavor]['fisher']:.12g} "
+                f"S0={fisher_summary[flavor]['S0_8ab']:.6g} "
+                f"S1={fisher_summary[flavor]['S1_8ab_signed']:+.6g} "
+                f"B={fisher_summary[flavor]['B_8ab']:.6g}"
+            )
+        print(f"combined I={fisher_summary['combined_likelihood']['fisher']:.12g}")
     print(f"outputs: {output_dir}")
     return 0
