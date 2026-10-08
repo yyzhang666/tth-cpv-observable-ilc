@@ -33,7 +33,7 @@ kinfit:
     accepted: 1
     fit_success: 1
   selected_pairs:
-    O_W: [W1, W2]              # exporter applies conditional Weaver q/qbar orientation
+    O_jj: [W1, W2]             # exporter applies conditional Weaver q/qbar orientation
     O_b: [b_had, b_lep]        # selected top-side b slots
 
 observable:
@@ -45,7 +45,7 @@ observable:
   object_b: lepton
   basis: lab_axes                # production_plane is reserved for Ma2018 sign observables
   frames: [lab, higgs_rest, ttbar_rest]
-  default_frame: higgs_rest      # strongest O_W frame in the theory study
+  default_frame: higgs_rest      # strongest O_jj frame in the theory study
   n_bins: 20
   range: [-1.0, 1.0]
 
@@ -73,9 +73,9 @@ features:
           - theta
           - phi
 
-      auxiliary: 
+      auxiliary:
         - down_jet_mass
-      
+
 
     lD_auxiliary:
       objects:
@@ -100,7 +100,7 @@ features:
 
         # Fitted neutrino
         neutrino:
-          - E 
+          - E
           - pt
           - theta
           - phi
@@ -132,7 +132,7 @@ features:
 
         # Fitted neutrino
         neutrino:
-          - E 
+          - E
           - pt
           - theta
           - phi
@@ -182,7 +182,7 @@ features:
 
         # Fitted neutrino
         neutrino:
-          - E 
+          - E
           - pt
           - theta
           - phi
@@ -235,7 +235,7 @@ features:
         - m_H
         - m_ttbar
         - down_jet_mass
-    
+
     lD_auxiliary_wbjets_lepton_separate_score:
       objects:
         lepton:
@@ -246,7 +246,7 @@ features:
 
         # Fitted neutrino
         neutrino:
-          - E 
+          - E
           - pt
           - theta
           - phi
@@ -301,6 +301,327 @@ features:
         - m_ttbar
         - down_jet_mass
 
+    lD_lnu_auxiliary_wbjets_lepton_separate_score:
+      objects:
+        lepton:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E
+          - pt
+          - theta
+          - phi
+
+        lnu_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        lnu_antifermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        anti_top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 1
+        wjet_quark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 2
+        wjet_antiquark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Top-decay b object
+        top_b:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # antitop-decay bbar object
+        antitop_bbar:
+          - E
+          - pt
+          - theta
+          - phi
+
+      auxiliary:
+        - lepton_charge
+        - w_assignment_likelihood_selected
+        - w_type_assignment_likelihood_selected
+        - final_fit_score
+        - final_flavor_score
+        - m_H
+        - m_ttbar
+        - down_jet_mass
+    lD_lnu_auxiliary_wbjets_lepton:
+      objects:
+        lepton:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E
+          - pt
+          - theta
+          - phi
+
+        lnu_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        lnu_antifermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        anti_top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 1
+        wjet_quark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 2
+        wjet_antiquark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Top-decay b object
+        top_b:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # antitop-decay bbar object
+        antitop_bbar:
+          - E
+          - pt
+          - theta
+          - phi
+
+      auxiliary:
+        - lepton_charge
+        - w_assignment_likelihood_selected
+        - w_type_assignment_likelihood_selected
+        - final_selection_score
+        - m_H
+        - m_ttbar
+        - down_jet_mass
+        - up_jet_mass
+
+    lD_lnu_auxiliary_wbjets_lepton_top:
+      objects:
+        lepton:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E
+          - pt
+          - theta
+          - phi
+
+        lnu_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        lnu_antifermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        anti_top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 1
+        wjet_quark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 2
+        wjet_antiquark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Top-decay b object
+        top_b:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # antitop-decay bbar object
+        antitop_bbar:
+          - E
+          - pt
+          - theta
+          - phi
+
+        top:
+          - E
+          - pt
+          - theta
+          - phi
+
+        antitop:
+          - E
+          - pt
+          - theta
+          - phi
+
+      auxiliary:
+        - lepton_charge
+        - w_assignment_likelihood_selected
+        - w_type_assignment_likelihood_selected
+        - final_selection_score
+        - m_H
+        - m_ttbar
+        - down_jet_mass
+        - up_jet_mass
+
+    lD_lnu_wbjets_lepton_top:
+      objects:
+        lepton:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E
+          - pt
+          - theta
+          - phi
+
+        lnu_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        lnu_antifermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        anti_top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 1
+        wjet_quark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 2
+        wjet_antiquark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Top-decay b object
+        top_b:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # antitop-decay bbar object
+        antitop_bbar:
+          - E
+          - pt
+          - theta
+          - phi
+
+        top:
+          - E
+          - pt
+          - theta
+          - phi
+
+        antitop:
+          - E
+          - pt
+          - theta
+          - phi
+
 
 
 training:
@@ -323,9 +644,9 @@ model:
   type: catboost               # ships with the key4hep cvmfs stack; catboost optional
   params:
     iterations: 1000            # try 150
-    max_depth: 7               # try 3, 4, 5...
-    learning_rate: 0.05        # try 0.05~0.1 
-    random_seed: 42 
+    max_depth: 10               # try 3, 4, 5...
+    learning_rate: 0.05        # try 0.05~0.1
+    random_seed: 42
     early_stopping_rounds: 50
   class_order: [-1, 1]        # [interference<0, interference>0]; frozen
 

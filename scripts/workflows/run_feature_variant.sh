@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 DEFAULT_ANALYSIS_ROOT="/data/dust/user/zhangyuy/analysis/tth/yuyang_tth_observable"
-DEFAULT_CONFIG="${REPO_ROOT}/configs/analysis_ml_superdataset_lr_catboost_v2.yaml"
+DEFAULT_CONFIG="${REPO_ROOT}/configs/analysis_ml_superdataset_lr_catboost_v3.yaml"
 DEFAULT_CHUNKS="1-79"
 DEFAULT_MODEL_TAG="catboost_d7_i1000_lr005_es50"
 
@@ -23,7 +23,7 @@ Required:
   --score-column NAME    Output score column, for example q_CPV_separate_score_v0
 
 Options:
-  --config PATH          Analysis YAML (default: repository v2 CatBoost config)
+  --config PATH          Analysis YAML (default: repository v3 CatBoost config)
   --analysis-root PATH   Root containing outputs/ (default: current zhangyuy NAF area)
   --chunks SPEC          Baseline chunks passed to both augment jobs (default: 1-79)
   --model-tag NAME       Model subdirectory tag (default: catboost_d7_i1000_lr005_es50)

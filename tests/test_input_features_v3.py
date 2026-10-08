@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from ilc_tth_cpv import angles, frames
+from ilc_tth_cpv import angles, frames, input_features
 from ilc_tth_cpv.input_features import (
     FeatureContext,
     materialize_v2_canonical_fields,
@@ -103,11 +103,147 @@ def test_charge_mapping_higgs_rest_objects_aliases_and_angles(charge, top_b_inde
     assert derived["higgs_pt"] == pytest.approx(0.0, abs=1e-12)
     assert derived["m_H"] == pytest.approx(124.25)
     assert derived["higgs_mass"] != pytest.approx(derived["m_H"])
-    assert derived["O_W"] == pytest.approx(angles.delta_phi(derived["wjet_quark_phi"], derived["wjet_antiquark_phi"]))
+    assert derived["O_jj"] == pytest.approx(angles.delta_phi(derived["wjet_quark_phi"], derived["wjet_antiquark_phi"]))
     assert derived["O_lD"] == pytest.approx(angles.delta_phi(derived["top_side_fermion_phi"], derived["anti_top_side_fermion_phi"]))
     assert derived["O_b"] == pytest.approx(angles.delta_phi(derived["top_b_phi"], derived["antitop_bbar_phi"]))
     assert derived["O_top"] == pytest.approx(angles.delta_phi(derived["top_phi"], derived["antitop_phi"]))
     assert derived["O_lnu"] == pytest.approx(angles.delta_phi(derived[expected_lnu_order[0]], derived[expected_lnu_order[1]]))
+
+
+EXPECTED_ANGLE_OPERANDS = {
+    -1: {
+        "O_lnu": ("lepton_phi", "neutrino_phi"),
+        "O_jj": ("wjet_quark_phi", "wjet_antiquark_phi"),
+        "O_lD": ("wjet_antiquark_phi", "lepton_phi"),
+        "O_lU": ("lepton_phi", "wjet_quark_phi"),
+        "O_nuD": ("wjet_antiquark_phi", "neutrino_phi"),
+        "O_nuU": ("wjet_quark_phi", "neutrino_phi"),
+        "O_b": ("top_b_phi", "antitop_bbar_phi"),
+        "O_lb": ("lepton_phi", "top_b_phi"),
+        "O_lbbar": ("lepton_phi", "antitop_bbar_phi"),
+        "O_nub": ("top_b_phi", "neutrino_phi"),
+        "O_nubbar": ("antitop_bbar_phi", "neutrino_phi"),
+        "O_Db": ("top_b_phi", "wjet_antiquark_phi"),
+        "O_Dbbar": ("antitop_bbar_phi", "wjet_antiquark_phi"),
+        "O_Ub": ("wjet_quark_phi", "top_b_phi"),
+        "O_Ubbar": ("wjet_quark_phi", "antitop_bbar_phi"),
+    },
+    1: {
+        "O_lnu": ("neutrino_phi", "lepton_phi"),
+        "O_jj": ("wjet_quark_phi", "wjet_antiquark_phi"),
+        "O_lD": ("lepton_phi", "wjet_quark_phi"),
+        "O_lU": ("wjet_antiquark_phi", "lepton_phi"),
+        "O_nuD": ("neutrino_phi", "wjet_quark_phi"),
+        "O_nuU": ("neutrino_phi", "wjet_antiquark_phi"),
+        "O_b": ("top_b_phi", "antitop_bbar_phi"),
+        "O_lb": ("top_b_phi", "lepton_phi"),
+        "O_lbbar": ("antitop_bbar_phi", "lepton_phi"),
+        "O_nub": ("neutrino_phi", "top_b_phi"),
+        "O_nubbar": ("neutrino_phi", "antitop_bbar_phi"),
+        "O_Db": ("wjet_quark_phi", "top_b_phi"),
+        "O_Dbbar": ("wjet_quark_phi", "antitop_bbar_phi"),
+        "O_Ub": ("top_b_phi", "wjet_antiquark_phi"),
+        "O_Ubbar": ("antitop_bbar_phi", "wjet_antiquark_phi"),
+    },
+}
+
+
+@pytest.mark.parametrize("charge", (-1, 1))
+def test_all_15_angles_use_exact_charge_ordered_operands(monkeypatch, charge):
+    context = FeatureContext(_baseline_row(charge))
+    expected_values = {
+        name: tuple(context.resolve(feature) for feature in pair)
+        for name, pair in EXPECTED_ANGLE_OPERANDS[charge].items()
+    }
+    for name, pair in expected_values.items():
+        assert context.resolve(name) == pytest.approx(angles.delta_phi(*pair))
+
+    context = FeatureContext(_baseline_row(charge))
+    observed = []
+
+    def record_delta(first, second):
+        observed.append((first, second))
+        return float(len(observed))
+
+    monkeypatch.setattr(input_features.angles, "delta_phi", record_delta)
+    for index, name in enumerate(EXPECTED_ANGLE_OPERANDS[charge], start=1):
+        assert context.resolve(name) == float(index)
+        assert observed[-1] == pytest.approx(expected_values[name])
+
+
+@pytest.mark.parametrize("charge", (-1, 1))
+def test_O_lD_preserves_historical_top_minus_antitop_sign(charge):
+    context = FeatureContext(_baseline_row(charge))
+    assert context.resolve("O_lD") == pytest.approx(
+        angles.delta_phi(
+            context.resolve("top_side_fermion_phi"),
+            context.resolve("anti_top_side_fermion_phi"),
+        )
+    )
+
+
+@pytest.mark.parametrize("charge", (0, float("nan"), None))
+def test_invalid_charge_only_allows_O_jj(charge):
+    row = _baseline_row()
+    if charge is None:
+        row.pop("lepton_charge")
+    else:
+        row["lepton_charge"] = charge
+    context = FeatureContext(row)
+    assert context.resolve("O_jj") == pytest.approx(
+        angles.delta_phi(
+            context.resolve("wjet_quark_phi"),
+            context.resolve("wjet_antiquark_phi"),
+        )
+    )
+    charge_dependent = tuple(
+        name for name in EXPECTED_ANGLE_OPERANDS[-1] if name != "O_jj"
+    )
+    assert all(math.isnan(context.resolve(name)) for name in charge_dependent)
+
+
+def test_O_jj_replaces_base_O_W_but_direct_and_v2_paths_remain():
+    row = _baseline_row()
+    derived = materialize_v2_canonical_fields(row)
+    assert "O_jj" in derived
+    assert "O_W" not in derived
+    assert "O_jj" in input_features._EXACT_REGISTRY
+    assert "O_W" not in input_features._EXACT_REGISTRY
+    assert math.isnan(resolve_feature_value(row, "O_W"))
+    row["O_W"] = 0.123456789
+    row["O_jj"] = -0.25
+    assert resolve_feature_value(row, "O_W") == pytest.approx(0.123456789)
+    assert resolve_feature_value(row, "O_jj") == pytest.approx(-0.25)
+    assert math.isfinite(resolve_feature_value(row, "O_W_v2"))
+    assert math.isfinite(resolve_feature_value(row, "O_lD_v2"))
+
+
+@pytest.mark.parametrize(
+    ("charge", "expected_fermion", "expected_antifermion"),
+    ((-1, "lepton", "neutrino"), (1, "neutrino", "lepton")),
+)
+def test_lnu_fermion_and_lnu_antifermion_follow_charge_mapping(
+    charge, expected_fermion, expected_antifermion
+):
+    context = FeatureContext(_baseline_row(charge))
+    for variable in ("E", "pt", "theta", "phi"):
+        assert context.resolve(f"lnu_fermion_{variable}") == pytest.approx(
+            context.resolve(f"{expected_fermion}_{variable}")
+        )
+        assert context.resolve(f"lnu_antifermion_{variable}") == pytest.approx(
+            context.resolve(f"{expected_antifermion}_{variable}")
+        )
+
+
+@pytest.mark.parametrize("charge", (0, float("nan")))
+def test_lnu_fermion_and_lnu_antifermion_invalid_charge_is_nan(charge):
+    names = tuple(
+        f"{alias}_{variable}"
+        for alias in ("lnu_fermion", "lnu_antifermion")
+        for variable in ("E", "pt", "theta", "phi")
+    )
+    values = resolve_feature_values(_baseline_row(charge), names)
+    assert all(math.isnan(value) for value in values.values())
 
 
 def test_direct_first_batch_and_context_cache_semantics(monkeypatch):
@@ -145,4 +281,4 @@ def test_invalid_selected_index_yields_invalid_canonical_object():
     row["idx_W1"] = 9
     derived = materialize_v2_canonical_fields(row)
     assert derived["wjet_quark_valid"] == 0
-    assert math.isnan(derived["O_W"])
+    assert math.isnan(derived["O_jj"])

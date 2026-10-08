@@ -1,0 +1,305 @@
+# =============================================================================
+# analysis_ml_superdataset_lr_catboost_v3.yaml — O_ML baseline, pure LR helicity.
+#
+# This file freezes everything a single baseline run needs. Do not edit
+# conventions here without updating docs/PHYSICS_CONVENTIONS.md.
+# =============================================================================
+
+analysis:
+  name: ml_superdataset_lr
+  observable_family: O_ML
+  helicity: LR
+  level: [gen, reco]          # inclusive gen + full reco; matching is optional diagnostic
+
+samples:
+  manifest: configs/samples.yaml
+  gen_sample: tthcpv_gen_elpr        # 80 chunks x 12500 events, sidecar per chunk
+  reco_sample: tthcpv_reco_elpr      # kinfit-ready complete reco (same chunks)
+  sm_gen_sample: tth_sm_gen_elpr
+  sm_reco_sample: tth_sm_reco_elpr
+
+  # Generator-level normalization values
+  sm_cross_section_fb: 2.96055           # Total sm signal cross-section
+  cross_section_fb: 0.395666999328   # Total CPV signal cross-section
+  n_chunks: 79                       # Total processed chunks
+  events_per_chunk: 12500            # Generator events per sidecar chunk
+
+# jet assignment + kinematic fit stage (docs/KINFIT_JET_ASSIGNMENT.md).
+# All reco-level observables use the logchi2_plus_flavor_x0p3 selected candidate.
+kinfit:
+  steering: steering/tth_semilep_kinfit.xml    # frozen canonical parameters
+  runner: scripts/run_kinfit_assignment.sh
+  require:
+    accepted: 1
+    fit_success: 1
+  selected_pairs:
+    O_jj: [W1, W2]             # exporter applies conditional Weaver q/qbar orientation
+    O_b: [b_had, b_lep]        # selected top-side b slots
+
+observable:
+  # Theory-study primary convention (docs/PHYSICS_CONVENTIONS.md §3–§5):
+  # pairs ordered particle - antiparticle, angles measured with the
+  # lab-axes basis (boost only, phi = atan2(py, px) vs fixed lab axes).
+  definition: "O_ML = P(+) - P(-)"
+  object_a: wjet_downtype
+  object_b: lepton
+  basis: lab_axes                # production_plane is reserved for Ma2018 sign observables
+  frames: [lab, higgs_rest, ttbar_rest]
+  default_frame: higgs_rest      # strongest O_jj frame in the theory study
+  n_bins: 20
+  range: [-1.0, 1.0]
+
+features:
+  default_set: angles_all16
+
+  sets:
+    angles_all16:
+      azimuthal_angle:
+        - O_jj
+        - O_lnu
+        - O_lD
+        - O_lU
+        - O_nuD
+        - O_nuU
+        - O_b
+        - O_top
+        - O_lb
+        - O_lbbar
+        - O_nub
+        - O_nubbar
+        - O_Db
+        - O_Dbbar
+        - O_Ub
+        - O_Ubbar
+
+    angles_all16_auxiliary:
+      azimuthal_angle:
+        - O_jj
+        - O_lnu
+        - O_lD
+        - O_lU
+        - O_nuD
+        - O_nuU
+        - O_b
+        - O_top
+        - O_lb
+        - O_lbbar
+        - O_nub
+        - O_nubbar
+        - O_Db
+        - O_Dbbar
+        - O_Ub
+        - O_Ubbar
+
+      auxiliary:
+        - lepton_charge
+        - w_assignment_likelihood_selected
+        - w_type_assignment_likelihood_selected
+        - final_selection_score
+        - m_H
+        - m_ttbar
+        - down_jet_mass
+        - up_jet_mass
+
+    angles_all16_auxiliary_full_kin:
+      azimuthal_angle:
+        - O_jj
+        - O_lnu
+        - O_lD
+        - O_lU
+        - O_nuD
+        - O_nuU
+        - O_b
+        - O_top
+        - O_lb
+        - O_lbbar
+        - O_nub
+        - O_nubbar
+        - O_Db
+        - O_Dbbar
+        - O_Ub
+        - O_Ubbar
+
+      objects:
+        # Full E, pt, theta, phi for six canonical objects.
+        lepton:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 1
+        wjet_quark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 2
+        wjet_antiquark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Top-decay b object
+        top_b:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # antitop-decay bbar object
+        antitop_bbar:
+          - E
+          - pt
+          - theta
+          - phi
+
+      auxiliary:
+        - lepton_charge
+        - w_assignment_likelihood_selected
+        - w_type_assignment_likelihood_selected
+        - final_selection_score
+        - m_H
+        - m_ttbar
+        - down_jet_mass
+        - up_jet_mass
+
+    angles_all16_auxiliary_full_kin_rep:
+      objects:
+        lepton:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Fitted neutrino
+        neutrino:
+          - E
+          - pt
+          - theta
+          - phi
+
+        lnu_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        lnu_antifermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        anti_top_side_fermion:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 1
+        wjet_quark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # W decay products 2
+        wjet_antiquark:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # Top-decay b object
+        top_b:
+          - E
+          - pt
+          - theta
+          - phi
+
+        # antitop-decay bbar object
+        antitop_bbar:
+          - E
+          - pt
+          - theta
+          - phi
+
+      auxiliary:
+        - lepton_charge
+        - w_assignment_likelihood_selected
+        - w_type_assignment_likelihood_selected
+        - final_selection_score
+        - m_H
+        - m_ttbar
+        - down_jet_mass
+        - up_jet_mass
+
+
+
+training:
+  lepton_flavors:
+    - electron
+    - muon
+
+  label_column: label
+  training_weight: weight_training
+  balance_classes: true
+
+split:
+  # deterministic split from event_id hash; see src/ilc_tth_cpv/io.py
+  train: 0.6
+  validation: 0.2
+  test: 0.2
+  seed: 20260720
+
+model:
+  type: catboost               # ships with the key4hep cvmfs stack; catboost optional
+  params:
+    iterations: 1000
+    max_depth: 7                 # frozen current model depth
+    learning_rate: 0.05
+    random_seed: 42              # frozen current model seed
+    early_stopping_rounds: 50
+  class_order: [-1, 1]        # [interference<0, interference>0]; frozen
+
+weights:
+  training_weight: weight_training              # base |w_int|; class balance is trainer-only
+  template_weight: weight_interference_signed   # NEVER class-balanced
+  sm_template_weight: weight_sm                 # sigma_SM / N_written_chunk (fb/event)
+
+selection:
+  enabled: false
+  # later:
+  # enabled: true
+  # score_file: outputs/mva/scores.csv
+  # threshold: null           # take pass_nominal_mva from the file
+
+background:
+  enabled: false
+  # later:
+  # enabled: true
+  # manifest: configs/samples.yaml
+
+fisher:
+  mode: [signal-only]
+  variant: [absolute-yield, shape-only]
+  luminosity_ab: 8.0          # scaled by polarisation weights downstream
+
+outputs:
+  base_dir: outputs/ml_superdataset

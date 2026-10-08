@@ -19,7 +19,7 @@ NAN = float("nan")
 CANONICAL_OBJECTS = (
     "wjet_quark", "wjet_antiquark", "top_side_fermion",
     "anti_top_side_fermion", "top_b", "antitop_bbar", "lepton",
-    "neutrino", "top", "antitop", "higgs",
+    "neutrino", "top", "antitop", "higgs", "lnu_fermion", "lnu_antifermion"
 )
 OBJECT_VARIABLES = ("E", "pt", "theta", "phi", "mass", "valid")
 WEAVER_SCORE_KEYS = (
@@ -30,6 +30,24 @@ WEAVER_SUMMARY_KEYS = ("mc_b", "mc_bbar", "mc_c", "mc_cbar")
 ORIENTED_WEAVER_OBJECTS = (
     "wjet_quark", "wjet_antiquark", "top_b", "antitop_bbar",
 )
+
+ANGLE_ROLE_PAIRS = {
+    "O_lnu": ("l", "nu"),
+    "O_jj": ("D", "U"),
+    "O_lD": ("l", "D"),
+    "O_lU": ("l", "U"),
+    "O_nuD": ("nu", "D"),
+    "O_nuU": ("nu", "U"),
+    "O_b": ("b", "bbar"),
+    "O_lb": ("l", "b"),
+    "O_lbbar": ("l", "bbar"),
+    "O_nub": ("nu", "b"),
+    "O_nubbar": ("nu", "bbar"),
+    "O_Db": ("D", "b"),
+    "O_Dbbar": ("D", "bbar"),
+    "O_Ub": ("U", "b"),
+    "O_Ubbar": ("U", "bbar"),
+}
 
 ORIENTATION_FIELDS = (
     "idx_W_quark", "idx_W_antiquark", "w_orientation_status",
@@ -58,7 +76,8 @@ V2_CANONICAL_FIELDS = (
         "down_jet_mass", "top_side_fermion_down_jet_mass",
         "anti_top_side_fermion_down_jet_mass",
     )
-    + ("O_W", "O_lD", "O_b", "O_top", "O_lnu", "chi2_over_ndof")
+    + tuple(ANGLE_ROLE_PAIRS)
+    + ("O_top", "chi2_over_ndof")
     + tuple(f"max_weaver_{key}" for key in WEAVER_SUMMARY_KEYS)
     + tuple(
         f"{name}_weaver_{key}"
@@ -91,6 +110,7 @@ def feature_columns_from_config(
     columns: list[str] = []
     for object_name, variables in feature_config.get("objects", {}).items():
         columns.extend(f"{object_name}_{variable}" for variable in variables)
+    columns.extend(feature_config.get("azimuthal_angle", []))
     columns.extend(feature_config.get("auxiliary", []))
     return columns
 
@@ -217,7 +237,9 @@ class FeatureContext:
                     "top_b_slot": self._slot(self.row.get("idx_bhad")),
                     "antitop_bbar_slot": self._slot(self.row.get("idx_blep")),
                     "down": wqbar, "down_slot": wqbar_slot,
+                    "up": wq, "up_slot": wq_slot,
                     "hadronic_W_charge": 1,
+                    "lnu_fermion": lepton, "lnu_antifermion": neutrino,
                 })
             elif math.isfinite(charge) and charge > 0.0:
                 result.update({
@@ -227,7 +249,9 @@ class FeatureContext:
                     "top_b_slot": self._slot(self.row.get("idx_blep")),
                     "antitop_bbar_slot": self._slot(self.row.get("idx_bhad")),
                     "down": wq, "down_slot": wq_slot,
+                    "up": wqbar, "up_slot": wqbar_slot,
                     "hadronic_W_charge": -1,
+                    "lnu_fermion": neutrino, "lnu_antifermion": lepton,
                 })
             self._intermediate[key] = result
         return self._intermediate[key]  # type: ignore[return-value]
@@ -255,6 +279,8 @@ class FeatureContext:
                     "antitop_bbar": assignment.get("antitop_bbar"),
                     "top": assignment.get("top"),
                     "antitop": assignment.get("antitop"),
+                    "lnu_fermion": assignment.get("lnu_fermion"),
+                    "lnu_antifermion": assignment.get("lnu_antifermion"),
                 }.get(object_name)
             self._intermediate[key] = value
         return self._intermediate[key]
@@ -497,6 +523,7 @@ def _calc_mass_or_alias(context: FeatureContext, name: str) -> float:
     assignment = context._charge_assignment()
     object_key = {
         "down_jet_mass": "down",
+        "up_jet_mass": "up",
         "top_side_fermion_down_jet_mass": "top_side",
         "anti_top_side_fermion_down_jet_mass": "anti_side",
     }[name]
@@ -505,22 +532,56 @@ def _calc_mass_or_alias(context: FeatureContext, name: str) -> float:
 
 
 def _calc_angle(context: FeatureContext, name: str) -> float:
-    pairs = {
-        "O_W": ("wjet_quark_phi", "wjet_antiquark_phi"),
-        "O_lD": ("top_side_fermion_phi", "anti_top_side_fermion_phi"),
-        "O_b": ("top_b_phi", "antitop_bbar_phi"),
-        "O_top": ("top_phi", "antitop_phi"),
-    }
-    if name == "O_lnu":
-        charge = to_float(context.row.get("lepton_charge"))
-        if charge < 0.0:
-            pair = ("lepton_phi", "neutrino_phi")
-        elif charge > 0.0:
-            pair = ("neutrino_phi", "lepton_phi")
-        else:
-            return NAN
+    if name == "O_jj":
+        pair = ("wjet_quark_phi", "wjet_antiquark_phi")
+    elif name == "O_top":
+        pair = ("top_phi", "antitop_phi")
     else:
-        pair = pairs[name]
+        charge = to_float(context.row.get("lepton_charge"))
+        if not math.isfinite(charge) or charge == 0.0:
+            return NAN
+        q = 1 if charge > 0.0 else -1
+        role_features = {
+            "l": "lepton_phi",
+            "nu": "neutrino_phi",
+            "D": "wjet_quark_phi" if q > 0 else "wjet_antiquark_phi",
+            "U": "wjet_antiquark_phi" if q > 0 else "wjet_quark_phi",
+            "b": "top_b_phi",
+            "bbar": "antitop_bbar_phi",
+        }
+        role_signs = {
+            "l": -q,
+            "nu": q,
+            "D": q,
+            "U": -q,
+            "b": 1,
+            "bbar": -1,
+        }
+        precedence = {role: index for index, role in enumerate(role_features)}
+        first_role, second_role = ANGLE_ROLE_PAIRS[name]
+        first_sign = role_signs[first_role]
+        second_sign = role_signs[second_role]
+        if first_sign != second_sign:
+            ordered_roles = (
+                (first_role, second_role)
+                if first_sign > second_sign
+                else (second_role, first_role)
+            )
+        elif first_sign > 0:
+            ordered_roles = tuple(
+                sorted((first_role, second_role), key=precedence.__getitem__)
+            )
+        else:
+            ordered_roles = tuple(
+                sorted(
+                    (first_role, second_role),
+                    key=precedence.__getitem__,
+                    reverse=True,
+                )
+            )
+        if name == "O_lD":
+            ordered_roles = (ordered_roles[1], ordered_roles[0])
+        pair = tuple(role_features[role] for role in ordered_roles)
     first = context.resolve(pair[0])
     second = context.resolve(pair[1])
     return angles.delta_phi(first, second) if math.isfinite(first) and math.isfinite(second) else NAN
@@ -616,7 +677,7 @@ def _w_slots_v2(self) -> dict[str, int | None]:
     key = "w_slots_v2"
 
     if key not in self._intermediate:
-        orientation = self._orientation_v2()
+        orientation = _orientation_v2(self)
 
         selected = (
             self._slot(self.row.get("idx_W1")),
@@ -687,7 +748,7 @@ def _calc_angle_v2(
     name: str,
 ) -> float:
 
-    slots = context._w_slots_v2()
+    slots = _w_slots_v2(context)
 
     if name == "O_W_v2":
         phi_q = _slot_phi_higgs_rest(
@@ -759,11 +820,11 @@ for _name in ("nu_fit_pt", "nu_fit_theta", "nu_fit_phi"):
     _EXACT_REGISTRY[_name] = FeatureSpec(_calc_nu_fit)
 for _name in (
     "m_ttbar", "m_W_had", "m_top_had", "m_top_lep", "m_H",
-    "down_jet_mass", "top_side_fermion_down_jet_mass",
+    "down_jet_mass", "top_side_fermion_down_jet_mass", "up_jet_mass",
     "anti_top_side_fermion_down_jet_mass", "chi2_over_ndof",
 ):
     _EXACT_REGISTRY[_name] = FeatureSpec(_calc_mass_or_alias)
-for _name in ("O_W", "O_lD", "O_b", "O_top", "O_lnu"):
+for _name in tuple(ANGLE_ROLE_PAIRS) + ("O_top",):
     _EXACT_REGISTRY[_name] = FeatureSpec(_calc_angle)
 for _name in tuple(f"max_weaver_{key}" for key in WEAVER_SUMMARY_KEYS):
     _EXACT_REGISTRY[_name] = FeatureSpec(_calc_max_weaver)

@@ -27,6 +27,30 @@ def test_feature_set_expansion_preserves_object_then_auxiliary_order():
     ]
 
 
+def test_feature_set_expansion_places_verbatim_angles_before_auxiliary():
+    config = {
+        "features": {
+            "sets": {
+                "chosen": {
+                    "objects": {"lepton": ["E", "phi"], "top": ["mass"]},
+                    "azimuthal_angle": ["O_lD", "O_jj", "O_nubbar"],
+                    "auxiliary": ["chi2_over_ndof", "weight_training"],
+                }
+            }
+        }
+    }
+    assert feature_columns_from_config(config, "chosen") == [
+        "lepton_E",
+        "lepton_phi",
+        "top_mass",
+        "O_lD",
+        "O_jj",
+        "O_nubbar",
+        "chi2_over_ndof",
+        "weight_training",
+    ]
+
+
 def test_selected_w_likelihood_uses_orientation_decision():
     assert resolve_feature_value(
         {"w_orientation_status": "L12_preferred", "L12": "0.8", "L21": "0.2"},
